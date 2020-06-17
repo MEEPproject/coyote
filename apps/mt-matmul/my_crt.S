@@ -162,7 +162,7 @@ _start:
   # for now, assume only 1 core
 
 
-li a7, 1
+li a7, 2
   # a1 is and must be the number of total cores. So far I have not seen a way to not have to manually set it
   mv a1, a7
 #1:bgeu a0, a1, 1b
