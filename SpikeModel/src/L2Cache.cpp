@@ -88,7 +88,10 @@ namespace spike_model
 
         if (CACHE_HIT) {
             // Update memory access info
-            out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+	    if(mem_access_info_ptr->getReq().getType()!=L2Request::AccessType::STORE)
+	    {
+            	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+	    }
         }
         else {
             count_cache_misses_++;

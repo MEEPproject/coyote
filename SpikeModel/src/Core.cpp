@@ -89,7 +89,6 @@ namespace spike_model
     
     void Core::handleMiss_(std::shared_ptr<spike_model::L2Request> miss)
     {
-        count_l2_requests_++;
         if(miss->getType()==L2Request::AccessType::FINISH)
         {
             finished_=true;
@@ -97,6 +96,7 @@ namespace spike_model
 
         if(!finished_)
         {
+            count_l2_requests_++;
             noc->send_(*miss);
         }
     }
