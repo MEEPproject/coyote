@@ -1,4 +1,8 @@
 #/bin/bash!
+threads=$1
+if [ -z "$1" ]; then
+	threads="1"
+fi
 
 git clone https://github.com/sparcians/map.git
 
@@ -6,10 +10,10 @@ cd map/sparta
 mkdir release
 cd release
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make
+make -j $threads
 
 cd ..
 mkdir debug
 cd debug
 cmake .. -DCMAKE_BUILD_TYPE=Debug
-make
+make -j $threads
