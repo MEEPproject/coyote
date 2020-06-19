@@ -17,12 +17,13 @@ namespace spike_model
         always_hit_(p->always_hit),
         miss_latency_(p->miss_latency),
         hit_latency_(p->hit_latency),
-        in_flight_reads_(p->line_size),
-        pending_requests_(p->line_size)
+        max_outstanding_misses_(p->max_outstanding_misses),
+        in_flight_reads_(max_outstanding_misses_, p->line_size),
+        pending_requests_()
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, issueAccess_, L2Request));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, issueAccess_, std::shared_ptr<L2Request>));
 
         in_biu_ack_.registerConsumerHandler
                 (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, sendAck_, MemoryAccessInfoPtr));
@@ -54,7 +55,7 @@ namespace spike_model
     void L2Cache::sendAck_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
         reloadCache_(mem_access_info_ptr->getRAdr());
-        if(mem_access_info_ptr->getReq().getType()!=L2Request::AccessType::STORE)
+        if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
         {
             auto range_misses=in_flight_reads_.equal_range(mem_access_info_ptr->getReq());
 
@@ -72,7 +73,7 @@ namespace spike_model
 
 
     // Issue inst. Returns true if it hits
-    void L2Cache::issueAccess_(const L2Request & req)
+    void L2Cache::issueAccess_(const std::shared_ptr<L2Request> & req)
     {
         count_requests_+=1;
 
@@ -88,10 +89,10 @@ namespace spike_model
 
         if (CACHE_HIT) {
             // Update memory access info
-	    if(mem_access_info_ptr->getReq().getType()!=L2Request::AccessType::STORE)
-	    {
-            	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
-	    }
+    	    if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
+    	    {
+               	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+	        }
         }
         else {
             count_cache_misses_++;
@@ -109,7 +110,7 @@ namespace spike_model
 
                 bool already_pending=false;
 
-                if(mem_access_info_ptr->getReq().getType()!=L2Request::AccessType::STORE)
+                if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
                 {
                     already_pending=in_flight_reads_.contains(mem_access_info_ptr->getReq());
                     in_flight_reads_.insert(mem_access_info_ptr->getReq());

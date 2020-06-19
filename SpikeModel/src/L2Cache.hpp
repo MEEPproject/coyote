@@ -49,8 +49,9 @@ namespace spike_model
             PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
             PARAMETER(bool, always_hit, false, "DL1 will always hit")
             // Parameters for event scheduling
-            PARAMETER(uint32_t, miss_latency, 100, "Cache miss latency")
-            PARAMETER(uint32_t, hit_latency, 10, "Cache hit latency")
+            PARAMETER(uint16_t, miss_latency, 100, "Cache miss latency")
+            PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
+            PARAMETER(uint16_t, max_outstanding_misses, 8, "Maximum misses in flight to the next level")
         };
 
         /*!
@@ -88,17 +89,17 @@ namespace spike_model
 
             MemoryAccessInfo() = delete;
 
-            MemoryAccessInfo(L2Request req) :
+            MemoryAccessInfo(std::shared_ptr<L2Request> req) :
                 l2_request_(req),
                 phyAddrIsReady_(true),
                 // Construct the State object here
-                address(req.getAddress()){}
+                address(req->getAddress()){}
 
             virtual ~MemoryAccessInfo() {}
 
             // This ExampleInst pointer will act as our portal to the ExampleInst class
             // and we will use this pointer to query values from functions of ExampleInst class
-            L2Request getReq() const { return l2_request_; }
+            std::shared_ptr<L2Request> getReq() const { return l2_request_; }
 
             void setPhyAddrStatus(bool isReady) { phyAddrIsReady_ = isReady; }
             bool getPhyAddrStatus() const { return phyAddrIsReady_; }
@@ -121,7 +122,7 @@ namespace spike_model
         private:
 
             // load/store instruction pointer
-            L2Request l2_request_;
+            std::shared_ptr<L2Request> l2_request_;
 
             // Indicate MMU address translation status
             bool phyAddrIsReady_;
@@ -134,7 +135,7 @@ namespace spike_model
         sparta::SpartaSharedPointer<MemoryAccessInfo>::SpartaSharedPointerAllocator memory_access_allocator;
 
         // Issue/Re-issue ready instructions in the issue queue
-        void issueAccess_(const L2Request & req);
+        void issueAccess_(const std::shared_ptr<L2Request> & req);
 
     private:
 
@@ -142,7 +143,7 @@ namespace spike_model
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
 
-        sparta::DataInPort<L2Request> in_core_req_
+        sparta::DataInPort<std::shared_ptr<L2Request>> in_core_req_
             {&unit_port_set_, "in_noc_req"};
 
         sparta::DataInPort<MemoryAccessInfoPtr> in_biu_ack_
@@ -153,7 +154,7 @@ namespace spike_model
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
         
-        sparta::DataOutPort<L2Request> out_core_ack_
+        sparta::DataOutPort<std::shared_ptr<L2Request>> out_core_ack_
             {&unit_port_set_, "out_noc_ack"};
 
         sparta::DataOutPort<MemoryAccessInfoPtr> out_biu_req_
@@ -178,8 +179,9 @@ namespace spike_model
         // This single slot could potentially be extended to a cache pending miss queue
 
 
-        unsigned miss_latency_;
-        unsigned hit_latency_;
+        uint16_t miss_latency_;
+        uint16_t hit_latency_;
+        uint16_t max_outstanding_misses_;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Callbacks
@@ -223,44 +225,50 @@ namespace spike_model
                 }
         };
 
-        class PendingList
+        class InFlightMissList
         {
             public:
-                PendingList(uint64_t l):line_size_(l){}
+                InFlightMissList(uint16_t m, uint64_t l):line_size_(l), max_(m){}
                 
-                void insert(L2Request req)
+                bool insert(std::shared_ptr<L2Request> req)
                 {
-                    misses_.insert(std::make_pair(getLine(req),req));
+                    bool res=false;
+                    {
+                        res=true;
+                        misses_.insert(std::make_pair(getLine(req),req));
+                    }
+                    return res;
                 }
                 
-                auto equal_range(L2Request req)
+                auto equal_range(std::shared_ptr<L2Request> req)
                 {
                     return misses_.equal_range(getLine(req));
                 }
 
-                void erase(L2Request req)
+                void erase(std::shared_ptr<L2Request> req)
                 {
                     misses_.erase(getLine(req));
                 }
             
-                bool contains(L2Request req)
+                bool contains(std::shared_ptr<L2Request> req)
                 {
                     return misses_.find(getLine(req))!=misses_.end();
                 }
                 
             private:
-                std::unordered_multimap<uint64_t, L2Request> misses_;
+                std::unordered_multimap<uint64_t, std::shared_ptr<L2Request>> misses_;
                 uint64_t line_size_;
+                uint16_t max_;
 
-                uint64_t getLine(L2Request req)
+                uint64_t getLine(std::shared_ptr<L2Request> req)
                 {
-                    return (req.getAddress()/line_size_)*line_size_;
+                    return (req->getAddress()/line_size_)*line_size_;
                 }
         };
 
-        PendingList in_flight_reads_;
+        InFlightMissList in_flight_reads_;
 
-        PendingList pending_requests_;
+        std::list<L2Request> pending_requests_;
     };
 
 

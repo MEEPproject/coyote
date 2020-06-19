@@ -96,11 +96,11 @@ namespace spike_model
         if(!finished_)
         {
             count_l2_requests_++;
-            noc->send_(*miss);
+            noc->send_(miss);
         }
     }
     
-    void Core::ack_(const L2Request & req)
+    void Core::ack_(const std::shared_ptr<L2Request> & req)
     {
         if(pending_misses_.size()>0) //If this was a fetch and there are data misses for the same instructions
         {
@@ -113,7 +113,7 @@ namespace spike_model
         }
 
         bool can_run=true;
-        bool is_load=req.getType()==L2Request::AccessType::LOAD;
+        bool is_load=req->getType()==L2Request::AccessType::LOAD;
 
         if(is_load)
         {

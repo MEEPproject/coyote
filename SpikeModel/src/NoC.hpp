@@ -67,8 +67,8 @@ namespace spike_model
         // Type Name/Alias Declaration
         ////////////////////////////////////////////////////////////////////////////////
 
-        void send_(const L2Request & req);
-        void issueAck_(const L2Request & req);
+        void send_(const std::shared_ptr<L2Request> & req);
+        void issueAck_(const std::shared_ptr<L2Request> & req);
 
         void setOrchestrator(unsigned i, Core& o)
         {
@@ -86,7 +86,7 @@ namespace spike_model
 
         //Forced to use unique_ptr because ports have no = operator
 
-        sparta::DataInPort<L2Request> in_l2_ack_
+        sparta::DataInPort<std::shared_ptr<L2Request>> in_l2_ack_
             {&unit_port_set_, "in_l2_ack"};
 
 
@@ -95,7 +95,7 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
         
 
-        sparta::DataOutPort<L2Request> out_l2_req_
+        sparta::DataOutPort<std::shared_ptr<L2Request>> out_l2_req_
             {&unit_port_set_, "out_l2_req"};
 
         std::vector<Core *> cores_;

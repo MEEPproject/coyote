@@ -58,7 +58,7 @@ namespace spike_model
                 id_=i;
             }    
 
-            void ack_(const L2Request & access);
+            void ack_(const std::shared_ptr<L2Request> & access);
 
         private:
             bool finished_;

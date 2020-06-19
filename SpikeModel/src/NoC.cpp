@@ -19,16 +19,16 @@ namespace spike_model
     {
 
         in_l2_ack_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, L2Request));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<L2Request>));
     }
 
-    void NoC::send_(const L2Request & req)
+    void NoC::send_(const std::shared_ptr<L2Request> & req)
     {
         out_l2_req_.send(req, 0); 
     }
 
-    void NoC::issueAck_(const L2Request & req)
+    void NoC::issueAck_(const std::shared_ptr<L2Request> & req)
     {
-        cores_[req.getCoreId()]->ack_(req);
+        cores_[req->getCoreId()]->ack_(req);
     }
 }
