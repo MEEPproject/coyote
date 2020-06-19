@@ -49,21 +49,9 @@ void thread_entry(int cid, int nc)
 
     // First do out-of-place vvadd
     barrier(nc);
-    printf("After barrier\n");
     matmul(cid, nc, DIM_SIZE, input1_data, input2_data, results_data); 
-    barrier(nc);
-    
-
-    int i;    
-    asm(
-       "csrr %0, minstret \n"
-       : "=r" (i) 
-       :
-       : 
-    );
-  
-    printf("Executed %lu instructions in core %d\n", i, cid);
     barrier(nc);//This barrier is necessary for all the simulated cores to finish
+
     if(cid==0)
     {
         exit(1); //We have to exit with something different from 0
