@@ -9,7 +9,6 @@
 #include "sparta/log/MessageSource.hpp"
 #include "sparta/statistics/Counter.hpp"
 
-#include "SpikeModelTypes.hpp"
 #include "L2Request.hpp"
 #include <chrono>
 

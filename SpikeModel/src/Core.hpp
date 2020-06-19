@@ -15,9 +15,6 @@
 #include "sparta/events/StartupEvent.hpp"
 
 #include "cache/TreePLRUReplacement.hpp"
-#include "FixedLatencyInstruction.hpp"
-#include "SpikeModelTypes.hpp"
-#include "SimpleTLB.hpp"
 #include "NoC.hpp"
 
 #include "spike_wrapper.h"

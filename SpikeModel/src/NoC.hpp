@@ -20,8 +20,6 @@
 
 #include <memory>
 
-#include "MemoryInstruction.hpp"
-#include "SpikeModelTypes.hpp"
 #include "L2Request.hpp"
 #include "Core.hpp"
 

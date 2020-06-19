@@ -22,8 +22,6 @@
 
 #include <unordered_map>
 
-#include "MemoryInstruction.hpp"
-#include "SpikeModelTypes.hpp"
 #include "L2Request.hpp"
 
 #include "SimpleDL1.hpp"
