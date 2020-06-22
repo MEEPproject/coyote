@@ -18,20 +18,17 @@ namespace spike_model
         miss_latency_(p->miss_latency),
         hit_latency_(p->hit_latency),
         max_outstanding_misses_(p->max_outstanding_misses),
+        busy_(false),
         in_flight_reads_(max_outstanding_misses_, p->line_size),
         pending_requests_()
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, issueAccess_, std::shared_ptr<L2Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, getAccess_, std::shared_ptr<L2Request>));
 
         in_biu_ack_.registerConsumerHandler
                 (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, sendAck_, MemoryAccessInfoPtr));
 
-        // NOTE:
-        // To resolve the race condition when:
-        // Both cache and MMU try to drive the single BIU port at the same cycle
-        // Here we give cache the higher priority
 
         // DL1 cache config
         const uint64_t l2_line_size = p->line_size;
@@ -57,6 +54,7 @@ namespace spike_model
         reloadCache_(mem_access_info_ptr->getRAdr());
         if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
         {
+            bool was_stalled=in_flight_reads_.is_full();
             auto range_misses=in_flight_reads_.equal_range(mem_access_info_ptr->getReq());
 
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
@@ -68,17 +66,78 @@ namespace spike_model
             }
 
             in_flight_reads_.erase(mem_access_info_ptr->getReq());
+        
+            if(pending_requests_.size()>0)
+            {
+                //ISSUE EVENT
+                if(was_stalled)
+                {
+                    busy_=true;
+                    issue_access_event_.schedule(sparta::Clock::Cycle(0));
+                }
+            }
+            else
+            {
+                busy_=false;
+            }
         }
     }   
 
 
-    // Issue inst. Returns true if it hits
-    void L2Cache::issueAccess_(const std::shared_ptr<L2Request> & req)
+    void L2Cache::getAccess_(const std::shared_ptr<L2Request> & req)
     {
         count_requests_+=1;
 
-        MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, req);
+        bool hit_on_store=false;
+        if(req->getType()!=L2Request::AccessType::LOAD)
+        {
+            for (std::list<std::shared_ptr<L2Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
+            {
+                hit_on_store=((*rit)->getType()==L2Request::AccessType::STORE && (*rit)->getAddress()==req->getAddress());
+            }
+        }
+
+        if(hit_on_store)//CHECK IF LOAD ON PENDING STORE
+        {
+            //AUTO HIT
+            out_core_ack_.send(req,1);
+            count_hit_on_store_++;
+        }
+        else
+        {
+            pending_requests_.push_back(req);
+
+            if(!busy_ && !in_flight_reads_.is_full())
+            {
+                busy_=true;
+                //ISSUE EVENT
+                issue_access_event_.schedule(sparta::Clock::Cycle(0));
+            }
+        }
+    }
+
+    void L2Cache::issueAccess_()
+    {
+        MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_requests_.front());
+        pending_requests_.pop_front();
         handleCacheLookupReq_(m);
+
+        bool stall=false;
+        if(in_flight_reads_.is_full())
+        {
+            stall=true;
+            count_stall_++;
+        }
+
+
+        if(!stall && pending_requests_.size()>0) //IF THERE ARE PENDING REQUESTS, TRY TO SCHEDULE NEXT ISSUE
+        {
+            issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
+        }
+        else
+        {
+            busy_=false;
+        }
     }
 
     // Handle cache access request
@@ -99,7 +158,7 @@ namespace spike_model
             // Update memory access info
 
             if (cache_busy_ == false) {
-                // Cache is now busy, no more CACHE MISS can be handled, RESET required on finish
+                // Cache is now busy_, no more CACHE MISS can be handled, RESET required on finish
                 //cache_busy_ = true;
                 // Keep record of the current CACHE MISS instruction
                 

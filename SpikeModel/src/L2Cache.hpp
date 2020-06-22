@@ -134,8 +134,9 @@ namespace spike_model
         // allocator for this object type
         sparta::SpartaSharedPointer<MemoryAccessInfo>::SpartaSharedPointerAllocator memory_access_allocator;
 
+        void getAccess_(const std::shared_ptr<L2Request> & req);
         // Issue/Re-issue ready instructions in the issue queue
-        void issueAccess_(const std::shared_ptr<L2Request> & req);
+        void issueAccess_();
 
     private:
 
@@ -158,9 +159,11 @@ namespace spike_model
             {&unit_port_set_, "out_noc_ack"};
 
         sparta::DataOutPort<MemoryAccessInfoPtr> out_biu_req_
-            {&unit_port_set_, "out_biu_req"};
+            {&unit_port_set_, "out_biu_req", false};
 
 
+        sparta::UniqueEvent<> issue_access_event_ 
+            {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(L2Cache, issueAccess_)};
 
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
@@ -182,6 +185,8 @@ namespace spike_model
         uint16_t miss_latency_;
         uint16_t hit_latency_;
         uint16_t max_outstanding_misses_;
+
+        bool busy_;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Callbacks
@@ -209,6 +214,8 @@ namespace spike_model
         sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_misses_on_already_pending_=sparta::Counter(getStatisticSet(), "misses_on_already_pending", "Number of misses on addreses that have already been requested", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_stall_=sparta::Counter(getStatisticSet(), "stalls", "Stalls due to full in-flight queue", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_hit_on_store_=sparta::Counter(getStatisticSet(), "hits_on_store", "Number of hits on pending stores", sparta::Counter::COUNT_NORMAL);
         
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",
@@ -254,6 +261,11 @@ namespace spike_model
                 {
                     return misses_.find(getLine(req))!=misses_.end();
                 }
+
+                bool is_full()
+                {
+                    return misses_.size()==max_;
+                }
                 
             private:
                 std::unordered_multimap<uint64_t, std::shared_ptr<L2Request>> misses_;
@@ -268,7 +280,8 @@ namespace spike_model
 
         InFlightMissList in_flight_reads_;
 
-        std::list<L2Request> pending_requests_;
+        std::list<std::shared_ptr<L2Request>> pending_requests_;
+        
     };
 
 
