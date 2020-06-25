@@ -31,7 +31,7 @@ public:
      * \brief Construct SpikeModel
      * \param be_noisy Be verbose -- not necessary, just an skeleton
      */
-    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores, std::string cmd, std::string isa, bool show_factories);
+    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores, uint32_t num_l2_banks, std::string cmd, std::string isa, bool show_factories);
 
     // Tear it down
     virtual ~SpikeModel();
@@ -59,9 +59,9 @@ private:
 
     //! Number of cores in this simulator. Temporary startup option
     const uint32_t num_cores_;
+    const uint32_t num_l2_banks_;
     std::string cmd_;
     std::string isa_;
-    uint32_t num_running_;
     
     /*! 
  

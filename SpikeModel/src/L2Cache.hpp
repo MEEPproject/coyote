@@ -138,6 +138,22 @@ namespace spike_model
         // Issue/Re-issue ready instructions in the issue queue
         void issueAccess_();
 
+        uint64_t getSize()
+        {
+            return l2_size_kb_;
+        }
+
+        uint64_t getAssoc()
+        {
+            return l2_associativity_;
+        }
+
+        uint64_t getLineSize()
+        {
+            return l2_line_size_;
+        }
+
+
     private:
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -281,6 +297,10 @@ namespace spike_model
         InFlightMissList in_flight_reads_;
 
         std::list<std::shared_ptr<L2Request>> pending_requests_;
+    
+        uint64_t l2_size_kb_;
+        uint64_t l2_associativity_;
+        uint64_t l2_line_size_;
         
     };
 

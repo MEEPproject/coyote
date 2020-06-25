@@ -44,6 +44,8 @@ namespace spike_model
             {
             }
             PARAMETER(uint16_t, num_cores, 1, "The number of cores")
+            PARAMETER(uint16_t, num_l2_banks, 1, "The number of l2 banks")
+            PARAMETER(std::string, data_mapping_policy, "set_interleaving", "The data mapping policy")
         };
 
         /*!
@@ -76,29 +78,51 @@ namespace spike_model
             cores_[i]=&o;
         }
 
+        void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
+        {
+            l2_bank_size_kbs=size;
+            l2_assoc=assoc;
+            l2_line_size=line_size;
+
+            block_offset_bits=(uint8_t)ceil(log2(l2_line_size));
+            bank_bits=(uint8_t)ceil(log2(in_ports_.size()));
+
+            uint64_t total_l2_size=l2_bank_size_kbs*in_ports_.size()*1024;
+            uint64_t num_sets=total_l2_size/(l2_assoc*l2_line_size);
+            set_bits=(uint8_t)ceil(log2(num_sets));
+            tag_bits=64-(set_bits+block_offset_bits);
+            std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
+        }
+
     private:
 
         uint16_t num_cores_;
+        uint16_t num_l2_banks_;
 
-        ////////////////////////////////////////////////////////////////////////////////
-        // Input Ports
-        ////////////////////////////////////////////////////////////////////////////////
-
-        //Forced to use unique_ptr because ports have no = operator
-
-        sparta::DataInPort<std::shared_ptr<L2Request>> in_l2_ack_
-            {&unit_port_set_, "in_l2_ack"};
-
-
-        ////////////////////////////////////////////////////////////////////////////////
-        // Output Ports
-        ////////////////////////////////////////////////////////////////////////////////
-        
-
-        sparta::DataOutPort<std::shared_ptr<L2Request>> out_l2_req_
-            {&unit_port_set_, "out_l2_req"};
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_;
 
         std::vector<Core *> cores_;
+
+        uint64_t l2_bank_size_kbs;
+        uint64_t l2_assoc;
+        uint64_t l2_line_size;
+
+        uint8_t block_offset_bits;
+        uint8_t bank_bits;
+        uint8_t set_bits; 
+        uint8_t bank_displacement;
+        uint8_t tag_bits;
+        
+        enum class MappingPolicy
+        {
+            SET_INTERLEAVING,
+            PAGE_TO_BANK,
+        };
+
+        MappingPolicy data_mapping_policy_;
+
+        uint16_t getDestination(std::shared_ptr<L2Request> req);
     };
 }
 #endif

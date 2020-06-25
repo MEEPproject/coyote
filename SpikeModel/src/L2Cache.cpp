@@ -20,7 +20,10 @@ namespace spike_model
         max_outstanding_misses_(p->max_outstanding_misses),
         busy_(false),
         in_flight_reads_(max_outstanding_misses_, p->line_size),
-        pending_requests_()
+        pending_requests_(),
+        l2_size_kb_ (p->size_kb),
+        l2_associativity_ (p->associativity),
+        l2_line_size_ (p->line_size)
     {
 
         in_core_req_.registerConsumerHandler
@@ -31,12 +34,9 @@ namespace spike_model
 
 
         // DL1 cache config
-        const uint64_t l2_line_size = p->line_size;
-        const uint64_t l2_size_kb = p->size_kb;
-        const uint64_t l2_associativity = p->associativity;
         std::unique_ptr<sparta::cache::ReplacementIF> repl(new sparta::cache::TreePLRUReplacement
-                                                         (l2_associativity));
-        l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb, l2_line_size, *repl ));
+                                                         (l2_associativity_));
+        l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, *repl ));
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "L2Cache construct: #" << node->getGroupIdx();

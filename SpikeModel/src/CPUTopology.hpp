@@ -108,6 +108,13 @@ public:
     auto setNumCores(const uint32_t num_of_cores) -> void{
         num_cores = num_of_cores;
     }
+    
+    /**
+     * @brief Set the number of cores in this processor
+     */
+    auto setNumL2Banks(const uint32_t num_of_l2_banks) -> void{
+        num_l2_banks = num_of_l2_banks;
+    }
 
     /**
      * @brief Static method to allocate memory for topology
@@ -116,7 +123,9 @@ public:
 
     //! Public members used by CPUFactory to build and bind tree
     uint32_t num_cores;
+    uint32_t num_l2_banks;
     std::unique_ptr<CPUFactories> factories;
+
     std::string topology_name;
     std::vector<UnitInfo> units;
     std::vector<UnitInfo> shared_units;

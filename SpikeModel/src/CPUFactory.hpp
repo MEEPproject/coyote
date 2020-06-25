@@ -39,7 +39,7 @@ public:
     /**
      * @brief Set the user-defined topology for this microarchitecture
      */
-    auto setTopology(const std::string&, const uint32_t) -> void;
+    auto setTopology(const std::string&, const uint32_t, const uint32_t) -> void;
 
     /**
      * @brief Build the device tree by instantiating resource nodes

@@ -84,11 +84,16 @@ int main(int argc, char **argv)
         cls.getSimulationConfiguration().processParameter(noc_cores, sparta::utils::uint32_to_str(num_cores));
         cls.getSimulationConfiguration().processParameter(spike_cores, sparta::utils::uint32_to_str(num_cores));
 
+        std::string noc_banks("top.cpu.noc.params.num_l2_banks");
+        uint32_t num_l2_banks=(uint32_t) std::stoi(cls.getSimulationConfiguration().getUnboundParameterTree().get(noc_banks).getValue());
+        printf("There are %d banks\n", num_l2_banks);
+
         // Create the simulator
         sparta::Scheduler scheduler;
         SpikeModel sim("core_topology_4",
                              scheduler,
                              num_cores, // cores
+                             num_l2_banks,
                              application, //application to simulate
                              isa,
                              show_factories); // run for ilimit instructions

@@ -124,7 +124,7 @@ namespace spike_model
         if(!running_ && can_run)
         {
             running_=true;
-            simulate_inst_event_.schedule(sparta::Clock::Cycle(0));
+            simulate_inst_event_.schedule(sparta::Clock::Cycle(1));
         }
     }
 }

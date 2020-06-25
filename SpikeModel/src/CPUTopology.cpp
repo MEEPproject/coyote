@@ -23,24 +23,24 @@ spike_model::CoreTopology_4::CoreTopology_4(){
     //! Instantiating ports of this topology
     port_connections = {
         {
-            "cpu.l2.ports.out_biu_req",
-            "cpu.l2.ports.in_biu_ack"
+            "cpu.l2_bank*.ports.out_biu_req",
+            "cpu.l2_bank*.ports.in_biu_ack"
         },
         {
-            "cpu.noc.ports.out_l2_req",
-            "cpu.l2.ports.in_noc_req"
+            "cpu.noc.ports.out_l2_bank*_req",
+            "cpu.l2_bank*.ports.in_noc_req"
         },
         {
-            "cpu.noc.ports.in_l2_ack", 
-            "cpu.l2.ports.out_noc_ack"
+            "cpu.noc.ports.in_l2_bank*_ack", 
+            "cpu.l2_bank*.ports.out_noc_ack"
         },
     };
 
     shared_units = {
             {
-                "l2",
+                "l2_bank*",
                 "cpu",
-                "L2 Cache",
+                "L2 Cache Bank *",
                 sparta::TreeNode::GROUP_NAME_NONE,
                 sparta::TreeNode::GROUP_IDX_NONE,
                 &factories->l2_rf

@@ -43,15 +43,16 @@ double calculateAverageOfInternalCounters(
 SpikeModel::SpikeModel(const std::string& topology,
                                    sparta::Scheduler & scheduler,
                                    uint32_t num_cores,
+                                   uint32_t num_l2_banks,
                                    std::string cmd,
                                    std::string isa,
                                    bool show_factories) :
     sparta::app::Simulation("spike_model", &scheduler),
     cpu_topology_(topology),
     num_cores_(num_cores),
+    num_l2_banks_(num_l2_banks),
     cmd_(cmd),
     isa_(isa),
-    num_running_(1),
     show_factories_(show_factories)
 {
     // Set up the CPU Resource Factory to be available through ResourceTreeNode
@@ -130,8 +131,9 @@ void SpikeModel::buildTree_()
 
     auto cpu_factory = getCPUFactory_();
 
+
     // Set the cpu topology that will be built
-    cpu_factory->setTopology(cpu_topology_, num_cores_);
+    cpu_factory->setTopology(cpu_topology_, num_cores_, num_l2_banks_);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
