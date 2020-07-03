@@ -22,7 +22,7 @@
 #define MSTATUS_TVM         0x00100000
 #define MSTATUS_TW          0x00200000
 #define MSTATUS_TSR         0x00400000
-#define MSTATUS_VS          0x01800000
+#define MSTATUS_VS          0x00000600
 #define MSTATUS32_SD        0x80000000
 #define MSTATUS_UXL         0x0000000300000000
 #define MSTATUS_SXL         0x0000000C00000000

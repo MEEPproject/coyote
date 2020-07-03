@@ -56,7 +56,7 @@ _start:
 
 #THIS BLOCK IS SET RESEMBLING THE PK EXAMPLE
 
-  li t0, 0x8000000a018460a2
+  li t0, 0x8000000a018466a2 #Added the secons 6 to enable the vector extension
   csrw mstatus, t0
 
   li t0, 0xb109
@@ -162,7 +162,7 @@ _start:
   # for now, assume only 1 core
 
 
-li a7, 2
+li a7, 1
   # a1 is and must be the number of total cores. So far I have not seen a way to not have to manually set it
   mv a1, a7
 #1:bgeu a0, a1, 1b
