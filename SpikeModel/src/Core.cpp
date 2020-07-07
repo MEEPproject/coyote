@@ -23,6 +23,8 @@ namespace spike_model
         latency_to_l2_(p->latency_to_l2)
     {
 
+        in_port_.registerConsumerHandler
+                (CREATE_SPARTA_HANDLER_WITH_DATA(Core, ack_, std::shared_ptr<L2Request>));
         
         sparta::StartupEvent(node, CREATE_SPARTA_HANDLER(Core, startup_));
     }
@@ -39,31 +41,34 @@ namespace spike_model
         {
             std::list<std::shared_ptr<spike_model::L2Request>> new_misses;
             bool success=spike->simulateOne(id_, getClock()->currentCycle(), new_misses);
-            if(success)
+
+            //FETCH MISSES ARE SERVICED WHETHER THERE IS A RAW OR NOT
+            if(new_misses.size()>0 && new_misses.front()->getType()==L2Request::AccessType::FETCH)
             {
+                handleMiss_(new_misses.front());
+                
+                //IF THERE ARE MISSES UNDER THE FETCH, SAVE THEM SO THEY ARE ISSUED ONCE THE FETCH HAS BEEN SERVICED
+                if(new_misses.size()>1)
+                {
+                    new_misses.pop_front();
+                    //Need to copy in this case, as I have passed everything by reference so far
+                    for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
+                    {
+                        pending_misses_.push_back(miss);
+                    }
+                }
+                running_=false;
+            }
+
+            //IF NO RAW AND NO FETCH MISS
+            if(success && running_)
+            {
+                count_simulated_instructions_++;
                 if(new_misses.size()>0)
                 {
-                    //printf("Got %lu misses\n", new_misses.size());
-                    if(new_misses.front()->getType()==L2Request::AccessType::FETCH)
+                    for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
                     {
-                        handleMiss_(new_misses.front());
-                        if(new_misses.size()>1)
-                        {
-                            new_misses.pop_front();
-                            //Need to copy in this case, as I have passed everything by reference so far
-                            for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
-                            {
-                                pending_misses_.push_back(miss);
-                            }
-                        }
-                        running_=false;
-                    }
-                    else
-                    {
-                        for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
-                        {
-                            handleMiss_(miss);
-                        }
+                        handleMiss_(miss);
                     }
                 }
 
@@ -96,7 +101,11 @@ namespace spike_model
         if(!finished_)
         {
             count_l2_requests_++;
-            noc->send_(miss);
+            out_port_.send(miss);
+        }
+        else
+        {
+            printf("I have already finished, so no more misses\n");
         }
     }
     
@@ -106,6 +115,7 @@ namespace spike_model
         {
             while(pending_misses_.size()>0)
             {
+                printf("Handling\n");
                 std::shared_ptr<spike_model::L2Request> miss=pending_misses_.front();
                 pending_misses_.pop_front();
                 handleMiss_(miss);

@@ -48,10 +48,6 @@ namespace spike_model
                 spike=&s;
             }
 
-            void setNoC(NoC& n)
-            {
-                noc=&n;
-            }
 
             void setId(uint16_t i)
             {
@@ -74,15 +70,20 @@ namespace spike_model
             void handleMiss_(std::shared_ptr<spike_model::L2Request> miss);
             void startup_();
 
-            NoC * noc;
-            
             uint16_t id_;
 
             sparta::UniqueEvent<> simulate_inst_event_ 
                 {&unit_event_set_, "simulate_inst_", CREATE_SPARTA_HANDLER(Core, getMisses_)};
         
+            sparta::DataInPort<std::shared_ptr<L2Request>> in_port_
+                {&unit_port_set_, "in_port"};
+            
+            sparta::DataOutPort<std::shared_ptr<L2Request>> out_port_
+                {&unit_port_set_, "out_port"};
+        
             sparta::Counter count_l2_requests_=sparta::Counter(getStatisticSet(), "l2_requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_dependency_stalls_=sparta::Counter(getStatisticSet(), "dependency_stalls", "Number of stalls due to data dependencies", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_simulated_instructions_=sparta::Counter(getStatisticSet(), "simulated_instructions", "Number of simulated instructions", sparta::Counter::COUNT_NORMAL);
     };
 }
 #endif
