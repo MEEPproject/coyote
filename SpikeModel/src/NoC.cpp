@@ -16,8 +16,10 @@ namespace spike_model
         sparta::Unit(node),
         num_cores_(p->num_cores),
         num_l2_banks_(p->num_l2_banks),
-        in_ports_(num_l2_banks_),
-        out_ports_(num_l2_banks_),
+        in_ports_l2_(num_l2_banks_),
+        out_ports_l2_(num_l2_banks_),
+        in_ports_cores_(num_cores_),
+        out_ports_cores_(num_cores_),
         cores_(num_cores_)
         
     {
@@ -25,12 +27,24 @@ namespace spike_model
             {
                 std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
                 std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<L2Request>>> (&unit_port_set_, out_name);
-                out_ports_[i]=std::move(out);
+                out_ports_l2_[i]=std::move(out);
 
                 std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack"); 
                 std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<L2Request>>> (&unit_port_set_, in_name);
-                in_ports_[i]=std::move(in);
-                in_ports_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<L2Request>));
+                in_ports_l2_[i]=std::move(in);
+                in_ports_l2_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<L2Request>));
+            }
+
+            for(uint16_t i=0; i<num_cores_; i++)  
+            { 
+                std::string out_name=std::string("out_core") + sparta::utils::uint32_to_str(i);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>> out_core=std::make_unique<sparta::DataOutPort<std::shared_ptr<L2Request>>> (&unit_port_set_, out_name);
+                out_ports_cores_[i]=std::move(out_core);
+
+                std::string in_name=std::string("in_core") + sparta::utils::uint32_to_str(i); 
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>> in_core=std::make_unique<sparta::DataInPort<std::shared_ptr<L2Request>>> (&unit_port_set_, in_name);
+                in_ports_cores_[i]=std::move(in_core);
+                in_ports_cores_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, send_, std::shared_ptr<L2Request>));
             }
 
             if(p->data_mapping_policy=="set_interleaving")
@@ -50,13 +64,13 @@ namespace spike_model
     void NoC::send_(const std::shared_ptr<L2Request> & req)
     {
         uint8_t bank=getDestination(req);
-        out_ports_[bank]->send(req, 0);
+        out_ports_l2_[bank]->send(req, 1);
         //out_ports_[req->getCoreId()]->send(req, 0); 
     }
 
     void NoC::issueAck_(const std::shared_ptr<L2Request> & req)
     {
-        cores_[req->getCoreId()]->ack_(req);
+        out_ports_cores_[req->getCoreId()]->send(req);
     }
         
     uint16_t NoC::getDestination(std::shared_ptr<L2Request> req)

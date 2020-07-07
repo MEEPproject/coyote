@@ -34,6 +34,14 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.noc.ports.in_l2_bank*_ack", 
             "cpu.l2_bank*.ports.out_noc_ack"
         },
+        {
+            "cpu.noc.ports.in_core*",
+            "cpu.core*.ports.out_port"
+        },
+        {
+            "cpu.noc.ports.out_core*", 
+            "cpu.core*.ports.in_port"
+        },
     };
 
     shared_units = {

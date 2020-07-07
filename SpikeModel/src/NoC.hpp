@@ -85,9 +85,9 @@ namespace spike_model
             l2_line_size=line_size;
 
             block_offset_bits=(uint8_t)ceil(log2(l2_line_size));
-            bank_bits=(uint8_t)ceil(log2(in_ports_.size()));
+            bank_bits=(uint8_t)ceil(log2(in_ports_l2_.size()));
 
-            uint64_t total_l2_size=l2_bank_size_kbs*in_ports_.size()*1024;
+            uint64_t total_l2_size=l2_bank_size_kbs*in_ports_l2_.size()*1024;
             uint64_t num_sets=total_l2_size/(l2_assoc*l2_line_size);
             set_bits=(uint8_t)ceil(log2(num_sets));
             tag_bits=64-(set_bits+block_offset_bits);
@@ -99,8 +99,10 @@ namespace spike_model
         uint16_t num_cores_;
         uint16_t num_l2_banks_;
 
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_;
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_l2_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_l2_;
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_cores_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_cores_;
 
         std::vector<Core *> cores_;
 

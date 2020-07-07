@@ -126,14 +126,52 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
     {
         for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks)
         {
+            bool bind=false;
             out_port_name = port.output_port_name;
             in_port_name = port.input_port_name;
             replace_with = std::to_string(num_of_l2_banks);
-            replace(out_port_name, to_replace_, replace_with);
-            replace(in_port_name, to_replace_, replace_with);
-            sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
+            if (out_port_name.find("l2_bank*") != std::string::npos) 
+            {
+                replace(out_port_name, to_replace_, replace_with);
+                bind=true;
+            }
+            
+            if (in_port_name.find("l2_bank*") != std::string::npos)
+            {
+                replace(in_port_name, to_replace_, replace_with);
+                bind=true;
+            }
+            
+            if(bind) 
+            {
+                sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
                     root_node->getChildAs<sparta::Port>(in_port_name));
+            }
         }
+        
+        for(std::size_t num_of_cores = 0; num_of_cores < topology_->num_cores; ++num_of_cores)
+        {
+            bool bind=false;
+            out_port_name = port.output_port_name;
+            in_port_name = port.input_port_name;
+            replace_with = std::to_string(num_of_cores);
+            if (out_port_name.find("core*") != std::string::npos) 
+            {
+                replace(out_port_name, to_replace_, replace_with);
+                bind=true;
+            }
+            
+            if (in_port_name.find("core*") != std::string::npos)
+            {
+                replace(in_port_name, to_replace_, replace_with);
+                bind=true;
+            } 
+            if(bind)
+            {
+                sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
+                        root_node->getChildAs<sparta::Port>(in_port_name));
+            }
+        } 
     }
        
     for(std::size_t num_of_cores = 0; num_of_cores < topology_->num_cores; ++num_of_cores){
@@ -143,7 +181,6 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
             Core * orch=core_node->getResourceAs<spike_model::Core>();
 
-            orch->setNoC(*noc);
             orch->setId(num_of_cores);
             orch->setSpike(*spike);
 
