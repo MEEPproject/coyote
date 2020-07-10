@@ -16,6 +16,7 @@ x' ~/.bashrc
 
 git clone --recursive https://github.com/riscv/riscv-gnu-toolchain 
 cd riscv-gnu-toolchain
+git checkout rvv-0.8.x
 ./configure --prefix=$RISCV
 sudo make
 cd ..
