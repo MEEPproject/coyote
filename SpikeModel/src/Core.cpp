@@ -46,18 +46,7 @@ namespace spike_model
             if(new_misses.size()>0 && new_misses.front()->getType()==L2Request::AccessType::FETCH)
             {
                 handleMiss_(new_misses.front());
-                
-                //IF THERE ARE MISSES UNDER THE FETCH, SAVE THEM SO THEY ARE ISSUED ONCE THE FETCH HAS BEEN SERVICED
-                if(new_misses.size()>1)
-                {
-                    new_misses.pop_front();
-                    //Need to copy in this case, as I have passed everything by reference so far
-                    for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
-                    {
-                        pending_misses_.push_back(miss);
-                    }
-                }
-                running_=false;
+                new_misses.pop_front();
             }
 
             //IF NO RAW AND NO FETCH MISS
@@ -77,12 +66,16 @@ namespace spike_model
             {
                 count_dependency_stalls_++;
                 running_=false;
+                for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
+                {   
+                    pending_misses_.push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+                }
             }
 
         }
         else
         {
-            printf("Finished\n");
+            //printf("Finished\n");
         }
         
         if(!finished_ && running_)
@@ -103,19 +96,15 @@ namespace spike_model
             count_l2_requests_++;
             out_port_.send(miss);
         }
-        else
-        {
-            printf("I have already finished, so no more misses\n");
-        }
+
     }
     
     void Core::ack_(const std::shared_ptr<L2Request> & req)
     {
-        if(pending_misses_.size()>0) //If this was a fetch and there are data misses for the same instructions
+        if(pending_misses_.size()>0) //If this was a fetch or there was a raw and there are data misses for the instructions
         {
             while(pending_misses_.size()>0)
             {
-                printf("Handling\n");
                 std::shared_ptr<spike_model::L2Request> miss=pending_misses_.front();
                 pending_misses_.pop_front();
                 handleMiss_(miss);
@@ -134,7 +123,7 @@ namespace spike_model
         if(!running_ && can_run)
         {
             running_=true;
-            simulate_inst_event_.schedule(sparta::Clock::Cycle(1));
+            simulate_inst_event_.schedule(sparta::Clock::Cycle(2)); //We schedule in 2 cycles because the rawing instruction is not actually replayed
         }
     }
 }
