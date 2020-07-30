@@ -83,7 +83,10 @@ namespace spike_model
         
             sparta::Counter count_l2_requests_=sparta::Counter(getStatisticSet(), "l2_requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_dependency_stalls_=sparta::Counter(getStatisticSet(), "dependency_stalls", "Number of stalls due to data dependencies", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter fetch_stalls_=sparta::Counter(getStatisticSet(), "fetch_stalls", "Number of stalls due to fetch misses", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_simulated_instructions_=sparta::Counter(getStatisticSet(), "simulated_instructions", "Number of simulated instructions", sparta::Counter::COUNT_NORMAL);
+
+            long long d;
     };
 }
 #endif

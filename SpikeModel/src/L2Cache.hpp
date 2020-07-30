@@ -67,6 +67,7 @@ namespace spike_model
                           << memory_access_allocator.getNumAllocated()
                           << " MemoryAccessInfo objects allocated/created"
                           << std::endl;
+            std::cout << "Spent "<< d << " getting and issuing misses\n";
         }
 
         //! name of this resource.
@@ -301,6 +302,8 @@ namespace spike_model
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;
         uint64_t l2_line_size_;
+
+        long long d;
         
     };
 

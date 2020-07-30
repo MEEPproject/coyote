@@ -118,6 +118,7 @@ namespace spike_model
 
     void L2Cache::issueAccess_()
     {
+        auto t1 = std::chrono::high_resolution_clock::now();
         MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_requests_.front());
         pending_requests_.pop_front();
         handleCacheLookupReq_(m);
@@ -138,6 +139,9 @@ namespace spike_model
         {
             busy_=false;
         }
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        d += std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     }
 
     // Handle cache access request

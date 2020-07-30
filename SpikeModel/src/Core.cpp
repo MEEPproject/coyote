@@ -47,6 +47,7 @@ namespace spike_model
             {
                 handleMiss_(new_misses.front());
                 new_misses.pop_front();
+                running_=false;
             }
 
             //IF NO RAW AND NO FETCH MISS
@@ -64,8 +65,15 @@ namespace spike_model
             }
             else
             {
-                count_dependency_stalls_++;
-                running_=false;
+                if(running_)
+                {
+                    count_dependency_stalls_++;
+                    running_=false;
+                }
+                else
+                {
+                    fetch_stalls_++;
+                }
                 for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
                 {   
                     pending_misses_.push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
@@ -76,6 +84,7 @@ namespace spike_model
         else
         {
             //printf("Finished\n");
+            //std::cout << "Simulating in spike took " << d << "nanoseconds\n";
         }
         
         if(!finished_ && running_)
