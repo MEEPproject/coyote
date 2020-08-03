@@ -52,7 +52,7 @@ namespace spike_model
     void L2Cache::sendAck_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
         reloadCache_(mem_access_info_ptr->getRAdr());
-        if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
+        if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
         {
             bool was_stalled=in_flight_reads_.is_full();
             auto range_misses=in_flight_reads_.equal_range(mem_access_info_ptr->getReq());
@@ -93,7 +93,7 @@ namespace spike_model
         {
             for (std::list<std::shared_ptr<L2Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
             {
-                hit_on_store=((*rit)->getType()==L2Request::AccessType::STORE && (*rit)->getAddress()==req->getAddress());
+                hit_on_store=(((*rit)->getType()==L2Request::AccessType::STORE || (*rit)->getType()==L2Request::AccessType::WRITEBACK) && (*rit)->getAddress()==req->getAddress());
             }
         }
 
@@ -152,7 +152,7 @@ namespace spike_model
 
         if (CACHE_HIT) {
             // Update memory access info
-    	    if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
+    	    if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::WRITEBACK)
     	    {
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
 	        }

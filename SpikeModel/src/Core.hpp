@@ -60,6 +60,7 @@ namespace spike_model
             bool finished_;
             
             std::list<std::shared_ptr<spike_model::L2Request>> pending_misses_;
+            std::list<std::shared_ptr<spike_model::L2Request>> pending_writebacks_;
             bool running_;
 
             uint64_t latency_to_l2_;

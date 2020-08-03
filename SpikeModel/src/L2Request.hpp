@@ -12,6 +12,7 @@ namespace spike_model
                 LOAD,
                 STORE,
                 FETCH,
+                WRITEBACK,
                 FINISH 
             };
             

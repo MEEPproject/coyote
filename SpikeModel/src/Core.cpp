@@ -58,7 +58,14 @@ namespace spike_model
                 {
                     for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
                     {
-                        handleMiss_(miss);
+                        if(miss->getType()!=L2Request::AccessType::WRITEBACK)
+                        {
+                            handleMiss_(miss);
+                        }
+                        else //WRITEBACKS ARE HANDLED LAST
+                        {
+                            pending_writebacks_.push_back(miss);
+                        }
                     }
                 }
 
@@ -116,6 +123,15 @@ namespace spike_model
             {
                 std::shared_ptr<spike_model::L2Request> miss=pending_misses_.front();
                 pending_misses_.pop_front();
+                handleMiss_(miss);
+            }
+        }
+        else
+        {
+            while(pending_writebacks_.size()>0) //Writebacks are sent last
+            {
+                std::shared_ptr<spike_model::L2Request> miss=pending_writebacks_.front();
+                pending_writebacks_.pop_front();
                 handleMiss_(miss);
             }
         }
