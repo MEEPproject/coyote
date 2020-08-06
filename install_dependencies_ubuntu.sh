@@ -21,10 +21,7 @@ git checkout rvv-0.8.x
 sudo make
 cd ..
 
-ex -sc '$a
 export PATH=$PATH:/opt/riscv/bin
-.
-x' ~/.bashrc
 
 git clone https://github.com/riscv/riscv-pk.git
 cd riscv-pk
