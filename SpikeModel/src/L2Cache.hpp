@@ -26,9 +26,11 @@
 
 #include "SimpleDL1.hpp"
 
+#include "LogCapable.hpp"
+
 namespace spike_model
 {
-    class L2Cache : public sparta::Unit
+    class L2Cache : public sparta::Unit, public LogCapable
     {
     public:
         /*!
@@ -67,7 +69,6 @@ namespace spike_model
                           << memory_access_allocator.getNumAllocated()
                           << " MemoryAccessInfo objects allocated/created"
                           << std::endl;
-            std::cout << "Spent "<< d << " getting and issuing misses\n";
         }
 
         //! name of this resource.
@@ -153,8 +154,7 @@ namespace spike_model
         {
             return l2_line_size_;
         }
-
-
+            
     private:
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -304,7 +304,6 @@ namespace spike_model
         uint64_t l2_line_size_;
 
         long long d;
-        
     };
 
 

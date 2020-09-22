@@ -72,6 +72,11 @@ namespace spike_model
             }
             else
             {
+                if(trace_)
+                {
+                    logger_.logStall(getClock()->currentCycle(), id_);
+                }
+
                 if(running_)
                 {
                     count_dependency_stalls_++;
@@ -111,6 +116,17 @@ namespace spike_model
         {
             count_l2_requests_++;
             out_port_.send(miss);
+            if(trace_)
+            {
+                if(miss->getType()==L2Request::AccessType::STORE)
+                {
+                    logger_.logL2Write(getClock()->currentCycle(), id_, miss->getAddress());
+                }
+                else
+                {
+                    logger_.logL2Read(getClock()->currentCycle(), id_, miss->getAddress());
+                }
+            }
         }
 
     }
@@ -149,6 +165,11 @@ namespace spike_model
         {
             running_=true;
             simulate_inst_event_.schedule(sparta::Clock::Cycle(2)); //We schedule in 2 cycles because the rawing instruction is not actually replayed
+            if(trace_)
+            {
+                logger_.logResume(getClock()->currentCycle(), id_);
+            }
         }
     }
+
 }

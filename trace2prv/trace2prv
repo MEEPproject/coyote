@@ -1,0 +1,5 @@
+#!/bin/bash
+
+SCRIPT_PATH=$(dirname -- "$(readlink -f -- "$BASH_SOURCE")")
+$SCRIPT_PATH/m_trace.py $*
+

@@ -11,6 +11,7 @@
 #include "sparta/simulation/ResourceFactory.hpp"
 #include "sparta/simulation/RootTreeNode.hpp"
 #include "sparta/simulation/ResourceTreeNode.hpp"
+#include "Logger.hpp"
 
 namespace spike_model{
 
@@ -95,6 +96,11 @@ public:
      */
     CPUTopology() : factories{new CPUFactories()}{}
 
+    ~CPUTopology()
+    {
+        logger.close();
+    }
+
     /**
      * @brief Set the name for this topoplogy
      */
@@ -110,10 +116,17 @@ public:
     }
     
     /**
-     * @brief Set the number of cores in this processor
+     * @brief Set the number of L2 banks in this processor
      */
     auto setNumL2Banks(const uint32_t num_of_l2_banks) -> void{
         num_l2_banks = num_of_l2_banks;
+    }
+    
+    /**
+     * @brief Set whether to trace or not
+     */
+    auto setTrace(const bool t) -> void{
+        trace = t;
     }
 
     /**
@@ -124,6 +137,10 @@ public:
     //! Public members used by CPUFactory to build and bind tree
     uint32_t num_cores;
     uint32_t num_l2_banks;
+    bool trace;
+
+    spike_model::Logger logger;
+
     std::unique_ptr<CPUFactories> factories;
 
     std::string topology_name;

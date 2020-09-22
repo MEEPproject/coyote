@@ -149,6 +149,7 @@ add_executable(spike_model
   src/Core.cpp
   src/L2Cache.cpp
   src/NoC.cpp
+  src/Logger.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc
   )
 

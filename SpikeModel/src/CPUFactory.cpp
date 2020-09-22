@@ -21,12 +21,14 @@ spike_model::CPUFactory::~CPUFactory() = default;
  */
 auto spike_model::CPUFactory::setTopology(const std::string& topology,
                                            const uint32_t num_cores,
-                                            const uint32_t num_l2_banks) -> void{
+                                            const uint32_t num_l2_banks,
+                                             const bool trace) -> void{
     sparta_assert(!topology_);
     topology_.reset(spike_model::CPUTopology::allocateTopology(topology));
     topology_->setName(topology);
     topology_->setNumCores(num_cores);
     topology_->setNumL2Banks(num_l2_banks);
+    topology_->setTrace(trace);
 }
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {
@@ -122,6 +124,11 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
     noc->setL2BankInfo(bank->getSize(), bank->getAssoc(), bank->getLineSize());
 
+    if(topology_->trace)
+    {
+        noc->setLogger(topology_->logger);
+    }
+
     for(const auto& port : ports)
     {
         for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks)
@@ -145,7 +152,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             if(bind) 
             {
                 sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
-                    root_node->getChildAs<sparta::Port>(in_port_name));
+                root_node->getChildAs<sparta::Port>(in_port_name));
             }
         }
         
@@ -179,12 +186,30 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                 sparta::utils::uint32_to_str(num_of_cores));
             sparta_assert(core_node != nullptr);
 
-            Core * orch=core_node->getResourceAs<spike_model::Core>();
+            Core * core=core_node->getResourceAs<spike_model::Core>();
 
-            orch->setId(num_of_cores);
-            orch->setSpike(*spike);
+            core->setId(num_of_cores);
+            core->setSpike(*spike);
+            
+            if(topology_->trace)
+            {
+                core->setLogger(topology_->logger);
+            }
 
-            noc->setOrchestrator(num_of_cores, *orch);
+            noc->setOrchestrator(num_of_cores, *core);
+    }
+    
+    if(topology_->trace)
+    {
+        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks){
+            auto bank_node = root_node->getChild(std::string("cpu.l2_bank") +
+                    sparta::utils::uint32_to_str(num_of_l2_banks));
+            sparta_assert(bank_node != nullptr);
+
+            L2Cache * bank=bank_node->getResourceAs<spike_model::L2Cache>();
+
+            bank->setLogger(topology_->logger);
+        }
     }
 }
 

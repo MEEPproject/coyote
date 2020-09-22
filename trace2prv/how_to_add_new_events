@@ -1,0 +1,3 @@
+
+- Add them to lib/events.json
+- Add them to derived_event_dict in m_trace.py

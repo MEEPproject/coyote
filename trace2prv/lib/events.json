@@ -1,0 +1,21 @@
+{
+  "spike_sparta": {
+    "machineId": "0",
+    "functionFile": "./parser_spike_sparta" ,
+    "events": [
+      { "eventName": "timestamp",                       "eventID": "0"},
+      { "eventName": "core-id",          "eventID": "1"},
+      { "eventName": "event-type"    ,               "eventID": "2" ,
+        "derivedEvents": [
+          {"eventName": "Resume",               "eventID": "4"  },
+          {"eventName": "Stall",               "eventID": "5"  },
+          {"eventName": "L2Read",               "eventID": "6"  },
+          {"eventName": "L2Write",               "eventID": "7"  },
+          {"eventName": "L2Miss",               "eventID": "8"  },
+          {"eventName": "RequestToBank",               "eventID": "9"  }
+        ]
+      },
+      { "eventName": "value",  "eventID": "3" }
+    ]
+  }
+}

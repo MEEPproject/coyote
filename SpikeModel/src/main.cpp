@@ -32,6 +32,7 @@ int main(int argc, char **argv)
     uint32_t num_cores = 1;
     std::string application="";
     std::string isa="RV64";
+    bool trace=false;
 
     sparta::app::DefaultValues DEFAULTS;
     DEFAULTS.auto_summary_default = "on";
@@ -56,6 +57,9 @@ int main(int argc, char **argv)
             ("application",
              sparta::app::named_value<std::string>("application", &application)->default_value(""),
              "The application to simulate (including its args)", "The application to simulate (including its args)")
+            ("trace",
+             sparta::app::named_value<bool>("trace", &trace)->default_value(false),
+             "Whether tracing is enabled or not", "Whether tracing is enabled or not")
             ("isa",
              sparta::app::named_value<std::string>("isa", &isa)->default_value("RV64"),
              "The RISC-V isa version to use", "The RISC-V isa version to use");
@@ -96,7 +100,8 @@ int main(int argc, char **argv)
                              num_l2_banks,
                              application, //application to simulate
                              isa,
-                             show_factories); // run for ilimit instructions
+                             show_factories,
+                             trace); // run for ilimit instructions
 
         std::cout << "Simulating: " << application;
 

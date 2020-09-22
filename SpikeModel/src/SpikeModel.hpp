@@ -31,7 +31,7 @@ public:
      * \brief Construct SpikeModel
      * \param be_noisy Be verbose -- not necessary, just an skeleton
      */
-    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores, uint32_t num_l2_banks, std::string cmd, std::string isa, bool show_factories);
+    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores, uint32_t num_l2_banks, std::string cmd, std::string isa, bool show_factories, bool trace);
 
     // Tear it down
     virtual ~SpikeModel();
@@ -70,6 +70,7 @@ private:
     auto getCPUFactory_() -> spike_model::CPUFactory*; 
 
     bool show_factories_;
+    bool trace_;
 
     /*!
      * \brief Notification source and dedicated warmup listeners used to mimic

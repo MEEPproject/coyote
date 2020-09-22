@@ -64,6 +64,10 @@ namespace spike_model
     void NoC::send_(const std::shared_ptr<L2Request> & req)
     {
         uint8_t bank=getDestination(req);
+        if(trace_)
+        {
+            logger_.logRequestToBank(getClock()->currentCycle(), req->getCoreId(), bank);
+        }
         out_ports_l2_[bank]->send(req, 1);
         //out_ports_[req->getCoreId()]->send(req, 0); 
     }

@@ -19,11 +19,13 @@
 
 #include "spike_wrapper.h"
 
+#include "LogCapable.hpp"
+
 namespace spike_model
 {
     class NoC; //Forward declaration
 
-    class Core : public sparta::Unit
+    class Core : public sparta::Unit, public LogCapable
     {
         public:
             //! \brief Parameters for Execute model
@@ -55,7 +57,7 @@ namespace spike_model
             }    
 
             void ack_(const std::shared_ptr<L2Request> & access);
-
+        
         private:
             bool finished_;
             
@@ -70,6 +72,12 @@ namespace spike_model
             void getMisses_();
             void handleMiss_(std::shared_ptr<spike_model::L2Request> miss);
             void startup_();
+
+            void log(std::string);
+            void logL2Read(uint64_t address);
+            void logL2Write(uint64_t address);
+            void logStall();
+            void logResume();
 
             uint16_t id_;
 

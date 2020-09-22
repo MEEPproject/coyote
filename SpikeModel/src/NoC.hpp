@@ -22,13 +22,14 @@
 
 #include "L2Request.hpp"
 #include "Core.hpp"
+#include "LogCapable.hpp"
 
 
 namespace spike_model
 {
     class Core; //Forward declaration    
 
-    class NoC : public sparta::Unit
+    class NoC : public sparta::Unit, public LogCapable
     {
     public:
         /*!

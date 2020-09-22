@@ -4,7 +4,7 @@ if [ -z "$1" ]; then
 	threads="1"
 fi
 
-git clone https://github.com/sparcians/map.git
+git clone https://github.com/sparcians/map.git || cd map;git pull;cd .. 
 
 cd map/sparta
 git pull
