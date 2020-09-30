@@ -45,11 +45,6 @@ namespace spike_model
             //! \brief Name of this resource. Required by sparta::UnitFactory
             static const char name[];
 
-            void setSpike(SpikeWrapper& s)
-            {
-                spike=&s;
-            }
-
 
             void setId(uint16_t i)
             {
@@ -67,8 +62,6 @@ namespace spike_model
 
             uint64_t latency_to_l2_;
  
-            SpikeWrapper * spike;
-
             void getMisses_();
             void handleMiss_(std::shared_ptr<spike_model::L2Request> miss);
             void startup_();

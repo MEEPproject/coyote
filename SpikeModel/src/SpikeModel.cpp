@@ -196,8 +196,19 @@ void SpikeModel::bindTree_()
     auto cpu_factory = getCPUFactory_();
     cpu_factory->bindTree(getRoot());
 
+    noc=getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();
+
+}
+
+void SpikeModel::setServicedRequestsStorage(spike_model::ServicedRequests & s)
+{
+    noc->setServicedRequestsStorage(s);
 }
     
+void SpikeModel::sendL2Request(std::shared_ptr<spike_model::L2Request> &req, uint64_t lapse)
+{
+    noc->send_(req, lapse);
+}
 
 void SpikeModel::validateTreeNodeExtensions_()
 {

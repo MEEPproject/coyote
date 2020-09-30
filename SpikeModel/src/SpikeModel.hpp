@@ -8,7 +8,9 @@
 #include "sparta/app/Simulation.hpp"
 #include "sparta/trigger/ExpiringExpressionTrigger.hpp"
 #include <cinttypes>
-
+#include "NoC.hpp"
+#include "L2Request.hpp"
+#include "ServicedRequests.hpp"
 
 namespace sparta {
     class Baz;
@@ -18,8 +20,8 @@ namespace sparta_simdb {
     class DatabaseTester;
 }
 
-namespace spike_model{ class CPUFactory; } 
-    
+namespace spike_model{ class CPUFactory;} 
+
 /*!
  * \brief SpikeModel which builds the model and configures it
  */
@@ -35,6 +37,10 @@ public:
 
     // Tear it down
     virtual ~SpikeModel();
+
+    void sendL2Request(std::shared_ptr<spike_model::L2Request> &req, uint64_t lapse);
+
+    void setServicedRequestsStorage(spike_model::ServicedRequests& s);
 
     //virtual void run(uint64_t run_time) override;
 
@@ -91,7 +97,9 @@ private:
      * \brief If present, test tree node extensions
      */
     void validateTreeNodeExtensions_();
-    
+   
+    spike_model::NoC * noc;
+ 
 };
 
 // __SPIKE_MODEL_H__

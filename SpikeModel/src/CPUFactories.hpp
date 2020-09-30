@@ -25,17 +25,14 @@ struct CPUFactories{
 
     //! \brief Resouce Factory to build a Core Unit
 
-    sparta::ResourceFactory<spike_model::Core,
-                          spike_model::Core::CoreParameterSet> core_rf;
+//    sparta::ResourceFactory<spike_model::Core,
+//                          spike_model::Core::CoreParameterSet> core_rf;
     
     sparta::ResourceFactory<spike_model::L2Cache,
                           spike_model::L2Cache::L2CacheParameterSet> l2_rf;
     
     sparta::ResourceFactory<spike_model::NoC,
                           spike_model::NoC::NoCParameterSet> noc_rf;
-
-    sparta::ResourceFactory<spike_model::SpikeWrapper,
-                          spike_model::SpikeWrapper::SpikeWrapperParameterSet> spike_rf;
 
 }; // struct CPUFactories
 }  // namespace spike_model

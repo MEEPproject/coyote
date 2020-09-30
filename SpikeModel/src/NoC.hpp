@@ -23,7 +23,7 @@
 #include "L2Request.hpp"
 #include "Core.hpp"
 #include "LogCapable.hpp"
-
+#include "ServicedRequests.hpp"
 
 namespace spike_model
 {
@@ -70,13 +70,13 @@ namespace spike_model
         // Type Name/Alias Declaration
         ////////////////////////////////////////////////////////////////////////////////
 
-        void send_(const std::shared_ptr<L2Request> & req);
+        void send_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
         void issueAck_(const std::shared_ptr<L2Request> & req);
 
-        void setOrchestrator(unsigned i, Core& o)
+        void setServicedRequestsStorage(ServicedRequests& s)
         {
-            sparta_assert(i < num_cores_);
-            cores_[i]=&o;
+            serviced_requests=s;
+            std::cout << s.hasRequest();
         }
 
         void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
@@ -102,11 +102,9 @@ namespace spike_model
 
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_l2_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_l2_;
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_cores_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_cores_;
 
-        std::vector<Core *> cores_;
-
+        ServicedRequests serviced_requests;
+    
         uint64_t l2_bank_size_kbs;
         uint64_t l2_assoc;
         uint64_t l2_line_size;
@@ -126,6 +124,8 @@ namespace spike_model
         MappingPolicy data_mapping_policy_;
 
         uint16_t getDestination(std::shared_ptr<L2Request> req);
+
+        uint64_t latency=1;
     };
 }
 #endif

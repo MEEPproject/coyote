@@ -11,14 +11,6 @@ spike_model::CoreTopology_4::CoreTopology_4(){
 
 //! Instantiating units of this topology
     units = {
-        {
-            "core*",
-            "cpu",
-            "Core *",
-            sparta::TreeNode::GROUP_NAME_NONE,
-            sparta::TreeNode::GROUP_IDX_NONE,
-            &factories->core_rf
-        },
     };
     //! Instantiating ports of this topology
     port_connections = {
@@ -33,14 +25,6 @@ spike_model::CoreTopology_4::CoreTopology_4(){
         {
             "cpu.noc.ports.in_l2_bank*_ack", 
             "cpu.l2_bank*.ports.out_noc_ack"
-        },
-        {
-            "cpu.noc.ports.in_core*",
-            "cpu.core*.ports.out_port"
-        },
-        {
-            "cpu.noc.ports.out_core*", 
-            "cpu.core*.ports.in_port"
         },
     };
 
@@ -61,14 +45,6 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 sparta::TreeNode::GROUP_IDX_NONE,
                 &factories->noc_rf
             },
-            {
-                "spike",
-                "cpu",
-                "Spike",
-                sparta::TreeNode::GROUP_NAME_NONE,
-                sparta::TreeNode::GROUP_IDX_NONE,
-                &factories->spike_rf
-            }
     };
 }
 /*
