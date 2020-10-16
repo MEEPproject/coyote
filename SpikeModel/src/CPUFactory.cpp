@@ -20,14 +20,16 @@ spike_model::CPUFactory::~CPUFactory() = default;
  * @brief Set the user-defined topology for this microarchitecture
  */
 auto spike_model::CPUFactory::setTopology(const std::string& topology,
-                                           const uint32_t num_cores,
-                                            const uint32_t num_l2_banks,
+                                           const uint32_t num_tiles,
+                                            const uint32_t num_banks_per_tile,
+                                             const uint32_t num_memory_controllers,
                                              const bool trace) -> void{
     sparta_assert(!topology_);
     topology_.reset(spike_model::CPUTopology::allocateTopology(topology));
     topology_->setName(topology);
-    topology_->setNumCores(num_cores);
-    topology_->setNumL2Banks(num_l2_banks);
+    topology_->setNumTiles(num_tiles);
+    topology_->setNumL2BanksPerTile(num_banks_per_tile);
+    topology_->setNumMemoryControllers(num_memory_controllers);
     topology_->setTrace(trace);
 }
 
@@ -47,28 +49,86 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                                           const std::vector<spike_model::CPUTopology::UnitInfo>& units) -> void{
     std::string parent_name, human_name, node_name, replace_with;
-    for(std::size_t num_of_cores = 0; num_of_cores < topology_->num_cores; ++num_of_cores){
-        for(const auto& unit : units){
-            parent_name = unit.parent_name;
-            node_name = unit.name;
-            human_name = unit.human_name;
-            replace_with = std::to_string(num_of_cores);
-            replace(parent_name, to_replace_, replace_with);
-            replace(node_name, to_replace_, replace_with);
-            replace(human_name, to_replace_, replace_with);
-            auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
-            auto rtn = new sparta::ResourceTreeNode(parent_node,
-                                                  node_name,
-                                                  unit.group_name,
-                                                  unit.group_id,
-                                                  human_name,
-                                                  unit.factory);
-            if(unit.is_private_subtree){
-                rtn->makeSubtreePrivate();
-                private_nodes_.emplace_back(rtn);
+    for(const auto& unit : units){
+        parent_name = unit.parent_name;
+        node_name = unit.name;
+        human_name = unit.human_name;
+        std::cout << "Handling " << node_name << "\n";
+        if(node_name.find(to_replace_tiles_)!=std::string::npos)
+        {
+            for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){    
+                parent_name = unit.parent_name;
+                node_name = unit.name;
+                human_name = unit.human_name;
+                replace_with = std::to_string(num_of_tiles);
+                replace(parent_name, to_replace_tiles_, replace_with);
+                replace(node_name, to_replace_tiles_, replace_with);
+                replace(human_name, to_replace_tiles_, replace_with);
+                auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                      node_name,
+                                                      unit.group_name,
+                                                      unit.group_id,
+                                                      human_name,
+                                                      unit.factory);
+                if(unit.is_private_subtree){
+                    rtn->makeSubtreePrivate();
+                    private_nodes_.emplace_back(rtn);
+                }
+                to_delete_.emplace_back(rtn);
+                resource_names_.emplace_back(node_name);
             }
-            to_delete_.emplace_back(rtn);
-            resource_names_.emplace_back(node_name);
+        }
+        else if(node_name.find(to_replace_banks_)!=std::string::npos)
+        {
+            for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
+                for(std::size_t num_of_banks = 0; num_of_banks < topology_->num_banks_per_tile; ++num_of_banks){    
+                    parent_name = unit.parent_name;
+                    node_name = unit.name;
+                    human_name = unit.human_name;
+                    replace(parent_name, to_replace_tiles_, std::to_string(num_of_tiles));
+                    replace(node_name, to_replace_banks_, std::to_string(num_of_banks));
+                    replace(human_name, to_replace_banks_, std::to_string(num_of_banks));
+                    auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                    auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                          node_name,
+                                                          unit.group_name,
+                                                          unit.group_id,
+                                                          human_name,
+                                                          unit.factory);
+                    if(unit.is_private_subtree){
+                        rtn->makeSubtreePrivate();
+                        private_nodes_.emplace_back(rtn);
+                    }
+                    to_delete_.emplace_back(rtn);
+                    resource_names_.emplace_back(node_name);
+                }
+            }
+        }
+        else if(node_name.find(to_replace_memory_controllers_)!=std::string::npos)
+        {
+            for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers){ 
+                parent_name = unit.parent_name;
+                node_name = unit.name;
+                human_name = unit.human_name;
+                replace_with = std::to_string(num_of_memory_controllers);
+                replace(parent_name, to_replace_memory_controllers_, replace_with);
+                replace(node_name, to_replace_memory_controllers_, replace_with);
+                replace(human_name, to_replace_memory_controllers_, replace_with);
+                auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                      node_name,
+                                                      unit.group_name,
+                                                      unit.group_id,
+                                                      human_name,
+                                                      unit.factory);
+                if(unit.is_private_subtree){
+                    rtn->makeSubtreePrivate();
+                    private_nodes_.emplace_back(rtn);
+                }
+                to_delete_.emplace_back(rtn);
+                resource_names_.emplace_back(node_name);
+            }
         }
     }
 }
@@ -78,16 +138,16 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
     std::string parent_name, human_name, node_name, replace_with, og_name;
     for(const auto& unit : units)
     {
-        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks)
+        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks)
         {
             og_name=unit.name;
             parent_name = unit.parent_name;
             node_name = unit.name;
             human_name = unit.human_name;
             replace_with = std::to_string(num_of_l2_banks);
-            replace(parent_name, to_replace_, replace_with);
-            replace(node_name, to_replace_, replace_with);
-            replace(human_name, to_replace_, replace_with);
+            replace(parent_name, to_replace_tiles_, replace_with);
+            replace(node_name, to_replace_tiles_, replace_with);
+            replace(human_name, to_replace_tiles_, replace_with);
             auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
             auto rtn = new sparta::ResourceTreeNode(parent_node,
                     node_name,
@@ -119,96 +179,122 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
     std::string out_port_name, in_port_name,replace_with;
     NoC * noc=root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();
 
-    L2Cache * bank=root_node->getChild(std::string("cpu.l2_bank0"))->getResourceAs<spike_model::L2Cache>();
-
-    noc->setL2BankInfo(bank->getSize(), bank->getAssoc(), bank->getLineSize());
+    //CacheBank * bank=root_node->getChild(std::string("cpu.tile0.l2_bank0"))->getResourceAs<spike_model::CacheBank>();
+    
 
     if(topology_->trace)
     {
         noc->setLogger(topology_->logger);
     }
 
-    for(const auto& port : ports)
+    for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
     {
-        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks)
+        for(std::size_t num_of_banks = 0; num_of_banks < topology_->num_banks_per_tile; ++num_of_banks)
         {
-            bool bind=false;
-            out_port_name = port.output_port_name;
-            in_port_name = port.input_port_name;
-            replace_with = std::to_string(num_of_l2_banks);
-            if (out_port_name.find("l2_bank*") != std::string::npos) 
+            for(const auto& port : ports)
             {
-                replace(out_port_name, to_replace_, replace_with);
-                bind=true;
-            }
-            
-            if (in_port_name.find("l2_bank*") != std::string::npos)
-            {
-                replace(in_port_name, to_replace_, replace_with);
-                bind=true;
-            }
-            
-            if(bind) 
-            {
-                sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
-                root_node->getChildAs<sparta::Port>(in_port_name));
-            }
-        }
-        
-        for(std::size_t num_of_cores = 0; num_of_cores < topology_->num_cores; ++num_of_cores)
-        {
-            bool bind=false;
-            out_port_name = port.output_port_name;
-            in_port_name = port.input_port_name;
-            replace_with = std::to_string(num_of_cores);
-            if (out_port_name.find("core*") != std::string::npos) 
-            {
-                replace(out_port_name, to_replace_, replace_with);
-                bind=true;
-            }
-            
-            if (in_port_name.find("core*") != std::string::npos)
-            {
-                replace(in_port_name, to_replace_, replace_with);
-                bind=true;
-            } 
-            if(bind)
-            {
-                sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
-                        root_node->getChildAs<sparta::Port>(in_port_name));
+                bool bind=false;
+                out_port_name = port.output_port_name;
+                in_port_name = port.input_port_name;
+                replace_with = std::to_string(num_of_banks);
+
+                if (out_port_name.find("l2_bank$") != std::string::npos) 
+                {
+                    replace(out_port_name, to_replace_banks_, replace_with);
+                    bind=true;
+                }
+                
+                if (in_port_name.find("l2_bank$") != std::string::npos)
+                {
+                    replace(in_port_name, to_replace_banks_, replace_with);
+                    bind=true;
+                }
+                
+                replace_with = std::to_string(num_of_tiles);
+                if (out_port_name.find("tile*") != std::string::npos) 
+                {
+                    replace(out_port_name, to_replace_tiles_, replace_with);
+                    bind=true;
+                }
+                
+                if (in_port_name.find("tile*") != std::string::npos)
+                {
+                    replace(in_port_name, to_replace_tiles_, replace_with);
+                    bind=true;
+                } 
+                    
+                if(bind)
+                {
+                    if(!root_node->getChildAs<sparta::Port>(out_port_name)->isBound())
+                    {
+                        std::cout << "Binding " << out_port_name << " and " << in_port_name << "\n";
+                        sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
+                            root_node->getChildAs<sparta::Port>(in_port_name));
+                    }
+                }
             }
         } 
     }
        
-    /*for(std::size_t num_of_cores = 0; num_of_cores < topology_->num_cores; ++num_of_cores){
-            auto core_node = root_node->getChild(std::string("cpu.core") +
-                sparta::utils::uint32_to_str(num_of_cores));
+    for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
+    {
+            for(const auto& port : ports)
+            {
+                bool bind=false;
+                out_port_name = port.output_port_name;
+                in_port_name = port.input_port_name;
+                replace_with = std::to_string(num_of_memory_controllers);
+                if (out_port_name.find("memory_controller&") != std::string::npos) 
+                {
+                    replace(out_port_name, to_replace_memory_controllers_, replace_with);
+                    bind=true;
+                }
+                
+                if (in_port_name.find("memory_controller&") != std::string::npos)
+                {
+                    replace(in_port_name, to_replace_memory_controllers_, replace_with);
+                    bind=true;
+                } 
+                    
+                if(bind)
+                {
+                    std::cout << "Binding " << out_port_name << " and " << in_port_name << "\n";
+                    sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name),
+                            root_node->getChildAs<sparta::Port>(in_port_name));
+                }
+            }
+    }
+
+    
+    for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
+            auto core_node = root_node->getChild(std::string("cpu.tile") +
+                sparta::utils::uint32_to_str(num_of_tiles));
             sparta_assert(core_node != nullptr);
 
-            Core * core=core_node->getResourceAs<spike_model::Core>();
+            Tile * tile=core_node->getResourceAs<spike_model::Tile>();
 
-            core->setId(num_of_cores);
+            tile->setId(num_of_tiles);
             
-            if(topology_->trace)
+            /*if(topology_->trace)
             {
                 core->setLogger(topology_->logger);
-            }
-
-            //noc->setOrchestrator(num_of_cores, *core);
-    }*/
+            }*/
+    }
     
     if(topology_->trace)
     {
-        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_l2_banks; ++num_of_l2_banks){
+        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks){
             auto bank_node = root_node->getChild(std::string("cpu.l2_bank") +
                     sparta::utils::uint32_to_str(num_of_l2_banks));
             sparta_assert(bank_node != nullptr);
 
-            L2Cache * bank=bank_node->getResourceAs<spike_model::L2Cache>();
+            CacheBank * bank=bank_node->getResourceAs<spike_model::CacheBank>();
 
             bank->setLogger(topology_->logger);
         }
     }
+
+    printf("HOLA\n");
 }
 
 /**

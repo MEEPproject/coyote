@@ -1,6 +1,8 @@
-#ifndef __MEMORY_ACCESS_HH__
-#define __MEMORY_ACCESS_HH__
+#ifndef __L2_REQUEST_HH__
+#define __L2_REQUEST_HH__
 
+#include "DataMappingPolicy.hpp"
+#include <iostream>
 
 namespace spike_model
 {
@@ -23,7 +25,11 @@ namespace spike_model
                 VECTOR,
             };
 
-            L2Request(){}
+            //L2Request(){}
+            L2Request() = delete;
+            L2Request(L2Request const&) = delete;
+            L2Request& operator=(L2Request const&) = delete;
+
             L2Request(uint64_t a, size_t s, AccessType t): address(a), size(s), type(t){}
             L2Request(uint64_t a, size_t s, AccessType t, uint64_t time, uint16_t c): address(a), size(s), type(t), timestamp(time), coreId(c){}
 
@@ -38,10 +44,31 @@ namespace spike_model
             void setRegId(uint8_t r, RegType t) {regId=r; regType=t;}
             RegType getRegType() const {return regType;}            
 
+            void setSourceTile(uint16_t source)
+            {
+                source_tile=source;
+            }
+
+            void setHomeTile(uint16_t home)
+            {
+                home_tile=home;
+            }
+
+            void setBank(uint16_t b)
+            {
+                bank=b;
+            }
+
             bool operator ==(const L2Request & m) const
             {
                 return m.getAddress()==getAddress();
             }
+    
+            uint16_t calculateHome(DataMappingPolicy d, uint8_t tag_bits, uint8_t block_offset_bits, uint8_t set_bits, uint8_t bank_bits);
+
+            uint16_t getHomeTile(){return home_tile;}
+            uint16_t getSourceTile(){return source_tile;}
+            uint16_t getBank(){return bank;}
 
         private:
             uint64_t address;
@@ -51,6 +78,10 @@ namespace spike_model
             uint16_t coreId;
             uint8_t regId;
             RegType regType;
+
+            uint16_t home_tile;
+            uint16_t source_tile;
+            uint16_t bank;
     };
     
     inline std::ostream & operator<<(std::ostream & Str, L2Request const & req)

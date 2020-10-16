@@ -143,13 +143,21 @@ message("The sparta lib is "${SPARTA_LIB})
 add_executable(spike_model
   src/main.cpp
   src/SpikeModel.cpp
+  src/SimulationOrchestrator.cpp
   src/CPUFactory.cpp
   src/CPUTopology.cpp
   src/CPU.cpp
   #src/Core.cpp
-  src/L2Cache.cpp
+  src/CacheBank.cpp
   src/NoC.cpp
+  src/NoCMessage.cpp
   src/Logger.cpp
+  src/Tile.cpp
+  src/L2Request.cpp
+  src/RequestManager.cpp
+  src/PrivateL2Manager.cpp
+  src/SharedL2Manager.cpp
+  src/MemoryController.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc
   )
 

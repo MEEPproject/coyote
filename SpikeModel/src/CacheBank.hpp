@@ -1,6 +1,6 @@
 
-#ifndef __L2Cache_H__
-#define __L2Cache_H__
+#ifndef __CacheBank_H__
+#define __CacheBank_H__
 
 #include "sparta/ports/PortSet.hpp"
 #include "sparta/ports/SignalPort.hpp"
@@ -30,18 +30,18 @@
 
 namespace spike_model
 {
-    class L2Cache : public sparta::Unit, public LogCapable
+    class CacheBank : public sparta::Unit, public LogCapable
     {
     public:
         /*!
-         * \class L2CacheParameterSet
-         * \brief Parameters for L2Cache model
+         * \class CacheBankParameterSet
+         * \brief Parameters for CacheBank model
          */
-        class L2CacheParameterSet : public sparta::ParameterSet
+        class CacheBankParameterSet : public sparta::ParameterSet
         {
         public:
-            //! Constructor for L2CacheParameterSet
-            L2CacheParameterSet(sparta::TreeNode* n):
+            //! Constructor for CacheBankParameterSet
+            CacheBankParameterSet(sparta::TreeNode* n):
                 sparta::ParameterSet(n)
             {
             }
@@ -57,13 +57,13 @@ namespace spike_model
         };
 
         /*!
-         * \brief Constructor for L2Cache
-         * \note  node parameter is the node that represent the L2Cache and
-         *        p is the L2Cache parameter set
+         * \brief Constructor for CacheBank
+         * \note  node parameter is the node that represent the CacheBank and
+         *        p is the CacheBank parameter set
          */
-        L2Cache(sparta::TreeNode* node, const L2CacheParameterSet* p);
+        CacheBank(sparta::TreeNode* node, const CacheBankParameterSet* p);
 
-        ~L2Cache() {
+        ~CacheBank() {
             debug_logger_ << getContainer()->getLocation()
                           << ": "
                           << memory_access_allocator.getNumAllocated()
@@ -85,7 +85,7 @@ namespace spike_model
         using MemoryAccessInfoPtr = sparta::SpartaSharedPointer<MemoryAccessInfo>;
 
         // Forward declaration of the Pair Definition class is must as we are friending it.
-        // Keep record of memory access information in L2Cache
+        // Keep record of memory access information in CacheBank
         class MemoryAccessInfo {
         public:
 
@@ -162,10 +162,10 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
 
         sparta::DataInPort<std::shared_ptr<L2Request>> in_core_req_
-            {&unit_port_set_, "in_noc_req"};
+            {&unit_port_set_, "in_tile_req"};
 
-        sparta::DataInPort<MemoryAccessInfoPtr> in_biu_ack_
-            {&unit_port_set_, "in_biu_ack"};
+        sparta::DataInPort<std::shared_ptr<L2Request>> in_biu_ack_
+            {&unit_port_set_, "in_tile_ack"};
 
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -173,14 +173,14 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
         
         sparta::DataOutPort<std::shared_ptr<L2Request>> out_core_ack_
-            {&unit_port_set_, "out_noc_ack"};
+            {&unit_port_set_, "out_tile_ack"};
 
-        sparta::DataOutPort<MemoryAccessInfoPtr> out_biu_req_
-            {&unit_port_set_, "out_biu_req", false};
+        sparta::DataOutPort<std::shared_ptr<L2Request>> out_biu_req_
+            {&unit_port_set_, "out_tile_req", false};
 
 
         sparta::UniqueEvent<> issue_access_event_ 
-            {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(L2Cache, issueAccess_)};
+            {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(CacheBank, issueAccess_)};
 
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
@@ -210,7 +210,7 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
 
         // Receive MSS access acknowledge from Bus Interface Unit
-        void sendAck_(const MemoryAccessInfoPtr & mem_access_info_ptr);
+        void sendAck_(const std::shared_ptr<L2Request> & req);
 
 
 

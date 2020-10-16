@@ -5,10 +5,10 @@
 #define __CPU_FACTORIES_H__
 
 #include "sparta/simulation/ResourceFactory.hpp"
-#include "Core.hpp"
-#include "L2Cache.hpp"
+#include "Tile.hpp"
+#include "MemoryController.hpp"
+#include "CacheBank.hpp"
 #include "NoC.hpp"
-#include "spike_wrapper.h"
 
 namespace spike_model{
 
@@ -28,12 +28,17 @@ struct CPUFactories{
 //    sparta::ResourceFactory<spike_model::Core,
 //                          spike_model::Core::CoreParameterSet> core_rf;
     
-    sparta::ResourceFactory<spike_model::L2Cache,
-                          spike_model::L2Cache::L2CacheParameterSet> l2_rf;
+    sparta::ResourceFactory<spike_model::CacheBank,
+                          spike_model::CacheBank::CacheBankParameterSet> cache_bank_rf;
     
     sparta::ResourceFactory<spike_model::NoC,
                           spike_model::NoC::NoCParameterSet> noc_rf;
+    
+    sparta::ResourceFactory<spike_model::Tile,
+                          spike_model::Tile::TileParameterSet> tile_rf;
 
+    sparta::ResourceFactory<spike_model::MemoryController,
+                          spike_model::MemoryController::MemoryControllerParameterSet> memory_controller_rf;
 }; // struct CPUFactories
 }  // namespace spike_model
 #endif

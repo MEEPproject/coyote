@@ -11,6 +11,8 @@
 #include "NoC.hpp"
 #include "L2Request.hpp"
 #include "ServicedRequests.hpp"
+#include "RequestManager.hpp"
+#include "L2SharingPolicy.hpp"
 
 namespace sparta {
     class Baz;
@@ -33,14 +35,12 @@ public:
      * \brief Construct SpikeModel
      * \param be_noisy Be verbose -- not necessary, just an skeleton
      */
-    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores, uint32_t num_l2_banks, std::string cmd, std::string isa, bool show_factories, bool trace);
+    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores_per_tile, uint32_t num_tiles, uint32_t num_l2_banks, uint32_t num_memory_controllers, spike_model::L2SharingPolicy l2_sharing_policy, spike_model::DataMappingPolicy bank_policy, spike_model::DataMappingPolicy tile_policy, std::string cmd, std::string isa, bool show_factories, bool trace);
 
     // Tear it down
     virtual ~SpikeModel();
 
-    void sendL2Request(std::shared_ptr<spike_model::L2Request> &req, uint64_t lapse);
-
-    void setServicedRequestsStorage(spike_model::ServicedRequests& s);
+    std::shared_ptr<spike_model::RequestManager> createRequestManager();
 
     //virtual void run(uint64_t run_time) override;
 
@@ -64,8 +64,15 @@ private:
     std::string cpu_topology_;
 
     //! Number of cores in this simulator. Temporary startup option
-    const uint32_t num_cores_;
+    const uint32_t num_cores_per_tile_;
+    const uint32_t num_tiles_;
     const uint32_t num_l2_banks_;
+    const uint32_t num_memory_controllers_;
+    spike_model::L2SharingPolicy l2_sharing_policy_;
+    spike_model::DataMappingPolicy bank_policy_;
+    spike_model::DataMappingPolicy tile_policy_;
+
+
     std::string cmd_;
     std::string isa_;
     
@@ -98,8 +105,6 @@ private:
      */
     void validateTreeNodeExtensions_();
    
-    spike_model::NoC * noc;
- 
 };
 
 // __SPIKE_MODEL_H__

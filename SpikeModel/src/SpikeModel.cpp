@@ -24,11 +24,9 @@
 #include "simdb/utils/uuids.hpp"
 
 #include "Core.hpp"
-
+#include "PrivateL2Manager.hpp"
+#include "SharedL2Manager.hpp"
 #include <thread>
-
-
-
 
 double calculateAverageOfInternalCounters(
     const std::vector<const sparta::CounterBase*> & counters)
@@ -42,16 +40,26 @@ double calculateAverageOfInternalCounters(
 
 SpikeModel::SpikeModel(const std::string& topology,
                                    sparta::Scheduler & scheduler,
-                                   uint32_t num_cores,
+                                   uint32_t num_cores_per_tile,
+                                   uint32_t num_tiles,
                                    uint32_t num_l2_banks,
+                                   uint32_t num_memory_controllers,
+                                   spike_model::L2SharingPolicy l2_sharing_policy,
+                                   spike_model::DataMappingPolicy bank_policy,
+                                   spike_model::DataMappingPolicy tile_policy,
                                    std::string cmd,
                                    std::string isa,
                                    bool show_factories,
                                    bool trace) :
     sparta::app::Simulation("spike_model", &scheduler),
     cpu_topology_(topology),
-    num_cores_(num_cores),
+    num_cores_per_tile_(num_cores_per_tile),
+    num_tiles_(num_tiles),
     num_l2_banks_(num_l2_banks),
+    num_memory_controllers_(num_memory_controllers),
+    l2_sharing_policy_(l2_sharing_policy),
+    bank_policy_(bank_policy),
+    tile_policy_(tile_policy),
     cmd_(cmd),
     isa_(isa),
     show_factories_(show_factories),
@@ -134,8 +142,10 @@ void SpikeModel::buildTree_()
     auto cpu_factory = getCPUFactory_();
 
 
+    printf("There are %u\n", num_memory_controllers_);
+
     // Set the cpu topology that will be built
-    cpu_factory->setTopology(cpu_topology_, num_cores_, num_l2_banks_, trace_);
+    cpu_factory->setTopology(cpu_topology_, num_tiles_, num_l2_banks_, num_memory_controllers_, trace_);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
@@ -195,21 +205,61 @@ void SpikeModel::bindTree_()
     //Tell the factory to bind all units
     auto cpu_factory = getCPUFactory_();
     cpu_factory->bindTree(getRoot());
-
-    noc=getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();
-
 }
 
-void SpikeModel::setServicedRequestsStorage(spike_model::ServicedRequests & s)
+std::shared_ptr<spike_model::RequestManager> SpikeModel::createRequestManager()
 {
-    noc->setServicedRequestsStorage(s);
+    spike_model::ServicedRequests s;
+    std::vector<spike_model::Tile *> tiles;
+    for(std::size_t i = 0; i < num_tiles_; ++i)
+    {
+        auto tile_node = getRoot()->getChild(std::string("cpu.tile") +
+                sparta::utils::uint32_to_str(i));
+        sparta_assert(tile_node != nullptr);
+
+        spike_model::Tile * t=tile_node->getResourceAs<spike_model::Tile>();
+
+        tiles.push_back(t);
+    }
+
+    std::shared_ptr<spike_model::RequestManager> m;
+
+    switch(l2_sharing_policy_)
+    {
+        case spike_model::L2SharingPolicy::TILE_PRIVATE:
+            m=std::make_shared<spike_model::PrivateL2Manager>(tiles, num_cores_per_tile_, bank_policy_);
+            break;
+        case spike_model::L2SharingPolicy::FULLY_SHARED:
+            m=std::make_shared<spike_model::SharedL2Manager>(tiles, num_cores_per_tile_, bank_policy_, tile_policy_);
+            break;
+        default:
+            std::cout << "Unsupported L2 sharing mode\n";
+            exit(-1);
+    }
+
+    //std::shared_ptr<spike_model::PrivateL2Manager> p=std::make_shared<spike_model::PrivateL2Manager>(tiles, num_cores_per_tile_);
+    //std::shared_ptr<spike_model::SharedL2Manager> p=std::make_shared<spike_model::SharedL2Manager>(tiles, num_cores_per_tile_);
+    m->setServicedRequestsStorage(s);
+    for(std::size_t i = 0; i < num_tiles_; ++i)
+    {
+        tiles[i]->setRequestManager(m);
+    }
+        
+    auto bank_node = getRoot()->getChild(std::string("cpu.tile0.l2_bank0"));
+    sparta_assert(bank_node != nullptr);
+
+    spike_model::CacheBank * b=bank_node->getResourceAs<spike_model::CacheBank>();
+
+    uint64_t bank_size=b->getSize();
+    uint64_t bank_line=b->getLineSize();
+    uint64_t bank_associativity=b->getAssoc();
+    
+    //ALL THE TILES SHARE A POINTER TO THE SAME REQUEST MANAGER
+    m->setL2TileInfo(bank_size*num_l2_banks_*num_tiles_, bank_associativity, bank_line, num_l2_banks_);
+
+    return m;
 }
     
-void SpikeModel::sendL2Request(std::shared_ptr<spike_model::L2Request> &req, uint64_t lapse)
-{
-    noc->send_(req, lapse);
-}
-
 void SpikeModel::validateTreeNodeExtensions_()
 {
 }

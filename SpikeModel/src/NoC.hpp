@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include "L2Request.hpp"
+#include "NoCMessage.hpp"
 #include "Core.hpp"
 #include "LogCapable.hpp"
 #include "ServicedRequests.hpp"
@@ -44,9 +44,9 @@ namespace spike_model
                 sparta::ParameterSet(n)
             {
             }
-            PARAMETER(uint16_t, num_cores, 1, "The number of cores")
-            PARAMETER(uint16_t, num_l2_banks, 1, "The number of l2 banks")
-            PARAMETER(std::string, data_mapping_policy, "set_interleaving", "The data mapping policy")
+            PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
+            PARAMETER(uint16_t, num_memory_controllers, 1, "The number of memory controllers")
+            PARAMETER(uint16_t, latency, 1, "The cycles to cross the NoC")
         };
 
         /*!
@@ -70,60 +70,22 @@ namespace spike_model
         // Type Name/Alias Declaration
         ////////////////////////////////////////////////////////////////////////////////
 
-        void send_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
-        void issueAck_(const std::shared_ptr<L2Request> & req);
-
-        void setServicedRequestsStorage(ServicedRequests& s)
-        {
-            serviced_requests=s;
-            std::cout << s.hasRequest();
-        }
-
-        void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
-        {
-            l2_bank_size_kbs=size;
-            l2_assoc=assoc;
-            l2_line_size=line_size;
-
-            block_offset_bits=(uint8_t)ceil(log2(l2_line_size));
-            bank_bits=(uint8_t)ceil(log2(in_ports_l2_.size()));
-
-            uint64_t total_l2_size=l2_bank_size_kbs*in_ports_l2_.size()*1024;
-            uint64_t num_sets=total_l2_size/(l2_assoc*l2_line_size);
-            set_bits=(uint8_t)ceil(log2(num_sets));
-            tag_bits=64-(set_bits+block_offset_bits);
-            std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
-        }
+        void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
+        void issueAck_(const std::shared_ptr<NoCMessage> & mes);
 
     private:
 
-        uint16_t num_cores_;
-        uint16_t num_l2_banks_;
+        uint16_t num_tiles_;
+        uint16_t num_memory_controllers_;
+        uint16_t latency_;
+ 
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_tiles_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_controllers_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_controllers_;
 
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_l2_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_l2_;
 
-        ServicedRequests serviced_requests;
-    
-        uint64_t l2_bank_size_kbs;
-        uint64_t l2_assoc;
-        uint64_t l2_line_size;
-
-        uint8_t block_offset_bits;
-        uint8_t bank_bits;
-        uint8_t set_bits; 
-        uint8_t bank_displacement;
-        uint8_t tag_bits;
-        
-        enum class MappingPolicy
-        {
-            SET_INTERLEAVING,
-            PAGE_TO_BANK,
-        };
-
-        MappingPolicy data_mapping_policy_;
-
-        uint16_t getDestination(std::shared_ptr<L2Request> req);
+        uint16_t getDestination(std::shared_ptr<NoCMessage> req);
 
         uint64_t latency=1;
     };

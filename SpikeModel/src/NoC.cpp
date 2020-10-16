@@ -14,72 +14,76 @@ namespace spike_model
 
     NoC::NoC(sparta::TreeNode *node, const NoCParameterSet *p) :
         sparta::Unit(node),
-        num_cores_(p->num_cores),
-        num_l2_banks_(p->num_l2_banks),
-        in_ports_l2_(num_l2_banks_),
-        out_ports_l2_(num_l2_banks_)
+        num_tiles_(p->num_tiles),
+        num_memory_controllers_(p->num_memory_controllers),
+        latency_(p->latency),
+        in_ports_tiles_(num_tiles_),
+        out_ports_tiles_(num_tiles_),
+        in_ports_memory_controllers_(num_memory_controllers_),
+        out_ports_memory_controllers_(num_memory_controllers_)
     {
-            for(uint16_t i=0; i<num_l2_banks_; i++)
+            for(uint16_t i=0; i<num_tiles_; i++)
             {
-                std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<L2Request>>> (&unit_port_set_, out_name);
-                out_ports_l2_[i]=std::move(out);
+                std::string out_name=std::string("out_tile") + sparta::utils::uint32_to_str(i);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, out_name);
+                out_ports_tiles_[i]=std::move(out);
+                
+                std::string in_name=std::string("in_tile") + sparta::utils::uint32_to_str(i); 
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, in_name);
+                in_ports_tiles_[i]=std::move(in);
+                in_ports_tiles_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, handleMessageFromTile_, std::shared_ptr<NoCMessage>));
+            }
+            
+            for(uint16_t i=0; i<num_memory_controllers_; i++)
+            {
+                std::string out_name=std::string("out_memory_controller") + sparta::utils::uint32_to_str(i);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, out_name);
+                out_ports_memory_controllers_[i]=std::move(out);
 
-                std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack"); 
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<L2Request>>> (&unit_port_set_, in_name);
-                in_ports_l2_[i]=std::move(in);
-                in_ports_l2_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<L2Request>));
-            }
-
-            if(p->data_mapping_policy=="set_interleaving")
-            {
-                data_mapping_policy_=MappingPolicy::SET_INTERLEAVING; 
-            }
-            else if(p->data_mapping_policy=="page_to_bank")
-            {
-                data_mapping_policy_=MappingPolicy::PAGE_TO_BANK; 
-            }
-            else
-            {
-                throw sparta::SpartaException("Invalid data mapping policy ") << p->data_mapping_policy << "'";
+                std::string in_name=std::string("in_memory_controller") + sparta::utils::uint32_to_str(i); 
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, in_name);
+                in_ports_memory_controllers_[i]=std::move(in);
+                in_ports_memory_controllers_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<NoCMessage>));
             }
     }
 
-    void NoC::send_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
+    void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes)
     {
-        uint8_t bank=getDestination(req);
-        if(trace_)
+        switch(mes->getType())
         {
-            logger_.logRequestToBank(getClock()->currentCycle(), req->getCoreId(), bank);
+            case NoCMessageType::REMOTE_L2_REQUEST:
+                //std::cout << "Handling remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " to tile " << mes->getRequest()->getHomeTile() << "\n";
+                out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
+                break;
+
+            case NoCMessageType::MEMORY_REQUEST:
+                out_ports_memory_controllers_[mes->getMemoryController(num_memory_controllers_)]->send(mes, latency_);
+                break;
+
+            case NoCMessageType::REMOTE_L2_ACK:
+                out_ports_tiles_[mes->getRequest()->getSourceTile()]->send(mes, latency_);
+                break;
+
+            case NoCMessageType::MEMORY_ACK:
+                std::cout << "Memory acks should not use tile ports!!!\n";
+                break;
+
+            default:
+                std::cout << "Unsupported message received from a Tile!!!\n";
         }
-        out_ports_l2_[bank]->send(req, lapse+latency);
-        //out_ports_[req->getCoreId()]->send(req, 0); 
     }
 
-    void NoC::issueAck_(const std::shared_ptr<L2Request> & req)
+    void NoC::issueAck_(const std::shared_ptr<NoCMessage> & mes)
     {
-        serviced_requests.addRequest(req);
+        if(mes->getType()==NoCMessageType::MEMORY_ACK)
+        {
+            //std::cout << "Sending memory ack from NoC to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
+            out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
+        }
+        else
+        {
+            std::cout << "Unsupported message received from a Memory Controller!!!\n";
+        }
     }
         
-    uint16_t NoC::getDestination(std::shared_ptr<L2Request> req)
-    {
-        uint16_t destination=0;
-        
-        if(bank_bits>0) //If more than one bank
-        {
-            uint8_t left=tag_bits;
-            uint8_t right=block_offset_bits;
-            switch(data_mapping_policy_)
-            {
-                case MappingPolicy::SET_INTERLEAVING:
-                    left+=set_bits-bank_bits;
-                    break;
-                case MappingPolicy::PAGE_TO_BANK:
-                    right+=set_bits-bank_bits;
-                    break;
-            }
-            destination=(req->getAddress() << left) >> (left+right);
-        }
-        return destination;
-    }
 }

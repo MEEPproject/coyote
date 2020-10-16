@@ -102,6 +102,13 @@ public:
     }
 
     /**
+     * @brief Set the number of cores in this processor
+     */
+    auto setNumTiles(const uint32_t num_of_tiles) -> void{
+        num_tiles = num_of_tiles;
+    }
+
+    /**
      * @brief Set the name for this topoplogy
      */
     auto setName(const std::string& topology) -> void{
@@ -111,15 +118,15 @@ public:
     /**
      * @brief Set the number of cores in this processor
      */
-    auto setNumCores(const uint32_t num_of_cores) -> void{
-        num_cores = num_of_cores;
+    auto setNumMemoryControllers(const uint32_t num_of_memory_controllers) -> void{
+        num_memory_controllers = num_of_memory_controllers;
     }
     
     /**
      * @brief Set the number of L2 banks in this processor
      */
-    auto setNumL2Banks(const uint32_t num_of_l2_banks) -> void{
-        num_l2_banks = num_of_l2_banks;
+    auto setNumL2BanksPerTile(const uint32_t num_of_l2_banks) -> void{
+        num_banks_per_tile = num_of_l2_banks;
     }
     
     /**
@@ -135,8 +142,9 @@ public:
     static auto allocateTopology(const std::string& topology) -> CPUTopology*;
 
     //! Public members used by CPUFactory to build and bind tree
-    uint32_t num_cores;
-    uint32_t num_l2_banks;
+    uint32_t num_tiles;
+    uint32_t num_banks_per_tile;
+    uint32_t num_memory_controllers;
     bool trace;
 
     spike_model::Logger logger;

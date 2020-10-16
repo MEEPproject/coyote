@@ -1,17 +1,17 @@
 
 #include "sparta/utils/SpartaAssert.hpp"
-#include "L2Cache.hpp"
+#include "CacheBank.hpp"
 #include <chrono>
 
 namespace spike_model
 {
-    const char L2Cache::name[] = "l2";
+    const char CacheBank::name[] = "l2";
 
     ////////////////////////////////////////////////////////////////////////////////
     // Constructor
     ////////////////////////////////////////////////////////////////////////////////
 
-    L2Cache::L2Cache(sparta::TreeNode *node, const L2CacheParameterSet *p) :
+    CacheBank::CacheBank(sparta::TreeNode *node, const CacheBankParameterSet *p) :
         sparta::Unit(node),
         memory_access_allocator(2000, 1000),
         always_hit_(p->always_hit),
@@ -27,10 +27,10 @@ namespace spike_model
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, getAccess_, std::shared_ptr<L2Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<L2Request>));
 
         in_biu_ack_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(L2Cache, sendAck_, MemoryAccessInfoPtr));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<L2Request>));
 
 
         // DL1 cache config
@@ -39,7 +39,7 @@ namespace spike_model
         l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, *repl ));
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
-            info_logger_ << "L2Cache construct: #" << node->getGroupIdx();
+            info_logger_ << "CacheBank construct: #" << node->getGroupIdx();
         }
     }
 
@@ -49,13 +49,14 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     // Receive MSS access acknowledge from Bus Interface Unit
-    void L2Cache::sendAck_(const MemoryAccessInfoPtr & mem_access_info_ptr)
+    void CacheBank::sendAck_(const std::shared_ptr<L2Request> & req)
     {
-        reloadCache_(mem_access_info_ptr->getRAdr());
-        if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
+        reloadCache_(req->getAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+
+        if(req->getType()!=L2Request::AccessType::STORE && req->getType()!=L2Request::AccessType::STORE)
         {
             bool was_stalled=in_flight_reads_.is_full();
-            auto range_misses=in_flight_reads_.equal_range(mem_access_info_ptr->getReq());
+            auto range_misses=in_flight_reads_.equal_range(req);
 
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
 
@@ -65,7 +66,7 @@ namespace spike_model
                 range_misses.first++;
             }
 
-            in_flight_reads_.erase(mem_access_info_ptr->getReq());
+            in_flight_reads_.erase(req);
         
             if(pending_requests_.size()>0)
             {
@@ -84,7 +85,7 @@ namespace spike_model
     }   
 
 
-    void L2Cache::getAccess_(const std::shared_ptr<L2Request> & req)
+    void CacheBank::getAccess_(const std::shared_ptr<L2Request> & req)
     {
         count_requests_+=1;
 
@@ -116,7 +117,7 @@ namespace spike_model
         }
     }
 
-    void L2Cache::issueAccess_()
+    void CacheBank::issueAccess_()
     {
         MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_requests_.front());
         pending_requests_.pop_front();
@@ -142,7 +143,7 @@ namespace spike_model
     }
 
     // Handle cache access request
-    bool L2Cache::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
+    bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
         // Access cache, and check cache hit or miss
         const bool CACHE_HIT = cacheLookup_(mem_access_info_ptr);
@@ -183,7 +184,7 @@ namespace spike_model
 
                 if(!already_pending)
                 {
-                    out_biu_req_.send(mem_access_info_ptr, sparta::Clock::Cycle(miss_latency_));
+                    out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
                 }
                 else
                 {
@@ -207,7 +208,7 @@ namespace spike_model
 
 
     // Access Cache
-    bool L2Cache::cacheLookup_(const MemoryAccessInfoPtr & mem_access_info_ptr)
+    bool CacheBank::cacheLookup_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
         uint64_t phyAddr = mem_access_info_ptr->getRAdr();
 
@@ -242,7 +243,7 @@ namespace spike_model
     }
 
     // Reload cache line
-    void L2Cache::reloadCache_(uint64_t phyAddr)
+    void CacheBank::reloadCache_(uint64_t phyAddr)
     {
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);

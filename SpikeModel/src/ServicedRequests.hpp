@@ -1,11 +1,11 @@
 
-#ifndef __ServicedRequests_H__
-#define __ServicedRequests_H__
+#ifndef __SERVICED_REQUESTS_HH__
+#define __SERVICED_REQUESTS_HH__
 
 #include <memory>
 
 #include "L2Request.hpp"
-
+#include <queue>
 
 namespace spike_model
 {
