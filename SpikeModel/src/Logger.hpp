@@ -23,7 +23,11 @@ namespace spike_model
 
             void logL2Miss(uint64_t timestamp, uint64_t id);
 
-            void logRequestToBank(uint64_t timestamp, uint64_t id, uint8_t bank);
+            void logLocalBankRequest(uint64_t timestamp, uint64_t id, uint8_t bank);
+
+            void logRemoteBankRequest(uint64_t timestamp, uint64_t id, uint8_t tile);
+
+            void logMemoryControllerRequest(uint64_t timestamp, uint64_t id, uint8_t mc);
 
             void close();
 

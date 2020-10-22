@@ -57,6 +57,10 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
+                if(trace_)
+                {
+                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getMemoryController(num_memory_controllers_));
+                }
                 out_ports_memory_controllers_[mes->getMemoryController(num_memory_controllers_)]->send(mes, latency_);
                 break;
 

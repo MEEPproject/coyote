@@ -23,12 +23,13 @@
 #include <DataMappingPolicy.hpp>
 #include "RequestManager.hpp"
 #include "NoCMessage.hpp"
+#include "LogCapable.hpp"
 
 namespace spike_model
 {
     class RequestManager; //Forward declaration
 
-    class Tile : public sparta::Unit
+    class Tile : public sparta::Unit, public LogCapable
     {
         public:
  

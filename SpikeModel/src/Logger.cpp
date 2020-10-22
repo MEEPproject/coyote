@@ -42,9 +42,19 @@ namespace spike_model
         log(timestamp, id, "l2_miss,0");
     }
 
-    void Logger::logRequestToBank(uint64_t timestamp, uint64_t id, uint8_t bank)
+    void Logger::logLocalBankRequest(uint64_t timestamp, uint64_t id, uint8_t bank)
     {
         log(timestamp, id, "request_to_bank,"+std::to_string(bank));
+    }
+            
+    void Logger::logRemoteBankRequest(uint64_t timestamp, uint64_t id, uint8_t tile)
+    {
+        log(timestamp, id, "request_to_remote_bank,"+std::to_string(tile));
+    }
+
+    void Logger::logMemoryControllerRequest(uint64_t timestamp, uint64_t id, uint8_t mc)
+    {
+        log(timestamp, id, "request_to_memory_controller,"+std::to_string(mc));
     }
 
     void Logger::close()

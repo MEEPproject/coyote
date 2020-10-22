@@ -283,14 +283,36 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
     
     if(topology_->trace)
     {
-        for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks){
-            auto bank_node = root_node->getChild(std::string("cpu.l2_bank") +
-                    sparta::utils::uint32_to_str(num_of_l2_banks));
-            sparta_assert(bank_node != nullptr);
+        for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
+        {
+            auto tile_node = root_node->getChild(std::string("cpu.tile") +
+                    sparta::utils::uint32_to_str(num_of_tiles));
+            sparta_assert(tile_node != nullptr);
 
-            CacheBank * bank=bank_node->getResourceAs<spike_model::CacheBank>();
+            Tile * tile=tile_node->getResourceAs<spike_model::Tile>();
 
-            bank->setLogger(topology_->logger);
+            tile->setLogger(topology_->logger);
+
+            for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks){
+                auto bank_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
+                        std::string(".l2_bank") + sparta::utils::uint32_to_str(num_of_l2_banks));
+                sparta_assert(bank_node != nullptr);
+
+                CacheBank * bank=bank_node->getResourceAs<spike_model::CacheBank>();
+
+                bank->setLogger(topology_->logger);
+            }
+        }
+
+        for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
+        {
+            auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
+                    sparta::utils::uint32_to_str(num_of_memory_controllers));
+            sparta_assert(mc_node != nullptr);
+
+            MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
+
+            mc->setLogger(topology_->logger);
         }
     }
 
@@ -319,4 +341,9 @@ auto spike_model::CPUFactory::bindTree(sparta::RootTreeNode* root_node) -> void{
  */
 auto spike_model::CPUFactory::getResourceNames() const -> const std::vector<std::string>&{
     return resource_names_;
+}
+
+spike_model::Logger& spike_model::CPUFactory::getLogger()
+{
+    return topology_->logger;
 }

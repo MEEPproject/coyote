@@ -85,10 +85,10 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         }
         else
         {
-            /*if(trace_)
+            if(trace_)
             {
-                logger_.logStall(getClock()->currentCycle(), id_);
-            }*/
+                logger_.logStall(current_cycle, core);
+            }
             
             if(running)
             {
@@ -111,7 +111,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             i--; //We have deleted an element, so we have to update the index that we are using to traverse the data structure
             if(!core_finished)
             {
-                //printf("Stalling core %d. Size: %lu\n", core, stalled_cores.size());
+            //    printf("Stalling core %d. Size: %lu\n", core, stalled_cores.size());
                 stalled_cores.push_back(core);
             }
             else
@@ -121,6 +121,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
                 //Spike has finished if all the cores have finished
                 if(active_cores.size()==0 && stalled_cores.size()==0)
                 {
+                    printf("I have finished\n");
                     spike_finished=true;
                 }
             }
@@ -199,11 +200,11 @@ void SimulationOrchestrator::handleEvents()
                     //printf("Notifying dependence on %d\n", req->getRegId());
                     stalled_cores.erase(it);
                     active_cores.push_back(core); 
+                    if(trace_)
+                    {
+                        logger_.logResume(current_cycle, core);
+                    }
                 }
-                /*if(trace_)
-                {
-                    logger_.logResume(getClock()->currentCycle(), id_);
-                }*/
             }
         }
     }

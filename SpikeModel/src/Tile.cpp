@@ -47,12 +47,16 @@ namespace spike_model
     void Tile::issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req)
     {
             //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
-            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST));  
+            std::shared_ptr<NoCMessage> mes=std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST);
+            out_port_noc_.send(mes);  
     }
 
     void Tile::issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
     {
-            //std::cout << "The lapse is " << lapse << "\n";
+            if(trace_)
+            {
+                logger_.logRemoteBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getHomeTile());
+            }
             out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST), lapse);  
     }
 
@@ -60,10 +64,10 @@ namespace spike_model
     {
         //uint16_t bank=req->calculateHome();
         uint16_t bank=req->getBank(); //TODO: THIS MUST BE FIXED!!
-        /*if(trace_)
+        if(trace_)
         {
-            logger_.logRequestToBank(getClock()->currentCycle(), req->getCoreId(), bank);
-        }*/
+            logger_.logLocalBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), bank);
+        }
         out_ports_l2_reqs_[bank]->send(req, lapse+latency_);
         //out_ports_[req->getCoreId()]->send(req, 0);
     }

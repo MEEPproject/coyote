@@ -6,8 +6,9 @@
 #include "spike_wrapper.h"
 #include "RequestManager.hpp"
 #include "SpikeModel.hpp"
+#include "LogCapable.hpp"
 
-class SimulationOrchestrator
+class SimulationOrchestrator : public spike_model::LogCapable
 {
     public:
 

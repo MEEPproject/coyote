@@ -13,6 +13,7 @@
 #include "ServicedRequests.hpp"
 #include "RequestManager.hpp"
 #include "L2SharingPolicy.hpp"
+#include "Logger.hpp"
 
 namespace sparta {
     class Baz;
@@ -41,6 +42,8 @@ public:
     virtual ~SpikeModel();
 
     std::shared_ptr<spike_model::RequestManager> createRequestManager();
+
+    spike_model::Logger& getLogger();
 
     //virtual void run(uint64_t run_time) override;
 

@@ -9,6 +9,7 @@
 //#include "CPU.hpp"
 #include "sparta/simulation/ResourceTreeNode.hpp"
 #include "CPUTopology.hpp"
+#include "Logger.hpp"
 
 namespace spike_model{
 
@@ -55,6 +56,9 @@ public:
      * @brief Get the list of resources instantiated in this topology
      */
     auto getResourceNames() const -> const std::vector<std::string>&;
+
+    Logger& getLogger();
+
 private:
 
     /**
