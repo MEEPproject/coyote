@@ -65,13 +65,13 @@ namespace spike_model
         //! name of this resource.
         static const char name[];
 
-
-        ////////////////////////////////////////////////////////////////////////////////
-        // Type Name/Alias Declaration
-        ////////////////////////////////////////////////////////////////////////////////
-
+        /*! \brief Forwards messages sent from tiles to the correct destination
+        */
         void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
-        void issueAck_(const std::shared_ptr<NoCMessage> & mes);
+
+        /*! \brief Forwards messages sent from memory controllers to the correct destination
+        */
+        void handleMessageFromMemoryController_(const std::shared_ptr<NoCMessage> & mes);
 
     private:
 
@@ -83,11 +83,6 @@ namespace spike_model
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_controllers_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_controllers_;
-
-
-        uint16_t getDestination(std::shared_ptr<NoCMessage> req);
-
-        uint64_t latency=1;
     };
 }
 #endif

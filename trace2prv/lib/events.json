@@ -3,19 +3,27 @@
     "machineId": "0",
     "functionFile": "./parser_spike_sparta" ,
     "events": [
-      { "eventName": "timestamp",                       "eventID": "0"},
-      { "eventName": "core-id",          "eventID": "1"},
-      { "eventName": "event-type"    ,               "eventID": "2" ,
+      { "eventName": "pc",          "eventID": "0"},
+      { "eventName": "event-type"    ,               "eventID": "1" ,
         "derivedEvents": [
-          {"eventName": "Resume",               "eventID": "4"  },
-          {"eventName": "Stall",               "eventID": "5"  },
-          {"eventName": "L2Read",               "eventID": "6"  },
-          {"eventName": "L2Write",               "eventID": "7"  },
-          {"eventName": "L2Miss",               "eventID": "8"  },
-          {"eventName": "RequestToBank",               "eventID": "9"  }
+          {"eventName": "AccessType",               "eventID": "2"  },
+          {"eventName": "LocalRequest",               "eventID": "3"  },
+          {"eventName": "RemoteRequest",               "eventID": "4"  },
+          {"eventName": "SurrogateRequest",               "eventID": "5"  },
+          {"eventName": "MemoryRequest",               "eventID": "6"  },
+          {"eventName": "MemoryOperation",               "eventID": "7"  },
+          {"eventName": "MemoryAck",               "eventID": "8"  },
+          {"eventName": "AckReceived",               "eventID": "9"  },
+          {"eventName": "AckForwarded",               "eventID": "10"  },
+          {"eventName": "AckForwardReceived",               "eventID": "11"  },
+          {"eventName": "L1MissServiced",               "eventID": "12"  },
+          {"eventName": "L2Miss",               "eventID": "13"  },
+          {"eventName": "Stall",               "eventID": "14"  },
+          {"eventName": "Resume",               "eventID": "15"  }
         ]
       },
-      { "eventName": "value",  "eventID": "3" }
+      { "eventName": "destination",          "eventID": "16"},
+      { "eventName": "address",          "eventID": "17"}
     ]
   }
 }

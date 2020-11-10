@@ -51,11 +51,13 @@ namespace spike_model
     // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAck_(const std::shared_ptr<L2Request> & req)
     {
-        reloadCache_(req->getAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+        
 
-        if(req->getType()!=L2Request::AccessType::STORE && req->getType()!=L2Request::AccessType::STORE)
+        bool was_stalled=in_flight_reads_.is_full();
+
+        if(req->getType()==L2Request::AccessType::LOAD || req->getType()==L2Request::AccessType::FETCH)
         {
-            bool was_stalled=in_flight_reads_.is_full();
+            reloadCache_(req->getAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
             auto range_misses=in_flight_reads_.equal_range(req);
 
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
@@ -68,19 +70,24 @@ namespace spike_model
 
             in_flight_reads_.erase(req);
         
-            if(pending_requests_.size()>0)
+        }
+        else //STORE-WRITEBACK JUST NOTIFY THIS REQUEST, AS THERE ISN'T ANY OTHER ASSOCIATED
+        {
+            out_core_ack_.send(req);
+        }
+
+        if(pending_requests_.size()>0)
+        {
+            //ISSUE EVENT
+            if(was_stalled)
             {
-                //ISSUE EVENT
-                if(was_stalled)
-                {
-                    busy_=true;
-                    issue_access_event_.schedule(sparta::Clock::Cycle(0));
-                }
+                busy_=true;
+                issue_access_event_.schedule(sparta::Clock::Cycle(0));
             }
-            else
-            {
-                busy_=false;
-            }
+        }
+        else
+        {
+            busy_=false;
         }
     }   
 
@@ -88,6 +95,7 @@ namespace spike_model
     void CacheBank::getAccess_(const std::shared_ptr<L2Request> & req)
     {
         count_requests_+=1;
+
 
         bool hit_on_store=false;
         if(req->getType()!=L2Request::AccessType::LOAD)
@@ -107,7 +115,6 @@ namespace spike_model
         else
         {
             pending_requests_.push_back(req);
-
             if(!busy_ && !in_flight_reads_.is_full())
             {
                 busy_=true;
@@ -150,17 +157,21 @@ namespace spike_model
 
         if (CACHE_HIT) {
             // Update memory access info
-    	    if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::WRITEBACK)
+    	    /*if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::WRITEBACK)
     	    {
+        if(mem_access_info_ptr->getReq()->getAddress()==2147487744)
+        {
+            printf("Sending\n");
+        }*/
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
-	        }
+	        //}
         }
         else {
             count_cache_misses_++;
             // Update memory access info
             if(trace_)
             {
-                logger_.logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId());
+                logger_.logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());
             }
 
             if (cache_busy_ == false) {
@@ -175,7 +186,7 @@ namespace spike_model
 
                 bool already_pending=false;
 
-                if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE)
+                if(mem_access_info_ptr->getReq()->getType()==L2Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==L2Request::AccessType::FETCH)
                 {
                     already_pending=in_flight_reads_.contains(mem_access_info_ptr->getReq());
                     in_flight_reads_.insert(mem_access_info_ptr->getReq());

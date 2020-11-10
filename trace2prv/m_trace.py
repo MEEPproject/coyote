@@ -11,16 +11,29 @@ from lib.ParaverLine import *
 import lib.ParaverLine
 from lib.DisasmRV import *
 
-
 derived_event_dict= {
-                        "resume" : 4,
-                        "stall" : 5,
-                        "l2_read" : 6,
-                        "l2_write" : 7,
-                        "l2_miss" : 8,
-                        "request_to_bank" : 9
+                        "access_type" : 2,
+                        "local_request" : 3,
+                        "remote_request" : 4,
+                        "surrogate_request" : 5,
+                        "memory_request" : 6,
+                        "memory_operation" : 7,
+                        "memory_ack" : 8,
+                        "ack_received" : 9,
+                        "ack_forwarded" : 10,
+                        "ack_forward_received" : 11,
+                        "miss_serviced" : 12,
+                        "l2_miss" : 13,
+                        "stall" : 14,
+                        "resume" : 15
                     }
 
+base_event_dict= {
+                    2 : 0,
+                    3 : 1,
+                    4 : 2,
+                    5 : 3
+                };
 
 def offset_parser(offsets_string, paraver_events, paraver_line, last_inst_with_offsets):
     counter = 0
@@ -134,15 +147,15 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     paraver_line = ParaverLine(2, 1, 1, 1, 1)
 
     last_dst_value = 0
-    last_dst_event = PrvEvents[2].derivedEvents[0]
+    last_dst_event = PrvEvents[1].derivedEvents[0]
 
     #disasm_col = 2
     offset_col = 0
     coreid_col = 1
-    event_type_col = 2
+    event_type_col = 3
     #coreid_col = 10
 
-    NUMBER_OF_COLUMS = 4
+    NUMBER_OF_COLUMS = 6
 
     last_state = [0] * NUMBER_OF_COLUMS
     parser_functions = [intToPRV] * NUMBER_OF_COLUMS
@@ -163,24 +176,53 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
 
     #sew_index = 11
     #lmul_index = 12
+    
+    prev_type=""
+    prev_time=0
 
     for row in data:
 
         if (sanityCheck(row, True) == -1): continue
-
+        
         paraver_line.time = row[0]
         paraver_line.events = []
 
-        i = 0
+        if prev_type=="l2_miss" and row[3]!="l2_miss": #Handle the no miss case
+            last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict["l2_miss"]-2], paraver_line, last_state[3])
+            if prev_time+1!=int(row[0]):
+                paraver_line.time = str(prev_time+1)
+                writePRVFile(prvfile, paraver_line.getLine())
+                paraver_line.time = row[0]
+                paraver_line.events = []
 
-        for col in row[1:-1]:
+        i = 0 #Starts at 1 because the firs column after the timestamp is not an event
+
+        for col in row[1:]:
             i = i + 1
-            if i==2: #If this is the event type, pass the value, which is in the last element of the row
-                ev=str(PrvEvents[i].derivedEvents[derived_event_dict[col]-len(derived_event_dict)+2].id)
-                last_state[i] = parser_functions[i](row[-1], PrvEvents[i].derivedEvents[derived_event_dict[col]-len(derived_event_dict)+2], paraver_line, last_state[i])
+            if (i==2 or i==4 or i==5) and (row[3]=="resume" or row[3]=="stall"): #These events have no associated pc, address or destination
+                continue
+
+            if i==4 and row[3]=="l2_miss": #L2 misses have no destination
+                continue
+
+            if i==5 and (row[3] in ['local_request', 'remote_request', 'surrogate_request', 'memory_request', 'memory_operation', 'memory_ack', 'ack_received', 'ack_forward_received', "ack_forwarded", "miss_serviced"]): #These events already have their address as the semantic value
+                continue
+
+            if i==3: #If this is the event type, pass the value, which is in the last element of the row
+                #ev=str(PrvEvents[i].derivedEvents[derived_event_dict[col]-6].id)
+                #last_state[i] = parser_functions[i](row[-1], PrvEvents[i].derivedEvents[derived_event_dict[col]-len(derived_event_dict)+2], paraver_line, last_state[i])
+                value=row[-1]
+                if col=="l2_miss":
+                    value="1"
+                last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2], paraver_line, last_state[i])
             else:
-                last_state[i] = parser_functions[i](col, PrvEvents[i], paraver_line, last_state[i])
-               
+                if i==1: #Core id
+                    parser_functions[i](col, None, paraver_line, last_state[i])
+                else:
+                    last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
+
+        prev_type=row[3]
+        prev_time=int(row[0])
 
         writePRVFile(prvfile, paraver_line.getLine())
 

@@ -125,12 +125,11 @@ namespace spike_model
             uint8_t bank_bits;
             uint8_t set_bits; 
             uint8_t tag_bits;
-            
+       
+            static const uint8_t address_size=8;
 
             DataMappingPolicy data_mapping_policy_;
             std::shared_ptr<RequestManager> request_manager_;
-
-            uint16_t getDestination(std::shared_ptr<L2Request> req);
 
             void issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req);
             void issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse);

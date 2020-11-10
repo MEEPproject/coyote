@@ -51,6 +51,7 @@ int main(int argc, char **argv)
     std::string l2_sharing;
     std::string bank_policy;
     std::string tile_policy;
+    bool fast_cache;
     bool trace=false;
 
     sparta::app::DefaultValues DEFAULTS;
@@ -108,7 +109,10 @@ int main(int argc, char **argv)
              "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
             ("tile_data_mapping_policy",
              sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("tile_private"),
-             "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving");
+             "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving")
+            ("fast_cache",
+             sparta::app::named_value<bool>("TRUE/FALSE", &fast_cache)->default_value(false),
+             "Whether to use a fast L1 cache model instead of the default spike cache.", "Whether to use a fast L1 cache model instead of the default spike cache.");
 
         // Add any positional command-line options
         // po::positional_options_description& pos_opts = cls.getPositionalOptions();
@@ -140,12 +144,39 @@ int main(int argc, char **argv)
 //        cls.getSimulationConfiguration().processParameter(spike_cores, sparta::utils::uint32_to_str(num_cores));
 
 
+        std::string line_size=dc.substr(dc.rfind(":") + 1);
+
+        //Set the number of banks in each tile and the line size.
         for(uint32_t i=0;i<num_tiles;i++)
         {
             std::string tile_bank("top.cpu.tile*.params.num_l2_banks");
             size_t start_pos = tile_bank.find("*");
             tile_bank.replace(start_pos, 1, std::to_string(i));
             cls.getSimulationConfiguration().processParameter(tile_bank, sparta::utils::uint32_to_str(num_l2_banks));
+        }
+
+        //Set the line size in each bank
+        for(uint32_t i=0;i<num_tiles;i++)
+        {
+            std::string tile("top.cpu.tile*.l2_bank&.params.line_size");
+            size_t start_pos = tile.find("*");
+            tile.replace(start_pos, 1, std::to_string(i));
+            for(uint32_t j=0;j<num_l2_banks;j++)
+            {
+                std::string bank=tile;
+                size_t start_pos = bank.find("&");
+                std::cout << bank;
+                bank.replace(start_pos, 1, std::to_string(j));
+                cls.getSimulationConfiguration().processParameter(bank, line_size);
+            }
+        }
+        
+        for(std::size_t i = 0; i < num_memory_controllers; ++i)
+        {
+            std::string mc("top.cpu.memory_controller*.params.line_size");
+            size_t start_pos = mc.find("*");
+            mc.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(mc, line_size);
         }
 
         spike_model::L2SharingPolicy l2_sharing_policy=spike_model::L2SharingPolicy::TILE_PRIVATE;
@@ -200,7 +231,8 @@ int main(int argc, char **argv)
         
         std::shared_ptr<spike_model::RequestManager> request_manager=sim->createRequestManager();
 
-        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,ic,dc,isa,cmd,varch);
+
+        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,ic,dc,isa,cmd,varch,fast_cache);
 
         //printf("Creqated\n");
 

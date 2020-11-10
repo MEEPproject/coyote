@@ -8,7 +8,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     pending_misses_per_core(num_cores),
     pending_writebacks_per_core(num_cores),
     simulated_instructions_per_core(num_cores),
-    current_cycle(0),
+    current_cycle(1),
     next_event_tick(sparta::Scheduler::INDEFINITE),
     timer(0),
     spike_finished(false)
@@ -34,6 +34,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
+
         bool core_finished=false;
         bool running=true;
 
@@ -42,10 +43,10 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             //FETCH MISSES ARE SERVICED WHETHER THERE IS A RAW OR NOT
             if(new_misses.front()->getType()==spike_model::L2Request::AccessType::FETCH)
             {
-                uint64_t lapse=0;
+                uint64_t lapse=1;
                 if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
                 {
-                    lapse=current_cycle-spike_model->getScheduler()->getCurrentTick();
+                    lapse=lapse+current_cycle-spike_model->getScheduler()->getCurrentTick();
                 }
                 request_manager->putRequest(new_misses.front(), lapse);
                 new_misses.pop_front();
@@ -87,7 +88,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         {
             if(trace_)
             {
-                logger_.logStall(current_cycle, core);
+                logger_.logStall(current_cycle, core, 0);
             }
             
             if(running)
@@ -100,8 +101,8 @@ void SimulationOrchestrator::simulateInstInActiveCores()
                 //fetch_stalls_++;
             }
             for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
-            {   
-                pending_misses_per_core[i].push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+            {  
+                pending_misses_per_core[core].push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
             }
         }
 
@@ -111,7 +112,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             i--; //We have deleted an element, so we have to update the index that we are using to traverse the data structure
             if(!core_finished)
             {
-            //    printf("Stalling core %d. Size: %lu\n", core, stalled_cores.size());
+                //printf("Stalling core %d. Size: %lu\n", core, stalled_cores.size());
                 stalled_cores.push_back(core);
             }
             else
@@ -121,7 +122,6 @@ void SimulationOrchestrator::simulateInstInActiveCores()
                 //Spike has finished if all the cores have finished
                 if(active_cores.size()==0 && stalled_cores.size()==0)
                 {
-                    printf("I have finished\n");
                     spike_finished=true;
                 }
             }
@@ -135,7 +135,6 @@ void SimulationOrchestrator::handleEvents()
     if(next_event_tick==sparta::Scheduler::INDEFINITE)
     {
         next_event_tick=spike_model->getScheduler()->nextEventTick();
-        //printf("NEXT updated to %lu\n", next_event_tick);
     }
    
     //HANDLE ALL THE EVENTS FOR THE CURRENT CYCLE
@@ -182,8 +181,9 @@ void SimulationOrchestrator::handleEvents()
 
             bool can_run=true;
             bool is_load=req->getType()==spike_model::L2Request::AccessType::LOAD;
+            //bool is_fetch=req->getType()==spike_model::L2Request::AccessType::FETCH;
 
-            if(is_load)
+            if(is_load)// || is_fetch)
             {
                 //printf("Sending the corresponding ack to register %d on tick %lu\n", req->getRegId(), current_cycle);
                 //What about vectors??? More than one miss might be necessary to free a single register
@@ -191,7 +191,6 @@ void SimulationOrchestrator::handleEvents()
             }
             if(can_run)
             {
-                //printf("CAN RUN is true\n");
                 std::vector<uint16_t>::iterator it;
 
                 it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
@@ -199,10 +198,10 @@ void SimulationOrchestrator::handleEvents()
                 {
                     //printf("Notifying dependence on %d\n", req->getRegId());
                     stalled_cores.erase(it);
-                    active_cores.push_back(core); 
+                    active_cores.push_back(core);
                     if(trace_)
                     {
-                        logger_.logResume(current_cycle, core);
+                        logger_.logResume(current_cycle, core, 0);
                     }
                 }
             }
@@ -216,7 +215,7 @@ void SimulationOrchestrator::run()
     //Each iteration of the loop handles a cycle
     while(!spike_model->getScheduler()->isFinished() || !spike_finished)
     {
-        //printf("Current %lu, next %lu\n", current_cycle, next_event_tick);
+//        printf("Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
         
         simulateInstInActiveCores();
         handleEvents();

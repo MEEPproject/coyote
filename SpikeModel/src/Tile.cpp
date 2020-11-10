@@ -47,27 +47,19 @@ namespace spike_model
     void Tile::issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req)
     {
             //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
-            std::shared_ptr<NoCMessage> mes=std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST);
+            std::shared_ptr<NoCMessage> mes=std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, address_size);
             out_port_noc_.send(mes);  
     }
 
     void Tile::issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
     {
-            if(trace_)
-            {
-                logger_.logRemoteBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getHomeTile());
-            }
-            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST), lapse);  
+            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size), lapse);  
     }
 
     void Tile::issueLocalL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
     {
         //uint16_t bank=req->calculateHome();
         uint16_t bank=req->getBank(); //TODO: THIS MUST BE FIXED!!
-        if(trace_)
-        {
-            logger_.logLocalBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), bank);
-        }
         out_ports_l2_reqs_[bank]->send(req, lapse+latency_);
         //out_ports_[req->getCoreId()]->send(req, 0);
     }
@@ -75,7 +67,7 @@ namespace spike_model
     void Tile::issueBankAck_(const std::shared_ptr<L2Request> & req)
     {
         uint16_t bank=req->getBank();
-        //std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << "\n";
+    //    std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << "\n";
         out_ports_l2_acks_[bank]->send(req);
     }
 
@@ -84,10 +76,18 @@ namespace spike_model
         if(req->getHomeTile()==id_)
         {
             //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
+            if(trace_)
+            {
+                logger_.logLocalBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getPC(), req->getBank(), req->getAddress());
+            }
             issueLocalL2Request_(req, lapse);
         }
         else
         {
+            if(trace_)
+            {
+                logger_.logRemoteBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getPC(), req->getHomeTile(), req->getAddress());
+            }
             //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
             issueRemoteL2Request_(req, lapse);
         }
@@ -99,12 +99,20 @@ namespace spike_model
         if(req->getSourceTile()==id_)
         {
             //std::cout << "Notifying to manager\n";
+            if(trace_)
+            {
+                logger_.logMissServiced(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getAddress());
+            }
             request_manager_->notifyAck(req);
         }
         else
         {
             //std::cout << "Sending ack to remote\n";
-            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK)); 
+            if(trace_)
+            {
+                logger_.logTileSendAck(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getSourceTile(), req->getAddress());
+            }
+            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, l2_line_size)); 
         }
     }
 
@@ -114,6 +122,10 @@ namespace spike_model
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
                 //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
+                if(trace_)
+                {
+                    logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getBank(), mes->getRequest()->getAddress());
+                }
                 Tile::issueLocalL2Request_(mes->getRequest(), 0);
                 break;
 
@@ -123,10 +135,19 @@ namespace spike_model
 
             case NoCMessageType::REMOTE_L2_ACK:
                 //std::cout << "Handling remote ack\n";
+                if(trace_)
+                {
+                    logger_.logTileRecAckForwarded(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
+                    logger_.logMissServiced(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
+                }
                 request_manager_->notifyAck(mes->getRequest());
                 break;
 
             case NoCMessageType::MEMORY_ACK:
+                if(trace_)
+                {
+                    logger_.logTileRecAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
+                }
                 issueBankAck_(mes->getRequest()); 
                 break;
 
@@ -134,4 +155,5 @@ namespace spike_model
                 std::cout << "Unsupported message received from the NoC!!!\n";
         }
     }    
+    
 }

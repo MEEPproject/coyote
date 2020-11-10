@@ -29,47 +29,48 @@ namespace spike_model
 
     class MemoryController : public sparta::Unit, public LogCapable
     {
-    public:
-        /*!
-         * \class MemoryControllerParameterSet
-         * \brief Parameters for MemoryController model
-         */
-        class MemoryControllerParameterSet : public sparta::ParameterSet
-        {
         public:
-            //! Constructor for MemoryControllerParameterSet
-            MemoryControllerParameterSet(sparta::TreeNode* n):
-                sparta::ParameterSet(n)
+            /*!
+             * \class MemoryControllerParameterSet
+             * \brief Parameters for MemoryController model
+             */
+            class MemoryControllerParameterSet : public sparta::ParameterSet
             {
+            public:
+                //! Constructor for MemoryControllerParameterSet
+                MemoryControllerParameterSet(sparta::TreeNode* n):
+                    sparta::ParameterSet(n)
+                {
+                }
+                PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
+                PARAMETER(uint64_t, line_size, 128, "The cache line size")
+            };
+
+            /*!
+             * \brief Constructor for MemoryController
+             * \note  node parameter is the node that represent the MemoryController and
+             *        p is the MemoryController parameter set
+             */
+            MemoryController(sparta::TreeNode* node, const MemoryControllerParameterSet* p);
+
+            ~MemoryController() {
+                debug_logger_ << getContainer()->getLocation()
+                              << ": "
+                              << std::endl;
             }
-            PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
-        };
 
-        /*!
-         * \brief Constructor for MemoryController
-         * \note  node parameter is the node that represent the MemoryController and
-         *        p is the MemoryController parameter set
-         */
-        MemoryController(sparta::TreeNode* node, const MemoryControllerParameterSet* p);
-
-        ~MemoryController() {
-            debug_logger_ << getContainer()->getLocation()
-                          << ": "
-                          << std::endl;
-        }
-
-        //! name of this resource.
-        static const char name[];
+            //! name of this resource.
+            static const char name[];
 
 
-        ////////////////////////////////////////////////////////////////////////////////
-        // Type Name/Alias Declaration
-        ////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////
+            // Type Name/Alias Declaration
+            ////////////////////////////////////////////////////////////////////////////////
 
-        void issueAck_(const std::shared_ptr<NoCMessage> & NoCMessage);
+            void issueAck_(const std::shared_ptr<NoCMessage> & NoCMessage);
 
-    private:
-        
+        private:
+            
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
 
@@ -77,7 +78,9 @@ namespace spike_model
             {&unit_port_set_, "in_noc"};
 
             uint64_t latency_;
-        
+       
+            uint64_t line_size_;
+
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
     };
 }

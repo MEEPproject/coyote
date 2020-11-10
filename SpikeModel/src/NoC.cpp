@@ -43,7 +43,7 @@ namespace spike_model
                 std::string in_name=std::string("in_memory_controller") + sparta::utils::uint32_to_str(i); 
                 std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, in_name);
                 in_ports_memory_controllers_[i]=std::move(in);
-                in_ports_memory_controllers_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, issueAck_, std::shared_ptr<NoCMessage>));
+                in_ports_memory_controllers_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, handleMessageFromMemoryController_, std::shared_ptr<NoCMessage>));
             }
     }
 
@@ -52,14 +52,13 @@ namespace spike_model
         switch(mes->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
-                //std::cout << "Handling remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " to tile " << mes->getRequest()->getHomeTile() << "\n";
                 out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
                 if(trace_)
                 {
-                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getMemoryController(num_memory_controllers_));
+                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getMemoryController(num_memory_controllers_), mes->getRequest()->getAddress());
                 }
                 out_ports_memory_controllers_[mes->getMemoryController(num_memory_controllers_)]->send(mes, latency_);
                 break;
@@ -77,11 +76,14 @@ namespace spike_model
         }
     }
 
-    void NoC::issueAck_(const std::shared_ptr<NoCMessage> & mes)
+    void NoC::handleMessageFromMemoryController_(const std::shared_ptr<NoCMessage> & mes)
     {
         if(mes->getType()==NoCMessageType::MEMORY_ACK)
         {
-            //std::cout << "Sending memory ack from NoC to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
+            if(trace_)
+            {
+                logger_.logMemoryControllerAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
+            }
             out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
         }
         else

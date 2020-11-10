@@ -51,7 +51,7 @@ namespace spike_model
             PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
             PARAMETER(bool, always_hit, false, "DL1 will always hit")
             // Parameters for event scheduling
-            PARAMETER(uint16_t, miss_latency, 100, "Cache miss latency")
+            PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
             PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
             PARAMETER(uint16_t, max_outstanding_misses, 8, "Maximum misses in flight to the next level")
         };
