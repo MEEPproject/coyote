@@ -23,7 +23,10 @@
         ]
       },
       { "eventName": "destination",          "eventID": "16"},
-      { "eventName": "address",          "eventID": "17"}
+      { "eventName": "address",          "eventID": "17"},
+      { "eventName": "MemoryObjName",          "eventID": "18"},
+      { "eventName": "MemoryObjStart",          "eventID": "19"},
+      { "eventName": "MemoryObjEnd",          "eventID": "20"}
     ]
   }
 }

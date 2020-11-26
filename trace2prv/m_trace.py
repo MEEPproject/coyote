@@ -10,6 +10,7 @@ from lib.asm2prv import *
 from lib.ParaverLine import *
 import lib.ParaverLine
 from lib.DisasmRV import *
+import subprocess
 
 derived_event_dict= {
                         "access_type" : 2,
@@ -107,17 +108,22 @@ def getThreadsFromTrace(csvfile):
 
 
 def intToPRV(string, event, paraver_line, last_state):
-    value = 0
+    value = 0 
     new_value=False
-
     if string != "":
-        value = int(string, 0)
+        base=0
+        if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced":
+            base=16
+
+        value=int(string, base)
+        #value=string
         new_value=True
 
     if last_state != 0 or new_value:
         paraver_line.addEvent(event, value)
 
     return value
+
 
 
 def threadID(string, event, paraver_line, last_state):
@@ -136,7 +142,8 @@ def interfaceDisasm(disasm, paraver_events, paraver_line, last_state):
 
 
 def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
-    
+   
+
     nThreads = len(threads)
     header = paraverHeader(csvfile, nthreads=nThreads, delimiter=",")
     writePRVFile(prvfile, header)
@@ -145,6 +152,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     data = csv.reader(csvfile, skipinitialspace=True, delimiter=',')
 
     paraver_line = ParaverLine(2, 1, 1, 1, 1)
+   
 
     last_dst_value = 0
     last_dst_event = PrvEvents[1].derivedEvents[0]
@@ -154,12 +162,49 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     coreid_col = 1
     event_type_col = 3
     #coreid_col = 10
+    
+    pc_col=2
+    address_col=5
+
 
     NUMBER_OF_COLUMS = 6
 
     last_state = [0] * NUMBER_OF_COLUMS
     parser_functions = [intToPRV] * NUMBER_OF_COLUMS
 
+    mem_obj_name_pos=4
+    mem_obj_start_pos=5
+    mem_obj_end_pos=6
+    mem_objs=[]
+
+    if args.exe!=None:
+        command = 'riscv64-unknown-elf-nm --print-size --size-sort '+args.exe
+        process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
+        output, error = process.communicate()
+        PrvEvents[mem_obj_name_pos].addValue(0, "None")
+        mem_objs.append((-1, -1))
+        i=1
+        for l in output.splitlines():
+            tokens=l.decode("utf-8").split(' ')
+            start=int(tokens[0], 16)
+            end=start+int(tokens[1],16)
+            name=tokens[3]
+
+            paraver_line.time = 0
+            paraver_line.events = []
+            paraver_line.addEvent(PrvEvents[mem_obj_name_pos], i)
+            PrvEvents[mem_obj_name_pos].addValue(i, name)
+
+            paraver_line.addEvent(PrvEvents[mem_obj_start_pos], start)
+            paraver_line.addEvent(PrvEvents[mem_obj_end_pos], end)
+
+            mem_objs.append((start, end))
+
+            writePRVFile(prvfile, paraver_line.getLine())
+
+            i=i+1
+
+        PrvEvents[mem_obj_name_pos].addValue(len(mem_objs), "Other")
 
     if args.offset_events_with_delay:
         last_state[offset_col] = [args.time_between_instruction, prvfile]
@@ -186,6 +231,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
         
         paraver_line.time = row[0]
         paraver_line.events = []
+
 
         if prev_type=="l2_miss" and row[3]!="l2_miss": #Handle the no miss case
             last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict["l2_miss"]-2], paraver_line, last_state[3])
@@ -221,6 +267,20 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 else:
                     last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
+        if row[3]!="resume" and row[3]!="stall": #Add memory obj info
+            found=False
+            for i in range(len(mem_objs)):
+                start, end=mem_objs[i]
+                if start <= int(row[5], 16) < end:
+                    paraver_line.addEvent(PrvEvents[mem_obj_name_pos], i)
+                    found=True
+                    break
+
+            if not found:
+                paraver_line.addEvent(PrvEvents[mem_obj_name_pos],len(mem_objs))
+                    
+
+
         prev_type=row[3]
         prev_time=int(row[0])
 
@@ -252,6 +312,7 @@ def parseArguments():
     parser.add_argument("--events-sorted", action='store_true', help="Paraver events sorted")
     parser.add_argument("--time-between-instruction", type=int, default=1, help="Time in nanoseconds between instructions")
     parser.add_argument("--offset-events-with-delay", action='store_true', help="The Offset events will be separated by 1 nanosecond")
+    parser.add_argument("--exe", help="Path to the exe for static variable analysis.")
     args = parser.parse_args()
 
     ParaverLine.GET_LINE_SORTED = args.events_sorted
@@ -260,6 +321,7 @@ def parseArguments():
 
 def main():
     args = parseArguments()
+
     filename = ntpath.basename(args.input)
 
     if args.output_name is None:
