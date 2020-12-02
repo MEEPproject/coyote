@@ -42,6 +42,8 @@ namespace spike_model
             void logTileRecAckForwarded(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
 
             void logMissServiced(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            
+            void logKI(uint64_t timestamp, uint64_t id);
 
             void close();
 

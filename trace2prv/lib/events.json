@@ -19,14 +19,15 @@
           {"eventName": "L1MissServiced",               "eventID": "12"  },
           {"eventName": "L2Miss",               "eventID": "13"  },
           {"eventName": "Stall",               "eventID": "14"  },
-          {"eventName": "Resume",               "eventID": "15"  }
+          {"eventName": "Resume",               "eventID": "15"  },
+          {"eventName": "KI",               "eventID": "16"  }
         ]
       },
-      { "eventName": "destination",          "eventID": "16"},
-      { "eventName": "address",          "eventID": "17"},
-      { "eventName": "MemoryObjName",          "eventID": "18"},
-      { "eventName": "MemoryObjStart",          "eventID": "19"},
-      { "eventName": "MemoryObjEnd",          "eventID": "20"}
+      { "eventName": "destination",          "eventID": "516"},
+      { "eventName": "address",          "eventID": "517"},
+      { "eventName": "MemoryObjName",          "eventID": "518"},
+      { "eventName": "MemoryObjStart",          "eventID": "519"},
+      { "eventName": "MemoryObjEnd",          "eventID": "520"}
     ]
   }
 }

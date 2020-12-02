@@ -12,8 +12,14 @@ class SimulationOrchestrator : public spike_model::LogCapable
 {
     public:
 
-        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManager>& request_manager, uint32_t num_cores);
+        /*!
+         * \brief Constructor for the SimulationOrchestrator
+         */
+        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManager>& request_manager, uint32_t num_cores, bool trace);
 
+        /*!
+         * \brief Runs the simulation
+         */
         void run();
 
     private:
@@ -33,7 +39,21 @@ class SimulationOrchestrator : public spike_model::LogCapable
         uint64_t timer;        
         bool spike_finished;
 
+        bool trace;
+
+        /*!
+         * \brief Simulates an instruction in each of the active cores
+         */
         void simulateInstInActiveCores();
+        
+        /*!
+         * \brief Handles the events for events earlier than the current cycle
+         */
         void handleEvents();
+
+        /*!
+         * \brief Calcullates the difference between a cycle value and Sparta time.
+         */
+        uint64_t spartaDelay(uint64_t cycle);
 };
 #endif

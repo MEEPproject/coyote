@@ -26,7 +26,8 @@ derived_event_dict= {
                         "miss_serviced" : 12,
                         "l2_miss" : 13,
                         "stall" : 14,
-                        "resume" : 15
+                        "resume" : 15,
+                        "KI" : 16
                     }
 
 base_event_dict= {
@@ -224,6 +225,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     
     prev_type=""
     prev_time=0
+    prev_core="-1"
 
     for row in data:
 
@@ -233,19 +235,18 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
         paraver_line.events = []
 
 
-        if prev_type=="l2_miss" and row[3]!="l2_miss": #Handle the no miss case
-            last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict["l2_miss"]-2], paraver_line, last_state[3])
-            if prev_time+1!=int(row[0]):
-                paraver_line.time = str(prev_time+1)
-                writePRVFile(prvfile, paraver_line.getLine())
-                paraver_line.time = row[0]
-                paraver_line.events = []
+        if (prev_type=="l2_miss" and (row[3]!="l2_miss" or row[coreid_col]!=prev_core)) or (prev_type=="KI" and (row[3]!="KI" or row[coreid_col]!=prev_core)): #Handle the no miss case and no KI case
+            last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict[prev_type]-2], paraver_line, last_state[3])
+            paraver_line.time = str(prev_time+1)
+            writePRVFile(prvfile, paraver_line.getLine())
+            paraver_line.time = row[0]
+            paraver_line.events = []
 
         i = 0 #Starts at 1 because the firs column after the timestamp is not an event
 
         for col in row[1:]:
             i = i + 1
-            if (i==2 or i==4 or i==5) and (row[3]=="resume" or row[3]=="stall"): #These events have no associated pc, address or destination
+            if (i==2 or i==4 or i==5) and (row[3]=="resume" or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
                 continue
 
             if i==4 and row[3]=="l2_miss": #L2 misses have no destination
@@ -258,7 +259,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 #ev=str(PrvEvents[i].derivedEvents[derived_event_dict[col]-6].id)
                 #last_state[i] = parser_functions[i](row[-1], PrvEvents[i].derivedEvents[derived_event_dict[col]-len(derived_event_dict)+2], paraver_line, last_state[i])
                 value=row[-1]
-                if col=="l2_miss":
+                if col=="l2_miss" or col=="KI":
                     value="1"
                 last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2], paraver_line, last_state[i])
             else:
@@ -267,7 +268,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 else:
                     last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
-        if row[3]!="resume" and row[3]!="stall": #Add memory obj info
+        if row[3]!="resume" and row[3]!="stall" and row[3]!="KI": #Add memory obj info
             found=False
             for i in range(len(mem_objs)):
                 start, end=mem_objs[i]
@@ -283,6 +284,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
 
         prev_type=row[3]
         prev_time=int(row[0])
+        prev_core=row[coreid_col]
 
         writePRVFile(prvfile, paraver_line.getLine())
 

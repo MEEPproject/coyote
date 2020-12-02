@@ -155,5 +155,36 @@ namespace spike_model
                 std::cout << "Unsupported message received from the NoC!!!\n";
         }
     }    
+            
+    void Tile::setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
+    {
+        l2_bank_size_kbs=size;
+        l2_assoc=assoc;
+        l2_line_size=line_size;
+
+        block_offset_bits=(uint8_t)ceil(log2(l2_line_size));
+        bank_bits=(uint8_t)ceil(log2(in_ports_l2_reqs_.size()));
+
+        uint64_t total_l2_size=l2_bank_size_kbs*in_ports_l2_reqs_.size()*1024;
+        uint64_t num_sets=total_l2_size/(l2_assoc*l2_line_size);
+        set_bits=(uint8_t)ceil(log2(num_sets));
+        tag_bits=64-(set_bits+block_offset_bits);
+        std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
+    }
+
+    void Tile::setRequestManager(std::shared_ptr<RequestManager> r)
+    {
+        request_manager_=r;
+    }
+
+    std::shared_ptr<RequestManager> Tile::getRequestManager()
+    {
+        return request_manager_;
+    }
+
+    void Tile::setId(uint16_t id)
+    {
+        id_=id;
+    }
     
 }

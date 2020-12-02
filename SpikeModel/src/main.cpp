@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 
         //printf("Creqated\n");
 
-        SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores);
+        SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores, trace);
 
         if(trace)
         {

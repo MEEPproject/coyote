@@ -65,40 +65,37 @@ namespace spike_model
             //! name of this resource.
             static const char name[];
 
-            void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
-            {
-                l2_bank_size_kbs=size;
-                l2_assoc=assoc;
-                l2_line_size=line_size;
+            /*!
+             * \brief Sets the information on the l2 cache banks associated to this tile
+             */
+            void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size);
 
-                block_offset_bits=(uint8_t)ceil(log2(l2_line_size));
-                bank_bits=(uint8_t)ceil(log2(in_ports_l2_reqs_.size()));
+            /*!
+             * \brief Sets the request manager for the tile
+             */
+            void setRequestManager(std::shared_ptr<RequestManager> r);
 
-                uint64_t total_l2_size=l2_bank_size_kbs*in_ports_l2_reqs_.size()*1024;
-                uint64_t num_sets=total_l2_size/(l2_assoc*l2_line_size);
-                set_bits=(uint8_t)ceil(log2(num_sets));
-                tag_bits=64-(set_bits+block_offset_bits);
-                std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
-            }
+            /*!
+             * \brief Sets the information on the l2 cache banks associated to this tile
+             */
+            std::shared_ptr<RequestManager> getRequestManager();
 
-            void setRequestManager(std::shared_ptr<RequestManager> r)
-            {
-                request_manager_=r;
-            }
+            /*!
+             * \brief Sets the id for the tile
+             */
+            void setId(uint16_t id);
 
-            std::shared_ptr<RequestManager> getRequestManager()
-            {
-                return request_manager_;
-            }
-
-            void setId(uint16_t id)
-            {
-                id_=id;
-            }
-
+            /*!
+             * \brief Enqueues an L2 request to the tile
+             * \note lapse is the number of cycles that the request needs to be delayed
+             */
             void putRequest_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            
+            /*!
+             * \brief Notifies the completion of the service for an L2 request
+             */
             void notifyAck_(const std::shared_ptr<L2Request> & req);
-            void handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes);
+            
 
         private:
             uint16_t id_;
@@ -131,10 +128,30 @@ namespace spike_model
             DataMappingPolicy data_mapping_policy_;
             std::shared_ptr<RequestManager> request_manager_;
 
+            /*!
+             * \brief Sends a request to a memory controller
+             */
             void issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req);
+            
+            /*!
+             * \brief Sends an L2 request to a bank in a different tile
+             */
             void issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            
+            /*!
+             * \brief Sends an L2 request to a bank in the current tile
+             */
             void issueLocalL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            
+            /*!
+             * \brief Sends an ack to a cache bank of the current tile (a prior remote L2 request or memory request has been serviced)
+             */
             void issueBankAck_(const std::shared_ptr<L2Request> & req);
+            
+            /*!
+             * \brief Handles a message from the NoC
+             */
+            void handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes);
     };
 }
 #endif
