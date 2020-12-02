@@ -17,15 +17,6 @@ namespace spike_model
     {
         in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, issueAck_, std::shared_ptr<NoCMessage>));
     }
-            void logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
-            
-            void logMemoryControllerAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address);
-            
-            void logTileRecAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
-            
-            void logTileSendAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address);
-
-            void logMissServiced(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
         
     void MemoryController::issueAck_(const std::shared_ptr<NoCMessage> & mes)
     {
