@@ -93,9 +93,17 @@ namespace spike_model
 
             MemoryAccessInfo(std::shared_ptr<L2Request> req) :
                 l2_request_(req),
-                phyAddrIsReady_(true),
-                // Construct the State object here
-                address(req->getAddress()){}
+                phyAddrIsReady_(true)
+                {
+                    if(req->getType()==L2Request::AccessType::LOAD)
+                    {
+                        address=req->getAddress();
+                    }
+                    else
+                    {
+                        address=req->getLineAddress();
+                    }
+                }
 
             virtual ~MemoryAccessInfo() {}
 

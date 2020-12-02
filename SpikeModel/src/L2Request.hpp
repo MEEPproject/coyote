@@ -119,6 +119,10 @@ namespace spike_model
                 bank=b;
             }
 
+            void calculateLineAddress(uint8_t block_offset_bits)
+            {
+                line_address=(address >> block_offset_bits) << block_offset_bits;
+            }
 
             /*!
              * \brief Calculates the home tile for the request
@@ -148,6 +152,8 @@ namespace spike_model
              */
             uint64_t getPC(){return pc;}
             
+            uint64_t getLineAddress(){return line_address;}
+            
             bool operator ==(const L2Request & m) const
             {
                 return m.getAddress()==getAddress();
@@ -155,6 +161,9 @@ namespace spike_model
 
         private:
             uint64_t address;
+
+            uint64_t line_address;
+
             AccessType type;
             uint64_t pc;
             uint64_t timestamp;

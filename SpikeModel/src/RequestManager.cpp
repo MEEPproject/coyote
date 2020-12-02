@@ -35,12 +35,8 @@ namespace spike_model
     void RequestManager::setL2TileInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile)
     {
         std::cout << "The result is " << ceil(log2(line_size)) << "\n";
-        
-        
-        
-        
-        uint8_t res=(uint8_t)(ceil(log2(line_size)));
-        block_offset_bits=res;
+         
+        block_offset_bits=(uint8_t)(ceil(log2(line_size)));
         tile_bits=(uint8_t)ceil(log2(tiles_.size()));
         bank_bits=(uint8_t)ceil(log2(banks_per_tile));
 
@@ -62,5 +58,6 @@ namespace spike_model
         uint16_t bank=req->calculateHome(bank_data_mapping_policy, tag_bits, block_offset_bits, set_bits, bank_bits);
         req->setSourceTile(source);
         req->setBank(bank);
+        req->calculateLineAddress(block_offset_bits);
     }
 }

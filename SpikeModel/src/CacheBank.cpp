@@ -51,13 +51,11 @@ namespace spike_model
     // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAck_(const std::shared_ptr<L2Request> & req)
     {
-        
-
         bool was_stalled=in_flight_reads_.is_full();
 
         if(req->getType()==L2Request::AccessType::LOAD || req->getType()==L2Request::AccessType::FETCH)
         {
-            reloadCache_(req->getAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+            reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
             auto range_misses=in_flight_reads_.equal_range(req);
 
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
@@ -100,13 +98,14 @@ namespace spike_model
         bool hit_on_store=false;
         if(req->getType()!=L2Request::AccessType::LOAD)
         {
+            //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
             for (std::list<std::shared_ptr<L2Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
             {
-                hit_on_store=(((*rit)->getType()==L2Request::AccessType::STORE || (*rit)->getType()==L2Request::AccessType::WRITEBACK) && (*rit)->getAddress()==req->getAddress());
+                hit_on_store=((*rit)->getType()==L2Request::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
             }
         }
 
-        if(hit_on_store)//CHECK IF LOAD ON PENDING STORE
+        if(hit_on_store)
         {
             //AUTO HIT
             out_core_ack_.send(req,1);
@@ -156,15 +155,7 @@ namespace spike_model
         const bool CACHE_HIT = cacheLookup_(mem_access_info_ptr);
 
         if (CACHE_HIT) {
-            // Update memory access info
-    	    /*if(mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::STORE && mem_access_info_ptr->getReq()->getType()!=L2Request::AccessType::WRITEBACK)
-    	    {
-        if(mem_access_info_ptr->getReq()->getAddress()==2147487744)
-        {
-            printf("Sending\n");
-        }*/
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
-	        //}
         }
         else {
             count_cache_misses_++;
