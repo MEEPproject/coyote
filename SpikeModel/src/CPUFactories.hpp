@@ -9,6 +9,7 @@
 #include "MemoryController.hpp"
 #include "CacheBank.hpp"
 #include "NoC.hpp"
+#include "MemoryBank.hpp"
 
 namespace spike_model{
 
@@ -39,6 +40,9 @@ struct CPUFactories{
 
     sparta::ResourceFactory<spike_model::MemoryController,
                           spike_model::MemoryController::MemoryControllerParameterSet> memory_controller_rf;
+    
+    sparta::ResourceFactory<spike_model::MemoryBank,
+                          spike_model::MemoryBank::MemoryBankParameterSet> memory_bank_rf;
 }; // struct CPUFactories
 }  // namespace spike_model
 #endif

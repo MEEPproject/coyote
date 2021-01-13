@@ -1,12 +1,12 @@
 #ifndef __L2_REQUEST_HH__
 #define __L2_REQUEST_HH__
 
-#include "DataMappingPolicy.hpp"
+#include "CacheDataMappingPolicy.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class L2Request
+    class Request
     {
         public:
             enum class AccessType
@@ -25,28 +25,28 @@ namespace spike_model
                 VECTOR,
             };
 
-            //L2Request(){}
-            L2Request() = delete;
-            L2Request(L2Request const&) = delete;
-            L2Request& operator=(L2Request const&) = delete;
+            //Request(){}
+            Request() = delete;
+            Request(Request const&) = delete;
+            Request& operator=(Request const&) = delete;
 
             /*!
-             * \brief Constructor for L2Request
+             * \brief Constructor for Request
              * \note  a is the requested address
              *        t is the type of the request
              *        pc is the program counter of the requesting instruction
              */
-            L2Request(uint64_t a, AccessType t, uint64_t pc): address(a), type(t), pc(pc){}
+            Request(uint64_t a, AccessType t, uint64_t pc): address(a), type(t), pc(pc){}
 
             /*!
-             * \brief Constructor for L2Request
+             * \brief Constructor for Request
              * \note  a is the requested address
              *        t is the type of the request
              *        pc is the program counter of the requesting instruction
              *        time is the timestamp for the request
              *        c is the requesting core
              */
-            L2Request(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): address(a), type(t), pc(pc), timestamp(time), coreId(c){}
+            Request(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): address(a), type(t), pc(pc), timestamp(time), coreId(c){}
 
             /*!
              * \brief Returns the address of the request
@@ -114,9 +114,9 @@ namespace spike_model
             /*!
              * \brief Sets the bank that will be accessed by the request
              */
-            void setBank(uint16_t b)
+            void setCacheBank(uint16_t b)
             {
-                bank=b;
+                cache_bank=b;
             }
 
             void calculateLineAddress(uint8_t block_offset_bits)
@@ -129,7 +129,7 @@ namespace spike_model
              * \note d is the data mapping policy to be used in the calculation
              *       tag_bits, block_offset_bits, set_bits, bank_bits define the geometry of the L2 cache that will be accessed
              */
-            uint16_t calculateHome(DataMappingPolicy d, uint8_t tag_bits, uint8_t block_offset_bits, uint8_t set_bits, uint8_t bank_bits);
+            uint16_t calculateHome(CacheDataMappingPolicy d, uint8_t tag_bits, uint8_t block_offset_bits, uint8_t set_bits, uint8_t bank_bits);
 
 
             /*!
@@ -145,7 +145,7 @@ namespace spike_model
             /*!
              * \brief Returns the bank that will be accessed by the request
              */
-            uint16_t getBank(){return bank;}
+            uint16_t getCacheBank(){return cache_bank;}
 
             /*!
              * \brief Returns the program counter for the requesting instruction
@@ -153,8 +153,16 @@ namespace spike_model
             uint64_t getPC(){return pc;}
             
             uint64_t getLineAddress(){return line_address;}
+        
+            void setMemoryAccessInfo(uint64_t memory_controller, uint64_t rank, uint64_t bank, uint64_t row, uint64_t col);
             
-            bool operator ==(const L2Request & m) const
+            uint64_t getMemoryController();
+            uint64_t getRank();
+            uint64_t getMemoryBank();
+            uint64_t getRow();
+            uint64_t getCol();
+
+            bool operator ==(const Request & m) const
             {
                 return m.getAddress()==getAddress();
             }
@@ -173,10 +181,16 @@ namespace spike_model
 
             uint16_t home_tile;
             uint16_t source_tile;
-            uint16_t bank;
+            uint16_t cache_bank;
+
+            uint64_t memory_controller_;
+            uint64_t rank_;
+            uint64_t memory_bank_;
+            uint64_t row_;
+            uint64_t col_;
     };
     
-    inline std::ostream & operator<<(std::ostream & Str, L2Request const & req)
+    inline std::ostream & operator<<(std::ostream & Str, Request const & req)
     {
         Str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp();
         return Str;

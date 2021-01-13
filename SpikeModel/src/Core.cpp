@@ -9,7 +9,7 @@
 #include "sparta/log/MessageSource.hpp"
 #include "sparta/statistics/Counter.hpp"
 
-#include "L2Request.hpp"
+#include "Request.hpp"
 #include <chrono>
 
 namespace spike_model
@@ -24,7 +24,7 @@ namespace spike_model
     {
 
         in_port_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(Core, ack_, std::shared_ptr<L2Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(Core, ack_, std::shared_ptr<Request>));
         
         sparta::StartupEvent(node, CREATE_SPARTA_HANDLER(Core, startup_));
     }
@@ -39,11 +39,11 @@ namespace spike_model
     {
         if(!finished_)
         {
-            std::list<std::shared_ptr<spike_model::L2Request>> new_misses;
+            std::list<std::shared_ptr<spike_model::Request>> new_misses;
             bool success=spike->simulateOne(id_, getClock()->currentCycle(), new_misses);
 
             //FETCH MISSES ARE SERVICED WHETHER THERE IS A RAW OR NOT
-            if(new_misses.size()>0 && new_misses.front()->getType()==L2Request::AccessType::FETCH)
+            if(new_misses.size()>0 && new_misses.front()->getType()==Request::AccessType::FETCH)
             {
                 handleMiss_(new_misses.front());
                 new_misses.pop_front();
@@ -56,9 +56,9 @@ namespace spike_model
                 count_simulated_instructions_++;
                 if(new_misses.size()>0)
                 {
-                    for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
+                    for(std::shared_ptr<spike_model::Request> miss: new_misses)
                     {
-                        if(miss->getType()!=L2Request::AccessType::WRITEBACK)
+                        if(miss->getType()!=Request::AccessType::WRITEBACK)
                         {
                             handleMiss_(miss);
                         }
@@ -86,7 +86,7 @@ namespace spike_model
                 {
                     fetch_stalls_++;
                 }
-                for(std::shared_ptr<spike_model::L2Request> miss: new_misses)
+                for(std::shared_ptr<spike_model::Request> miss: new_misses)
                 {   
                     pending_misses_.push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
                 }
@@ -105,9 +105,9 @@ namespace spike_model
         }
     }
     
-    void Core::handleMiss_(std::shared_ptr<spike_model::L2Request> miss)
+    void Core::handleMiss_(std::shared_ptr<spike_model::Request> miss)
     {
-        if(miss->getType()==L2Request::AccessType::FINISH)
+        if(miss->getType()==Request::AccessType::FINISH)
         {
             finished_=true;
         }
@@ -118,7 +118,7 @@ namespace spike_model
             out_port_.send(miss);
             if(trace_)
             {
-                if(miss->getType()==L2Request::AccessType::STORE)
+                if(miss->getType()==Request::AccessType::STORE)
                 {
                     logger_.logL2Write(getClock()->currentCycle(), id_, miss->getAddress());
                 }
@@ -131,13 +131,13 @@ namespace spike_model
 
     }
     
-    void Core::ack_(const std::shared_ptr<L2Request> & req)
+    void Core::ack_(const std::shared_ptr<Request> & req)
     {
         if(pending_misses_.size()>0) //If this was a fetch or there was a raw and there are data misses for the instructions
         {
             while(pending_misses_.size()>0)
             {
-                std::shared_ptr<spike_model::L2Request> miss=pending_misses_.front();
+                std::shared_ptr<spike_model::Request> miss=pending_misses_.front();
                 pending_misses_.pop_front();
                 handleMiss_(miss);
             }
@@ -146,14 +146,14 @@ namespace spike_model
         {
             while(pending_writebacks_.size()>0) //Writebacks are sent last
             {
-                std::shared_ptr<spike_model::L2Request> miss=pending_writebacks_.front();
+                std::shared_ptr<spike_model::Request> miss=pending_writebacks_.front();
                 pending_writebacks_.pop_front();
                 handleMiss_(miss);
             }
         }
 
         bool can_run=true;
-        bool is_load=req->getType()==L2Request::AccessType::LOAD;
+        bool is_load=req->getType()==Request::AccessType::LOAD;
 
         if(is_load)
         {

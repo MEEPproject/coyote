@@ -40,7 +40,7 @@ public:
     /**
      * @brief Set the user-defined topology for this microarchitecture
      */
-    auto setTopology(const std::string&, const uint32_t, const uint32_t, const uint32_t, const bool) -> void;
+    auto setTopology(const std::string&, const uint32_t, const uint32_t, const uint32_t, const uint32_t, const bool) -> void;
 
     /**
      * @brief Build the device tree by instantiating resource nodes
@@ -81,6 +81,7 @@ private:
     std::string to_replace_tiles_ {"*"};
     std::string to_replace_banks_ {"$"};
     std::string to_replace_memory_controllers_ {"&"};
+    std::string to_replace_memory_banks_ {"!"};
 
     /**
      * @brief The user-defined topology unit

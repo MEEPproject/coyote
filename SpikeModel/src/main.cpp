@@ -1,11 +1,11 @@
 // <main.cpp> -*- C++ -*-
 
 #include "SpikeModel.hpp" // Core model skeleton simulator
-#include "L2Request.hpp"
-#include "RequestManager.hpp"
+#include "Request.hpp"
+#include "RequestManagerIF.hpp"
 #include "spike_wrapper.h"
 #include "L2SharingPolicy.hpp"
-#include "DataMappingPolicy.hpp"
+#include "CacheDataMappingPolicy.hpp"
 #include "SimulationOrchestrator.hpp"
 
 #include "sparta/parsers/ConfigEmitterYAML.hpp"
@@ -41,6 +41,7 @@ int main(int argc, char **argv)
     uint32_t num_tiles = 1;
     uint32_t num_l2_banks = 1;
     uint32_t num_memory_controllers = 1;
+    uint32_t num_memory_banks = 8;
     std::string application="";
     std::string isa="RV64";
     std::string p="1";
@@ -48,6 +49,7 @@ int main(int argc, char **argv)
     std::string dc;
     std::string cmd;
     std::string varch;
+    std::string address_mapping;
     std::string l2_sharing;
     std::string bank_policy;
     std::string tile_policy;
@@ -84,11 +86,14 @@ int main(int argc, char **argv)
              sparta::app::named_value<std::string>("NUM_CORES", &p)->default_value("1"),
              "The total number of cores to simulate", "The number of cores to simulate")
             ("num_l2_banks",
-             sparta::app::named_value<std::uint32_t>("NUM_BANKS", &num_l2_banks)->default_value(1),
+             sparta::app::named_value<std::uint32_t>("NUM_CACHE_BANKS", &num_l2_banks)->default_value(1),
              "The number of L2 banks per tile", "The number of L2 banks per tile")
             ("num_memory_controllers",
              sparta::app::named_value<std::uint32_t>("NUM_MCS", &num_memory_controllers)->default_value(1),
              "The number of memory controllers", "The number of memory controllers")
+            ("num_memory_banks",
+             sparta::app::named_value<std::uint32_t>("NUM_MEMORY_BANKS", &num_memory_banks)->default_value(8),
+             "The number of memory banks handled by each memory controller", "The number of memory banks")
             ("ic",
              sparta::app::named_value<std::string>("ic", &ic)->default_value("64:8:64"),
              "The icache configuration", "The icache configuration")
@@ -101,6 +106,9 @@ int main(int argc, char **argv)
             ("varch",
              sparta::app::named_value<std::string>("varch", &varch)->default_value("v128:e64:s128"),
              "The varch to use", "The varch to use")
+            ("address_mapping_mode",
+             sparta::app::named_value<std::string>("POLICY", &address_mapping)->default_value("open_page"),
+             "The memory addressing mode", "Supported values: open_page, close_page")
             ("l2_sharing_mode",
              sparta::app::named_value<std::string>("POLICY", &l2_sharing)->default_value("tile_private"),
              "The L2 sharing mode", "Supported values: tile_private, fully_shared")
@@ -173,10 +181,15 @@ int main(int argc, char **argv)
         
         for(std::size_t i = 0; i < num_memory_controllers; ++i)
         {
-            std::string mc("top.cpu.memory_controller*.params.line_size");
-            size_t start_pos = mc.find("*");
-            mc.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(mc, line_size);
+            std::string mc_line("top.cpu.memory_controller*.params.line_size");
+            size_t start_pos = mc_line.find("*");
+            mc_line.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(mc_line, line_size);
+            
+            std::string mc_bank("top.cpu.memory_controller*.params.num_banks");
+            start_pos = mc_bank.find("*");
+            mc_bank.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(mc_bank, sparta::utils::uint32_to_str(num_memory_banks));
         }
 
         spike_model::L2SharingPolicy l2_sharing_policy=spike_model::L2SharingPolicy::TILE_PRIVATE;
@@ -189,24 +202,34 @@ int main(int argc, char **argv)
             l2_sharing_policy=spike_model::L2SharingPolicy::FULLY_SHARED;
         }
 
-        spike_model::DataMappingPolicy b_pol=spike_model::DataMappingPolicy::PAGE_TO_BANK;
+        spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
         if(bank_policy=="page_to_bank")
         {
-            b_pol=spike_model::DataMappingPolicy::PAGE_TO_BANK;
+            b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
         }
         else if(bank_policy=="set_interleaving")
         {
-            b_pol=spike_model::DataMappingPolicy::SET_INTERLEAVING;
+            b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
         }
 
-        spike_model::DataMappingPolicy t_pol=spike_model::DataMappingPolicy::PAGE_TO_BANK;
+        spike_model::CacheDataMappingPolicy t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
         if(tile_policy=="page_to_bank")
         {
-            t_pol=spike_model::DataMappingPolicy::PAGE_TO_BANK;
+            t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
         }
         else if(tile_policy=="set_interleaving")
         {
-            t_pol=spike_model::DataMappingPolicy::SET_INTERLEAVING;
+            t_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+        }
+
+        spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        if(address_mapping=="open_page")
+        {
+            a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        }
+        else if(address_mapping=="close_page")
+        {
+            a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
         }
 
         // Create the simulator
@@ -217,6 +240,8 @@ int main(int argc, char **argv)
                              num_tiles,
                              num_l2_banks,
                              num_memory_controllers,
+                             num_memory_banks,
+                             a_pol,
                              l2_sharing_policy,
                              b_pol,
                              t_pol,
@@ -229,7 +254,7 @@ int main(int argc, char **argv)
 
         cls.populateSimulation(&(*sim));
         
-        std::shared_ptr<spike_model::RequestManager> request_manager=sim->createRequestManager();
+        std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManagerIF();
 
 
         std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,ic,dc,isa,cmd,varch,fast_cache);

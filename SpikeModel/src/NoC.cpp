@@ -58,9 +58,9 @@ namespace spike_model
             case NoCMessageType::MEMORY_REQUEST:
                 if(trace_)
                 {
-                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getMemoryController(num_memory_controllers_), mes->getRequest()->getAddress());
+                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getMemoryController(), mes->getRequest()->getAddress());
                 }
-                out_ports_memory_controllers_[mes->getMemoryController(num_memory_controllers_)]->send(mes, latency_);
+                out_ports_memory_controllers_[mes->getRequest()->getMemoryController()]->send(mes, latency_);
                 break;
 
             case NoCMessageType::REMOTE_L2_ACK:

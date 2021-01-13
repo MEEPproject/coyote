@@ -20,14 +20,14 @@
 
 #include <memory>
 
-#include <DataMappingPolicy.hpp>
-#include "RequestManager.hpp"
+#include "RequestManagerIF.hpp"
 #include "NoCMessage.hpp"
 #include "LogCapable.hpp"
 
 namespace spike_model
 {
-    class RequestManager; //Forward declaration
+    class RequestManagerIF; //Forward declaration
+    class NoCMessage; //Forward declaration
 
     class Tile : public sparta::Unit, public LogCapable
     {
@@ -73,12 +73,7 @@ namespace spike_model
             /*!
              * \brief Sets the request manager for the tile
              */
-            void setRequestManager(std::shared_ptr<RequestManager> r);
-
-            /*!
-             * \brief Sets the information on the l2 cache banks associated to this tile
-             */
-            std::shared_ptr<RequestManager> getRequestManager();
+            void setRequestManager(std::shared_ptr<RequestManagerIF> r);
 
             /*!
              * \brief Sets the id for the tile
@@ -89,12 +84,12 @@ namespace spike_model
              * \brief Enqueues an L2 request to the tile
              * \note lapse is the number of cycles that the request needs to be delayed
              */
-            void putRequest_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            void putRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Notifies the completion of the service for an L2 request
              */
-            void notifyAck_(const std::shared_ptr<L2Request> & req);
+            void notifyAck_(const std::shared_ptr<Request> & req);
             
 
         private:
@@ -103,13 +98,13 @@ namespace spike_model
             uint16_t num_l2_banks_;
             uint64_t latency_;
  
-            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_l2_acks_;
-            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>>> in_ports_l2_reqs_;
+            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_acks_;
+            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_reqs_;
             sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_
             {&unit_port_set_, "in_noc"};
 
-            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_l2_acks_;
-            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>>> out_ports_l2_reqs_;
+            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_acks_;
+            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
 
@@ -123,30 +118,28 @@ namespace spike_model
             uint8_t set_bits; 
             uint8_t tag_bits;
        
-            static const uint8_t address_size=8;
 
-            DataMappingPolicy data_mapping_policy_;
-            std::shared_ptr<RequestManager> request_manager_;
+            std::shared_ptr<RequestManagerIF> request_manager_;
 
             /*!
              * \brief Sends a request to a memory controller
              */
-            void issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req);
+            void issueMemoryControllerRequest_(const std::shared_ptr<Request> & req);
             
             /*!
              * \brief Sends an L2 request to a bank in a different tile
              */
-            void issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            void issueRemoteRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an L2 request to a bank in the current tile
              */
-            void issueLocalL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse);
+            void issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an ack to a cache bank of the current tile (a prior remote L2 request or memory request has been serviced)
              */
-            void issueBankAck_(const std::shared_ptr<L2Request> & req);
+            void issueBankAck_(const std::shared_ptr<Request> & req);
             
             /*!
              * \brief Handles a message from the NoC

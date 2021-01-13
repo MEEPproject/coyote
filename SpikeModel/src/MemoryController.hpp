@@ -19,13 +19,19 @@
 #include "sparta/utils/SpartaSharedPointer.hpp"
 
 #include <memory>
+#include <queue>
 
 #include "LogCapable.hpp"
 #include "NoCMessage.hpp"
+#include "MemoryAccessSchedulerIF.hpp"
+#include "RequestManagerIF.hpp"
+#include "BankCommand.hpp"
+#include "CommandSchedulerIF.hpp"
+#include "MemoryBank.hpp"
 
 namespace spike_model
 {
-    class Core; //Forward declaration    
+    class MemoryBank; //Forward declaration
 
     class MemoryController : public sparta::Unit, public LogCapable
     {
@@ -43,6 +49,7 @@ namespace spike_model
                 {
                 }
                 PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
+                PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(uint64_t, line_size, 128, "The cache line size")
             };
 
@@ -62,26 +69,49 @@ namespace spike_model
             //! name of this resource.
             static const char name[];
 
-
-            ////////////////////////////////////////////////////////////////////////////////
-            // Type Name/Alias Declaration
-            ////////////////////////////////////////////////////////////////////////////////
-
-            void issueAck_(const std::shared_ptr<NoCMessage> & NoCMessage);
+            void addBank_(MemoryBank * bank);
+            void notifyCompletion_(std::shared_ptr<BankCommand> c);
+            
+            /*!
+             * \brief Sets the request manager for the tile
+             */
+            void setRequestManager(std::shared_ptr<RequestManagerIF> r);
 
         private:
             
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
-            {&unit_port_set_, "out_noc"};
+                {&unit_port_set_, "out_noc"};
 
             sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_
-            {&unit_port_set_, "in_noc"};
+                {&unit_port_set_, "in_noc"};
+
+            sparta::UniqueEvent<> controller_cycle_event_ 
+                {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
             uint64_t latency_;
        
             uint64_t line_size_;
 
+            uint64_t num_banks_;
+
+            bool idle_=true;
+
+            std::vector<MemoryBank *> banks;
+
+            std::unique_ptr<MemoryAccessSchedulerIF> sched;
+            std::unique_ptr<CommandSchedulerIF> ready_commands;
+    
+            std::shared_ptr<RequestManagerIF> request_manager_;
+
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
+    
+            void receiveMessage_(const std::shared_ptr<NoCMessage> & mes);
+            
+            void issueAck_(std::shared_ptr<Request> req);
+    
+            void controllerCycle_();
+    
+            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank);
     };
 }
 #endif

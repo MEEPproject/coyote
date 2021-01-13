@@ -23,7 +23,7 @@
 
 namespace spike_model
 {
-    class NoC; //Forward declaration
+    //class NoC; //Forward declaration
 
     class Core : public sparta::Unit, public LogCapable
     {
@@ -51,19 +51,19 @@ namespace spike_model
                 id_=i;
             }    
 
-            void ack_(const std::shared_ptr<L2Request> & access);
+            void ack_(const std::shared_ptr<Request> & access);
         
         private:
             bool finished_;
             
-            std::list<std::shared_ptr<spike_model::L2Request>> pending_misses_;
-            std::list<std::shared_ptr<spike_model::L2Request>> pending_writebacks_;
+            std::list<std::shared_ptr<spike_model::Request>> pending_misses_;
+            std::list<std::shared_ptr<spike_model::Request>> pending_writebacks_;
             bool running_;
 
             uint64_t latency_to_l2_;
  
             void getMisses_();
-            void handleMiss_(std::shared_ptr<spike_model::L2Request> miss);
+            void handleMiss_(std::shared_ptr<spike_model::Request> miss);
             void startup_();
 
             void log(std::string);
@@ -77,10 +77,10 @@ namespace spike_model
             sparta::UniqueEvent<> simulate_inst_event_ 
                 {&unit_event_set_, "simulate_inst_", CREATE_SPARTA_HANDLER(Core, getMisses_)};
         
-            sparta::DataInPort<std::shared_ptr<L2Request>> in_port_
+            sparta::DataInPort<std::shared_ptr<Request>> in_port_
                 {&unit_port_set_, "in_port"};
             
-            sparta::DataOutPort<std::shared_ptr<L2Request>> out_port_
+            sparta::DataOutPort<std::shared_ptr<Request>> out_port_
                 {&unit_port_set_, "out_port"};
         
             sparta::Counter count_l2_requests_=sparta::Counter(getStatisticSet(), "l2_requests", "Number of requests", sparta::Counter::COUNT_NORMAL);

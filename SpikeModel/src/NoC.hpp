@@ -27,7 +27,7 @@
 
 namespace spike_model
 {
-    class Core; //Forward declaration    
+    //class Core; //Forward declaration    
 
     class NoC : public sparta::Unit, public LogCapable
     {

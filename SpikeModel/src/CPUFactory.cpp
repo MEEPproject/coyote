@@ -23,6 +23,7 @@ auto spike_model::CPUFactory::setTopology(const std::string& topology,
                                            const uint32_t num_tiles,
                                             const uint32_t num_banks_per_tile,
                                              const uint32_t num_memory_controllers,
+                                              const uint32_t num_memory_banks,
                                              const bool trace) -> void{
     sparta_assert(!topology_);
     topology_.reset(spike_model::CPUTopology::allocateTopology(topology));
@@ -30,6 +31,7 @@ auto spike_model::CPUFactory::setTopology(const std::string& topology,
     topology_->setNumTiles(num_tiles);
     topology_->setNumL2BanksPerTile(num_banks_per_tile);
     topology_->setNumMemoryControllers(num_memory_controllers);
+    topology_->setNumMemoryBanksPerMemoryController(num_memory_banks);
     topology_->setTrace(trace);
 }
 
@@ -128,6 +130,33 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 }
                 to_delete_.emplace_back(rtn);
                 resource_names_.emplace_back(node_name);
+            }
+        }
+        else if(node_name.find(to_replace_memory_banks_)!=std::string::npos)
+        {
+            for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers){
+                for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks){ 
+                    parent_name = unit.parent_name;
+                    node_name = unit.name;
+                    human_name = unit.human_name;
+                    replace_with = std::to_string(num_of_memory_banks);
+                    replace(parent_name, to_replace_memory_controllers_, std::to_string(num_of_memory_controllers));
+                    replace(node_name, to_replace_memory_banks_, replace_with);
+                    replace(human_name, to_replace_memory_banks_, replace_with);
+                    auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                    auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                          node_name,
+                                                          unit.group_name,
+                                                          unit.group_id,
+                                                          human_name,
+                                                          unit.factory);
+                    if(unit.is_private_subtree){
+                        rtn->makeSubtreePrivate();
+                        private_nodes_.emplace_back(rtn);
+                    }
+                    to_delete_.emplace_back(rtn);
+                    resource_names_.emplace_back(node_name);
+                }
             }
         }
     }
@@ -238,6 +267,22 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
        
     for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
     {
+            auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
+                    sparta::utils::uint32_to_str(num_of_memory_controllers));
+            sparta_assert(mc_node != nullptr);
+            MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
+    
+            for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks)
+            {
+                auto bank_node = root_node->getChild(std::string("cpu.memory_controller") +
+                        sparta::utils::uint32_to_str(num_of_memory_controllers) + std::string(".memory_bank") + sparta::utils::uint32_to_str(num_of_memory_banks));
+                sparta_assert(bank_node != nullptr);
+                MemoryBank * b=bank_node->getResourceAs<spike_model::MemoryBank>();
+                mc->addBank_(b);
+                b->setMemoryController(mc);
+            }
+
+
             for(const auto& port : ports)
             {
                 bool bind=false;

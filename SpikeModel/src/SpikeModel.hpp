@@ -9,10 +9,11 @@
 #include "sparta/trigger/ExpiringExpressionTrigger.hpp"
 #include <cinttypes>
 #include "NoC.hpp"
-#include "L2Request.hpp"
+#include "Request.hpp"
 #include "ServicedRequests.hpp"
-#include "RequestManager.hpp"
+#include "RequestManagerIF.hpp"
 #include "L2SharingPolicy.hpp"
+#include "AddressMappingPolicy.hpp"
 #include "Logger.hpp"
 
 namespace sparta {
@@ -36,12 +37,12 @@ public:
      * \brief Construct SpikeModel
      * \param be_noisy Be verbose -- not necessary, just an skeleton
      */
-    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores_per_tile, uint32_t num_tiles, uint32_t num_l2_banks, uint32_t num_memory_controllers, spike_model::L2SharingPolicy l2_sharing_policy, spike_model::DataMappingPolicy bank_policy, spike_model::DataMappingPolicy tile_policy, std::string cmd, std::string isa, bool show_factories, bool trace);
+    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores_per_tile, uint32_t num_tiles, uint32_t num_l2_banks, uint32_t num_memory_controllers, uint32_t num_memory_banks, spike_model::AddressMappingPolicy address_mapping_policy, spike_model::L2SharingPolicy l2_sharing_policy, spike_model::CacheDataMappingPolicy bank_policy, spike_model::CacheDataMappingPolicy tile_policy, std::string cmd, std::string isa, bool show_factories, bool trace);
 
     // Tear it down
     virtual ~SpikeModel();
 
-    std::shared_ptr<spike_model::RequestManager> createRequestManager();
+    std::shared_ptr<spike_model::RequestManagerIF> createRequestManagerIF();
 
     spike_model::Logger& getLogger();
 
@@ -71,9 +72,11 @@ private:
     const uint32_t num_tiles_;
     const uint32_t num_l2_banks_;
     const uint32_t num_memory_controllers_;
+    const uint32_t num_memory_banks_;
+    spike_model::AddressMappingPolicy address_mapping_policy_;
     spike_model::L2SharingPolicy l2_sharing_policy_;
-    spike_model::DataMappingPolicy bank_policy_;
-    spike_model::DataMappingPolicy tile_policy_;
+    spike_model::CacheDataMappingPolicy bank_policy_;
+    spike_model::CacheDataMappingPolicy tile_policy_;
 
 
     std::string cmd_;

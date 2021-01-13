@@ -27,10 +27,10 @@ namespace spike_model
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<L2Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<Request>));
 
         in_biu_ack_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<L2Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<Request>));
 
 
         // DL1 cache config
@@ -49,11 +49,11 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     // Receive MSS access acknowledge from Bus Interface Unit
-    void CacheBank::sendAck_(const std::shared_ptr<L2Request> & req)
+    void CacheBank::sendAck_(const std::shared_ptr<Request> & req)
     {
         bool was_stalled=in_flight_reads_.is_full();
 
-        if(req->getType()==L2Request::AccessType::LOAD || req->getType()==L2Request::AccessType::FETCH)
+        if(req->getType()==Request::AccessType::LOAD || req->getType()==Request::AccessType::FETCH)
         {
             reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
             auto range_misses=in_flight_reads_.equal_range(req);
@@ -90,18 +90,18 @@ namespace spike_model
     }   
 
 
-    void CacheBank::getAccess_(const std::shared_ptr<L2Request> & req)
+    void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
     {
         count_requests_+=1;
 
 
         bool hit_on_store=false;
-        if(req->getType()!=L2Request::AccessType::LOAD)
+        if(req->getType()!=Request::AccessType::LOAD)
         {
             //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
-            for (std::list<std::shared_ptr<L2Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
+            for (std::list<std::shared_ptr<Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
             {
-                hit_on_store=((*rit)->getType()==L2Request::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
+                hit_on_store=((*rit)->getType()==Request::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
             }
         }
 
@@ -177,7 +177,7 @@ namespace spike_model
 
                 bool already_pending=false;
 
-                if(mem_access_info_ptr->getReq()->getType()==L2Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==L2Request::AccessType::FETCH)
+                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==Request::AccessType::FETCH)
                 {
                     already_pending=in_flight_reads_.contains(mem_access_info_ptr->getReq());
                     in_flight_reads_.insert(mem_access_info_ptr->getReq());

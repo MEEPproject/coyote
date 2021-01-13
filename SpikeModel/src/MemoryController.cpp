@@ -1,6 +1,7 @@
 #include "sparta/utils/SpartaAssert.hpp"
 #include "MemoryController.hpp"
-#include <chrono>
+#include "FifoRrMemoryAccessScheduler.hpp"
+#include "FifoCommandScheduler.hpp"
 
 namespace spike_model
 {
@@ -13,19 +14,151 @@ namespace spike_model
     MemoryController::MemoryController(sparta::TreeNode *node, const MemoryControllerParameterSet *p):
     sparta::Unit(node),
     latency_(p->latency),
-    line_size_(p->line_size)
+    line_size_(p->line_size),
+    num_banks_(p->num_banks),
+    banks()
     {
-        in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, issueAck_, std::shared_ptr<NoCMessage>));
+        in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<NoCMessage>));
+        sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
+        ready_commands=std::make_unique<FifoCommandScheduler>();
     }
-        
-    void MemoryController::issueAck_(const std::shared_ptr<NoCMessage> & mes)
+
+    void MemoryController::receiveMessage_(const std::shared_ptr<NoCMessage> & mes)
+    {
+        count_requests_++;
+        uint64_t bank=mes->getRequest()->getMemoryBank();
+        sched->putRequest(mes->getRequest(), bank);
+        if(idle_ & sched->hasIdleBanks())
+        {
+            controller_cycle_event_.schedule();
+            idle_=false;
+        }
+    }
+
+    void MemoryController::issueAck_(std::shared_ptr<Request> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        if(trace_)
+        out_port_noc_.send(request_manager_->getMemoryReplyMessage(req), 0);
+    }
+    
+    std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank)
+    {
+        std::shared_ptr<BankCommand> res_command;
+
+        uint64_t column_to_schedule=req->getCol();
+        if(req->getType()==Request::AccessType::STORE || req->getType()==Request::AccessType::WRITEBACK)
         {
-            logger_.logMemoryControllerOperation(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
+            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule);
         }
-        out_port_noc_.send(std::make_shared<NoCMessage>(mes->getRequest(), NoCMessageType::MEMORY_ACK, line_size_), latency_);
-        count_requests_++;
+        else
+        {
+            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
+        }
+        return res_command;
+    }
+
+    void MemoryController::controllerCycle_()
+    {
+        while(sched->hasIdleBanks())
+        {
+            uint64_t bank_to_schedule=sched->getNextBank();
+            std::shared_ptr<Request> request_to_schedule=sched->getRequest(bank_to_schedule);
+            uint64_t row_to_schedule=request_to_schedule->getRow();
+
+            std::shared_ptr<BankCommand> com;
+            if(banks[bank_to_schedule]->isOpen() && banks[bank_to_schedule]->getOpenRow()==row_to_schedule)
+            {
+                com=getAccessCommand_(request_to_schedule, bank_to_schedule);
+            }
+            else
+            {
+               if(banks[bank_to_schedule]->isOpen())
+               {
+                    com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0);
+               }
+               else
+               {
+                    com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
+               }
+            }
+            ready_commands->addCommand(com);
+        }
+
+        if(ready_commands->hasCommands())
+        {
+            std::shared_ptr<BankCommand> next=ready_commands->getNextCommand();
+            banks[next->getDestinationBank()]->issue(next);
+            if(ready_commands->hasCommands())
+            {
+                controller_cycle_event_.schedule(1);
+            }
+            else
+            {
+                idle_=true;
+            }
+        }
+        else
+        {
+        }
+    }
+            
+    void MemoryController::addBank_(MemoryBank * bank)
+    {
+        banks.push_back(bank);
+    } 
+    
+    void MemoryController::notifyCompletion_(std::shared_ptr<BankCommand> c)
+    {
+        std::shared_ptr<BankCommand> com=nullptr;
+        uint64_t command_bank=c->getDestinationBank();
+        switch(c->getType())
+        {
+            case BankCommand::CommandType::OPEN:
+            {
+                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                com=getAccessCommand_(pending_request_for_bank, command_bank);
+                break;
+            }
+
+            case BankCommand::CommandType::CLOSE:
+            {
+                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                uint64_t row_to_schedule=pending_request_for_bank->getRow();
+                com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, command_bank, row_to_schedule);
+                break;
+            }
+
+            case BankCommand::CommandType::READ:
+            {
+                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                sched->notifyRequestCompletion(command_bank);
+                issueAck_(pending_request_for_bank);
+                break;
+            }
+           
+            case BankCommand::CommandType::WRITE:
+            {
+                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                sched->notifyRequestCompletion(command_bank);
+                issueAck_(pending_request_for_bank);
+                break;
+            }
+        }
+        
+        if(com!=nullptr)
+        {
+            ready_commands->addCommand(com);
+        }
+        
+        if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
+        {
+            controller_cycle_event_.schedule();
+            idle_=false;
+        }
+    }
+    
+    void MemoryController::setRequestManager(std::shared_ptr<RequestManagerIF> r)
+    {
+        request_manager_=r;
     }
 }

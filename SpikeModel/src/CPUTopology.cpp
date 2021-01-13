@@ -35,6 +35,14 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 sparta::TreeNode::GROUP_IDX_NONE,
                 &factories->memory_controller_rf
             },
+            {
+                "memory_bank!",
+                "cpu.memory_controller&",
+                "Memory Bank !",
+                sparta::TreeNode::GROUP_NAME_NONE,
+                sparta::TreeNode::GROUP_IDX_NONE,
+                &factories->memory_bank_rf
+            },
     };
     //! Instantiating ports of this topology
     port_connections = {

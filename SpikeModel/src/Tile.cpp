@@ -23,64 +23,64 @@ namespace spike_model
             for(uint16_t i=0; i<num_l2_banks_; i++)
             {
                 std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<L2Request>>> (&unit_port_set_, out_name);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
                 out_ports_l2_reqs_[i]=std::move(out);
                 
                 out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<L2Request>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<L2Request>>> (&unit_port_set_, out_name);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
                 out_ports_l2_acks_[i]=std::move(out_ack);
 
                 std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack"); 
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<L2Request>>> (&unit_port_set_, in_name);
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
                 in_ports_l2_acks_[i]=std::move(in_ack);
-                in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<L2Request>));
+                in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<Request>));
                 
                 in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req"); 
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<L2Request>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<L2Request>>> (&unit_port_set_, in_name);
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
                 in_ports_l2_reqs_[i]=std::move(in_req);
-                in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<L2Request>));
+                in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<Request>));
             }
 
             in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
     }
 
-    void Tile::issueMemoryControllerRequest_(const std::shared_ptr<L2Request> & req)
+    void Tile::issueMemoryControllerRequest_(const std::shared_ptr<Request> & req)
     {
             //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
-            std::shared_ptr<NoCMessage> mes=std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, address_size);
+            std::shared_ptr<NoCMessage> mes=request_manager_->getMemoryRequestMessage(req);
             out_port_noc_.send(mes);  
     }
 
-    void Tile::issueRemoteL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
+    void Tile::issueRemoteRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
     {
-            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size), lapse);  
+            out_port_noc_.send(request_manager_->getRemoteL2RequestMessage(req), lapse);  
     }
 
-    void Tile::issueLocalL2Request_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
+    void Tile::issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
     {
         //uint16_t bank=req->calculateHome();
-        uint16_t bank=req->getBank(); //TODO: THIS MUST BE FIXED!!
+        uint16_t bank=req->getCacheBank(); //TODO: THIS MUST BE FIXED!!
         out_ports_l2_reqs_[bank]->send(req, lapse+latency_);
         //out_ports_[req->getCoreId()]->send(req, 0);
     }
 
-    void Tile::issueBankAck_(const std::shared_ptr<L2Request> & req)
+    void Tile::issueBankAck_(const std::shared_ptr<Request> & req)
     {
-        uint16_t bank=req->getBank();
+        uint16_t bank=req->getCacheBank();
     //    std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << "\n";
         out_ports_l2_acks_[bank]->send(req);
     }
 
-    void Tile::putRequest_(const std::shared_ptr<L2Request> & req, uint64_t lapse)
+    void Tile::putRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
     {
         if(req->getHomeTile()==id_)
         {
             //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
             if(trace_)
             {
-                logger_.logLocalBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getPC(), req->getBank(), req->getAddress());
+                logger_.logLocalBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getPC(), req->getCacheBank(), req->getAddress());
             }
-            issueLocalL2Request_(req, lapse);
+            issueLocalRequest_(req, lapse);
         }
         else
         {
@@ -89,11 +89,11 @@ namespace spike_model
                 logger_.logRemoteBankRequest(getClock()->currentCycle()+lapse, req->getCoreId(), req->getPC(), req->getHomeTile(), req->getAddress());
             }
             //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
-            issueRemoteL2Request_(req, lapse);
+            issueRemoteRequest_(req, lapse);
         }
     }
 
-    void Tile::notifyAck_(const std::shared_ptr<L2Request> & req)
+    void Tile::notifyAck_(const std::shared_ptr<Request> & req)
     {
         //The ack is for this tile
         if(req->getSourceTile()==id_)
@@ -112,7 +112,7 @@ namespace spike_model
             {
                 logger_.logTileSendAck(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getSourceTile(), req->getAddress());
             }
-            out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, l2_line_size)); 
+            out_port_noc_.send(request_manager_->getDataForwardMessage(req), l2_line_size); 
         }
     }
 
@@ -124,9 +124,9 @@ namespace spike_model
                 //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
                 if(trace_)
                 {
-                    logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getBank(), mes->getRequest()->getAddress());
+                    logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
                 }
-                Tile::issueLocalL2Request_(mes->getRequest(), 0);
+                Tile::issueLocalRequest_(mes->getRequest(), 0);
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
@@ -172,14 +172,9 @@ namespace spike_model
         std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
     }
 
-    void Tile::setRequestManager(std::shared_ptr<RequestManager> r)
+    void Tile::setRequestManager(std::shared_ptr<RequestManagerIF> r)
     {
         request_manager_=r;
-    }
-
-    std::shared_ptr<RequestManager> Tile::getRequestManager()
-    {
-        return request_manager_;
     }
 
     void Tile::setId(uint16_t id)

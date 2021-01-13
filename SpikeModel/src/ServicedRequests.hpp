@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "L2Request.hpp"
+#include "Request.hpp"
 #include <queue>
 
 namespace spike_model
@@ -16,17 +16,17 @@ namespace spike_model
 
             ServicedRequests()
             {
-                serviced_misses=std::make_shared<std::queue<std::shared_ptr<L2Request>>> ();
+                serviced_misses=std::make_shared<std::queue<std::shared_ptr<Request>>> ();
             }
 
-            void addRequest(std::shared_ptr<L2Request> req)
+            void addRequest(std::shared_ptr<Request> req)
             {
                 serviced_misses->push(req);
             }
 
-            std::shared_ptr<L2Request> getRequest()
+            std::shared_ptr<Request> getRequest()
             {
-                std::shared_ptr<L2Request> res=serviced_misses->front();
+                std::shared_ptr<Request> res=serviced_misses->front();
                 serviced_misses->pop();
                 return res;
             }
@@ -37,7 +37,7 @@ namespace spike_model
             }
 
         private:
-           std::shared_ptr<std::queue<std::shared_ptr<L2Request>>> serviced_misses;
+           std::shared_ptr<std::queue<std::shared_ptr<Request>>> serviced_misses;
     };
 }
 #endif
