@@ -9,14 +9,14 @@
 
 #if 0
 #define FMA( vc, vb, sa, gvl ) do { \
-  __epi_1xf64 vta  = __builtin_epi_vbroadcast_1xf64(sa, gvl); \
+  __epi_1xf64 vta  = __builtin_epi_vfmv_v_f_1xf64(sa, gvl); \
   __epi_1xf64 vtp  = __builtin_epi_vfmul_1xf64(vta, vb, gvl); \
   vc   = __builtin_epi_vfadd_1xf64(vc, vtp, gvl); \
 } while(0)
 #endif
 
 #define FMA( vc, vb, sa, gvl ) do { \
-  __epi_1xf64 vta  = __builtin_epi_vbroadcast_1xf64(sa, gvl); \
+  __epi_1xf64 vta  = __builtin_epi_vfmv_v_f_1xf64(sa, gvl); \
   vc  = __builtin_epi_vfmacc_1xf64(vc, vta, vb, gvl); \
 } while(0)
 
@@ -37,25 +37,26 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
      for (ii = 0; ii < M-15; ii += bi) {                        //unroll rows (no possibility of indirection on register addressing)
 		__epi_1xf64 vc0, vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8, vc9, vc10, vc11, vc12, vc13, vc14, vc15;
         __epi_1xf64 vb0;
-        vc0  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
+        vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+
 #if 0
 	vc1=vc2=vc3=vc4=vc5=vc6=vc7=vc8=vc9=vc10=vc11=vc12=vc13=vc14=vc15=vc0;
 #else
-        vc1  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc2 = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc3  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc4  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc5  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc6  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc7  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc8  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc9  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc10  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc11  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc12  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc13  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc14  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc15  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
+        vc1  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc2 = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc3  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc4  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc5  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc6  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc7  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc8  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc9  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc10  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc11  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc12  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc13  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc14  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc15  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
 #endif
 
         for (int kk = 0; kk < K; kk += bk) {
@@ -105,10 +106,10 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
      __epi_1xf64 vb0;
      unsigned long int gvl = __builtin_epi_vsetvl(N-jj, __epi_e64, __epi_m1);
      for (ii=ii_left; ii < M; ii += 2) {
-        vc0  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc1  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc2  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
-        vc3  = __builtin_epi_vbroadcast_1xf64(0.0, gvl); 
+        vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc1  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc2  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc3  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
 
         for (int kk = 0; kk < K; kk += bk) {
            vb0 = __builtin_epi_vload_1xf64(&b[kk][jj], gvl);
@@ -140,6 +141,7 @@ int thread_entry(int cid, int nc)
   int bk = 1;
 
   static data_t results_data[ARRAY_SIZE];
+
 
   matmul_builtins(cid, nc, m, k, n, bi, bj, bk, results_data, input1_data, input2_data);
 
