@@ -10,15 +10,31 @@
 
 class SimulationOrchestrator : public spike_model::LogCapable
 {
+    
+    /**
+     * \class SimulationOrchestrator
+     *
+     * \brief SimulationOrchestrator is the glue that puts together  Spike and Sparta in Coyote.
+     *
+     * Its purpose is to handle the execution of instructions on Spike, the forwarding of L2 Requests
+     * to Sparta and the notifications to Sparta when a request has been serviced.
+     *
+     */
+
     public:
 
         /*!
          * \brief Constructor for the SimulationOrchestrator
+         * \param spike An instance of a wrapped Spike simulation
+         * \param spike_model The model for the architecture that will be simulated
+         * \param request_manager The request manager to communicate requests to the modelled architecture
+         * \param num_cores The number of simukated cores
+         * \param trace Whether tracing is enabled or not
          */
         SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, bool trace);
 
         /*!
-         * \brief Runs the simulation
+         * \brief Triggers the simulation
          */
         void run();
 
@@ -42,17 +58,19 @@ class SimulationOrchestrator : public spike_model::LogCapable
         bool trace;
 
         /*!
-         * \brief Simulates an instruction in each of the active cores
+         * \brief Simulate an instruction in each of the active cores
          */
         void simulateInstInActiveCores();
         
         /*!
-         * \brief Handles the events for events earlier than the current cycle
+         * \brief Handle the events for cycles earlier or equal to the current cycle
          */
         void handleEvents();
 
         /*!
-         * \brief Calcullates the difference between a cycle value and Sparta time.
+         * \brief Calcullate the difference between a cycle value and Sparta time.
+         * \param cycle The value that will be compared to the Sparta clock.
+         * \return The difference between cycle and the value in the Sparta clock in cycles.
          */
         uint64_t spartaDelay(uint64_t cycle);
 };

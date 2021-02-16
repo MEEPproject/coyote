@@ -23,7 +23,6 @@
 #include "simdb/impl/hdf5/HDF5ConnProxy.hpp"
 #include "simdb/utils/uuids.hpp"
 
-#include "Core.hpp"
 #include "PrivateL2Manager.hpp"
 #include "SharedL2Manager.hpp"
 #include <thread>
@@ -211,7 +210,7 @@ void SpikeModel::bindTree_()
     cpu_factory->bindTree(getRoot());
 }
 
-std::shared_ptr<spike_model::RequestManagerIF> SpikeModel::createRequestManagerIF()
+std::shared_ptr<spike_model::RequestManagerIF> SpikeModel::createRequestManager()
 {
     spike_model::ServicedRequests s;
     std::vector<spike_model::Tile *> tiles;

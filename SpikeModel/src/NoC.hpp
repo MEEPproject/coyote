@@ -21,7 +21,6 @@
 #include <memory>
 
 #include "NoCMessage.hpp"
-#include "Core.hpp"
 #include "LogCapable.hpp"
 #include "ServicedRequests.hpp"
 
@@ -31,6 +30,12 @@ namespace spike_model
 
     class NoC : public sparta::Unit, public LogCapable
     {
+        /*!
+         * \class spike_model::NoC
+         * \brief NoC models the network on chip interconnecting tiles and memory controllers
+         * 
+         * It currently models a highly idelized crossbar, but more realistic NoCs are work in progress
+         */
     public:
         /*!
          * \class NoCParameterSet
@@ -51,8 +56,8 @@ namespace spike_model
 
         /*!
          * \brief Constructor for NoC
-         * \note  node parameter is the node that represent the NoC and
-         *        p is the NoC parameter set
+         * \param node The node that represent the NoC and
+         * \param p The NoC parameter set
          */
         NoC(sparta::TreeNode* node, const NoCParameterSet* p);
 
@@ -65,11 +70,13 @@ namespace spike_model
         //! name of this resource.
         static const char name[];
 
-        /*! \brief Forwards messages sent from tiles to the correct destination
+        /*! \brief Forward a message sent from a tile to the correct destination
+        * \parame mes The meesage to handle
         */
         void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
 
-        /*! \brief Forwards messages sent from memory controllers to the correct destination
+        /*! \brief Forward a message sent from a memory controller to the correct destination
+        * \param mes The message
         */
         void handleMessageFromMemoryController_(const std::shared_ptr<NoCMessage> & mes);
 

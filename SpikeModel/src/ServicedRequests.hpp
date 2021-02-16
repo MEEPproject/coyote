@@ -12,18 +12,37 @@ namespace spike_model
 
     class ServicedRequests
     {
+        /**
+         * \class spike_model::ServicedRequests
+         *
+         * \brief Stores instances of Request that have been already been serviced.
+         *
+         * In general, RequestManagerIF adds requests, while the SimulationOrchestrator gets them.
+         *
+         */
         public:
 
+            /*!
+             * \brief Constructor
+             */
             ServicedRequests()
             {
                 serviced_misses=std::make_shared<std::queue<std::shared_ptr<Request>>> ();
             }
 
+            /*!
+             * \brief Adds a request that has been serviced
+             * \param req The request that has been serviced
+             */
             void addRequest(std::shared_ptr<Request> req)
             {
                 serviced_misses->push(req);
             }
 
+            /*!
+             * \brief Get a serviced request
+             * \return The Request
+             */
             std::shared_ptr<Request> getRequest()
             {
                 std::shared_ptr<Request> res=serviced_misses->front();
@@ -31,6 +50,10 @@ namespace spike_model
                 return res;
             }
 
+            /*!
+             * \brief Check if there is any serviced request available
+             * \return true if there is a request
+             */
             bool hasRequest()
             {
                 return !serviced_misses->empty();

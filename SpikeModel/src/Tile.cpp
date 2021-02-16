@@ -95,24 +95,32 @@ namespace spike_model
 
     void Tile::notifyAck_(const std::shared_ptr<Request> & req)
     {
-        //The ack is for this tile
-        if(req->getSourceTile()==id_)
+        if(req->getType()==Request::AccessType::STORE || req->getType()==Request::AccessType::WRITEBACK)
         {
-            //std::cout << "Notifying to manager\n";
-            if(trace_)
-            {
-                logger_.logMissServiced(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getAddress());
-            }
+            logger_.logMissServiced(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getAddress());
             request_manager_->notifyAck(req);
         }
         else
         {
-            //std::cout << "Sending ack to remote\n";
-            if(trace_)
+            //The ack is for this tile
+            if(req->getSourceTile()==id_)
             {
-                logger_.logTileSendAck(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getSourceTile(), req->getAddress());
+                //std::cout << "Notifying to manager\n";
+                if(trace_)
+                {
+                    logger_.logMissServiced(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getAddress());
+                }
+                request_manager_->notifyAck(req);
             }
-            out_port_noc_.send(request_manager_->getDataForwardMessage(req), l2_line_size); 
+            else
+            {
+                //std::cout << "Sending ack to remote\n";
+                if(trace_)
+                {
+                    logger_.logTileSendAck(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getSourceTile(), req->getAddress());
+                }
+                out_port_noc_.send(request_manager_->getDataForwardMessage(req), l2_line_size); 
+            }
         }
     }
 

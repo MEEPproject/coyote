@@ -15,20 +15,21 @@
 
 namespace spike_model{
 
-/**
- * @file  CPUTopology.h
- * @brief CPUTopology will act as the place where a user-defined topology
- *        is actually written. This class has structures for holding the
- *        required tree nodes and details about its parents nodes, names,
- *        groups, ids and whether it should be a private node or not.
- *
- * CPUTopology unit will
- * 1. Contain the nuts and bolts needed by the user to generate an actual topology
- * 2. Contain unit structures and port structures to build and bind
- * 3. Allow deriving classes to define a topology
- */
 class CPUTopology{
 public:
+
+    /**
+     * \class  spike_model::CPUTopology
+     * \brief CPUTopology will act as the place where a user-defined topology
+     *        is actually written. This class has structures for holding the
+     *        required tree nodes and details about its parents nodes, names,
+     *        groups, ids and whether it should be a private node or not.
+     *
+     * CPUTopology unit will
+     * 1. Contain the nuts and bolts needed by the user to generate an actual topology
+     * 2. Contain unit structures and port structures to build and bind
+     * 3. Allow deriving classes to define a topology
+     */
 
     //! \brief Structure to represent a resource unit in device tree
     struct UnitInfo{

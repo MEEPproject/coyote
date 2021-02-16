@@ -45,6 +45,13 @@ namespace spike_model
         sstream << "l2_miss,0," << std::hex << address;
         log(timestamp, id, pc, sstream.str());
     }
+    
+    void Logger::logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    {
+        std::stringstream sstream; 
+        sstream << "l2_wb,0," << std::hex << address;
+        log(timestamp, id, pc, sstream.str());
+    }
 
     void Logger::logLocalBankRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t bank, uint64_t address)
     {

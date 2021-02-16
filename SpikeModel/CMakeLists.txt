@@ -147,7 +147,6 @@ add_executable(spike_model
   src/CPUFactory.cpp
   src/CPUTopology.cpp
   src/CPU.cpp
-  #src/Core.cpp
   src/CacheBank.cpp
   src/NoC.cpp
   src/NoCMessage.cpp

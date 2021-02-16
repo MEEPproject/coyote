@@ -16,6 +16,7 @@ namespace spike_model
     latency_(p->latency),
     line_size_(p->line_size),
     num_banks_(p->num_banks),
+    write_allocate_(p->write_allocate),
     banks()
     {
         in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<NoCMessage>));
@@ -54,6 +55,17 @@ namespace spike_model
         {
             res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
         }
+        return res_command;
+    }
+    
+    std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<Request> req, uint64_t bank)
+    {
+        sparta_assert(req->getType()==Request::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
+        
+        std::shared_ptr<BankCommand> res_command;
+
+        uint64_t column_to_schedule=req->getCol();
+        res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
         return res_command;
     }
 
@@ -132,15 +144,25 @@ namespace spike_model
             {
                 std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
                 sched->notifyRequestCompletion(command_bank);
-                issueAck_(pending_request_for_bank);
+                if(pending_request_for_bank->getType()==Request::AccessType::LOAD || pending_request_for_bank->getType()==Request::AccessType::FETCH || (pending_request_for_bank->getType()==Request::AccessType::STORE && write_allocate_))
+                {
+                    issueAck_(pending_request_for_bank);
+                }
                 break;
             }
            
             case BankCommand::CommandType::WRITE:
             {
                 std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
-                sched->notifyRequestCompletion(command_bank);
-                issueAck_(pending_request_for_bank);
+
+                if(!write_allocate_ || sched->getRequest(command_bank)->getType()==Request::AccessType::WRITEBACK)
+                {
+                    sched->notifyRequestCompletion(command_bank);
+                }
+                else
+                {
+                    com=getAllocateCommand_(pending_request_for_bank, command_bank);
+                }
                 break;
             }
         }
@@ -149,7 +171,7 @@ namespace spike_model
         {
             ready_commands->addCommand(com);
         }
-        
+       
         if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
         {
             controller_cycle_event_.schedule();

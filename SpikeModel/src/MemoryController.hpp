@@ -35,6 +35,14 @@ namespace spike_model
 
     class MemoryController : public sparta::Unit, public LogCapable
     {
+        /*!
+         * \class spike_model::MemoryController
+         * \brief MemoryController models a the operation of simple memory controller
+         *
+         * To make modification and extension easy, many functionalities related to the scheduling of commands/requests
+         * have been extracted to other classes, such as MemoryAccessSchedulerIF. A reduced subset of commands is supported.
+         * The addition of new commands is expected to involve limited changes to controllerCycle_() and notifyCompletion_() methods.
+         */
         public:
             /*!
              * \class MemoryControllerParameterSet
@@ -51,12 +59,13 @@ namespace spike_model
                 PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(uint64_t, line_size, 128, "The cache line size")
+                PARAMETER(bool, write_allocate, true, "The write allocation policy")
             };
 
             /*!
              * \brief Constructor for MemoryController
-             * \note  node parameter is the node that represent the MemoryController and
-             *        p is the MemoryController parameter set
+             * \param node The node that represent the MemoryController and
+             * \param p The MemoryController parameter set
              */
             MemoryController(sparta::TreeNode* node, const MemoryControllerParameterSet* p);
 
@@ -69,11 +78,21 @@ namespace spike_model
             //! name of this resource.
             static const char name[];
 
+            /*!
+             * \brief Associate a bank to the memory controller
+             * \param bank The bank
+             */
             void addBank_(MemoryBank * bank);
+
+            /*!
+             * \brief Notify the completion of a command
+             * \param c The command
+             */
             void notifyCompletion_(std::shared_ptr<BankCommand> c);
             
             /*!
-             * \brief Sets the request manager for the tile
+             * \brief Set the request manager
+             * \param r The request manager
              */
             void setRequestManager(std::shared_ptr<RequestManagerIF> r);
 
@@ -94,6 +113,8 @@ namespace spike_model
 
             uint64_t num_banks_;
 
+            bool write_allocate_;
+
             bool idle_=true;
 
             std::vector<MemoryBank *> banks;
@@ -105,13 +126,40 @@ namespace spike_model
 
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
     
+            /*!
+             * \brief Receive a message from the NoC
+             * \param mes The message
+             */
             void receiveMessage_(const std::shared_ptr<NoCMessage> & mes);
             
+            /*!
+             * \brief Send an acknowledgement through the NoC
+             * \param req The request that has been completed and will be acknowledged
+             */
             void issueAck_(std::shared_ptr<Request> req);
     
+            /*!
+             * \brief Execute a memory controller cycle
+             *  This method implements the main operation of the controller and will be 
+             *  executed every cycle, provided there is work to do
+             */
             void controllerCycle_();
     
+            /*!
+             * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
+             * \param req The request
+             * \param bank The bank to access
+             * \return A command of the correct type to access the specified bank
+             */
             std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank);
+    
+            /*!
+             * \brief Create a command to read the line after writing it (if write-allocate is enabled)
+             * \param req The request
+             * \param bank The bank to access
+             * \return A command for the write allocate
+             */
+            std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<Request> req, uint64_t bank);
     };
 }
 #endif

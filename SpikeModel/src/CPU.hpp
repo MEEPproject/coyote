@@ -23,6 +23,12 @@ namespace spike_model{
  */
 class CPU : public sparta::Unit{
 public:
+    
+    /*!
+     * \class spike:model::CPU
+     * \brief Representation of the overall modelled architecture
+     *
+     */
 
     //! \brief Parameters for CPU model
     class CPUParameterSet : public sparta::ParameterSet{

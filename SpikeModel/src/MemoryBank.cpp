@@ -52,7 +52,6 @@ namespace spike_model
                 break;
         }
         command_completed_event.preparePayload(c)->schedule(delay);
-
     }
 
     uint64_t MemoryBank::getOpenRow()
@@ -76,6 +75,7 @@ namespace spike_model
         {
             case BankCommand::CommandType::OPEN:
                 state=BankState::OPEN;
+                //current_row=c->getValue();
                 break;
 
             case BankCommand::CommandType::CLOSE:

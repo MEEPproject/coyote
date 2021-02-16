@@ -4,7 +4,7 @@
 #include "sparta/utils/SpartaAssert.hpp"
 #include "sparta/utils/MathUtils.hpp"
 #include "cache/BasicCacheItem.hpp"
-#include "cache/SimpleCache2.hpp"
+#include "cache_helpers/SimpleCache.hpp"
 #include "cache/ReplacementIF.hpp"
 #include "cache/preload/PreloadableIF.hpp"
 #include "cache/preload/PreloadableNode.hpp"
@@ -19,7 +19,8 @@ namespace spike_model
 
         SimpleCacheLine(uint64_t line_size) :
             line_size_(line_size),
-            valid_(false)
+            valid_(false),
+            modified_(false)
         {
             sparta_assert(sparta::utils::is_power_of_2(line_size),
                 "Cache line size must be a power of 2. line_size=" << line_size);
@@ -29,7 +30,8 @@ namespace spike_model
         SimpleCacheLine(const SimpleCacheLine & rhs) :
             BasicCacheItem(rhs),
             line_size_(rhs.line_size_),
-            valid_(rhs.valid_)
+            valid_(rhs.valid_),
+            modified_(rhs.modified_)
         {
         }
 
@@ -49,6 +51,7 @@ namespace spike_model
         void reset(uint64_t addr)
         {
             setValid(true);
+            setModified(false);
             BasicCacheItem::setAddr(addr);
         }
 
@@ -59,7 +62,8 @@ namespace spike_model
         bool isValid() const { return valid_; }
 
         // Required by SimpleCache2
-        void setModified(bool m) { (void) m; }
+        void setModified(bool m) { modified_=m; }
+        bool isModified() { return modified_;}
 
         // Required by SimpleCache2
         bool read(uint64_t offset, uint32_t size, uint32_t *buf) const
@@ -84,10 +88,12 @@ namespace spike_model
         private:
         uint32_t line_size_;
         bool valid_;
+        bool modified_;
 
         }; // class SimpleCacheLine
 
-    class SimpleDL1 : public sparta::cache::SimpleCache2<SimpleCacheLine>,
+    //class SimpleDL1 : public sparta::cache::SimpleCache2<SimpleCacheLine>,
+    class SimpleDL1 : public sparta::cache::SimpleCache<SimpleCacheLine>,
                       public sparta::TreeNode,
                       public sparta::cache::PreloadableIF,
                       public sparta::cache::PreloadDumpableIF
@@ -99,7 +105,7 @@ namespace spike_model
                   uint64_t cache_size_kb,
                   uint64_t line_size,
                   const sparta::cache::ReplacementIF& rep) :
-            sparta::cache::SimpleCache2<SimpleCacheLine> (cache_size_kb,
+            sparta::cache::SimpleCache<SimpleCacheLine> (cache_size_kb,
                                                         line_size,
                                                         line_size,
                                                         SimpleCacheLine(line_size),

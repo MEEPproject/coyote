@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 
         cls.populateSimulation(&(*sim));
         
-        std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManagerIF();
+        std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManager();
 
 
         std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,ic,dc,isa,cmd,varch,fast_cache);

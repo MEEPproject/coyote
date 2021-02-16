@@ -13,34 +13,32 @@
 
 namespace spike_model{
 
-/**
- * @file  CPUFactories.h
- * @brief CPUFactories will act as the place which contains all the
- *        required factories to build sub-units of the CPU.
- *
- * CPUFactories unit will
- * 1. Contain resource factories to build each core of the CPU
- * 2. Contain resource factories to build microarchitectural units in each core
- */
+
 struct CPUFactories{
-
-    //! \brief Resouce Factory to build a Core Unit
-
-//    sparta::ResourceFactory<spike_model::Core,
-//                          spike_model::Core::CoreParameterSet> core_rf;
     
+    /*
+     * \struct spike_model::CPUFactories
+     * \brief CPUFactories will act as the place which contains all the required factories to build sub-units of the CPU
+     */
+
+
+    //! \brief Resouce Factory to build a CacheBank Unit
     sparta::ResourceFactory<spike_model::CacheBank,
                           spike_model::CacheBank::CacheBankParameterSet> cache_bank_rf;
     
+    //! \brief Resouce Factory to build a NoC Unit
     sparta::ResourceFactory<spike_model::NoC,
                           spike_model::NoC::NoCParameterSet> noc_rf;
     
+    //! \brief Resouce Factory to build a Tile Unit
     sparta::ResourceFactory<spike_model::Tile,
                           spike_model::Tile::TileParameterSet> tile_rf;
 
+    //! \brief Resouce Factory to build a MemoryController Unit
     sparta::ResourceFactory<spike_model::MemoryController,
                           spike_model::MemoryController::MemoryControllerParameterSet> memory_controller_rf;
     
+    //! \brief Resouce Factory to build a MemoryBank Unit
     sparta::ResourceFactory<spike_model::MemoryBank,
                           spike_model::MemoryBank::MemoryBankParameterSet> memory_bank_rf;
 }; // struct CPUFactories

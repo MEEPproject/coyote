@@ -32,6 +32,14 @@ namespace spike_model
 {
     class CacheBank : public sparta::Unit, public LogCapable
     {
+        /*!
+         * \class spike_model::CacheBank
+         * \brief A cache bank that belongs to a Tile in the architecture.
+         *
+         * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
+         * be in service at the sime time. Whether banks are shared or private to the tile is controlled from
+         * the RequestManagerIF class. The Cache is write-back and write-allocate.
+         */
     public:
         /*!
          * \class CacheBankParameterSet
@@ -58,8 +66,8 @@ namespace spike_model
 
         /*!
          * \brief Constructor for CacheBank
-         * \note  node parameter is the node that represent the CacheBank and
-         *        p is the CacheBank parameter set
+         * \param node The node that represent the CacheBank and
+         * \param p The CacheBank parameter set
          */
         CacheBank(sparta::TreeNode* node, const CacheBankParameterSet* p);
 
@@ -144,20 +152,39 @@ namespace spike_model
         // allocator for this object type
         sparta::SpartaSharedPointer<MemoryAccessInfo>::SpartaSharedPointerAllocator memory_access_allocator;
 
+        /*!
+         * \brief Get a request coming from the input port from the tile and store it for later handling
+         * \param req The request to store
+         */
         void getAccess_(const std::shared_ptr<Request> & req);
-        // Issue/Re-issue ready instructions in the issue queue
+
+        /*!
+        * \brief Issue a request from the queue of pending requests
+        */
         void issueAccess_();
 
+        /*!
+        * \brief Get the size of the cache bank
+        * \return The size
+        */
         uint64_t getSize()
         {
             return l2_size_kb_;
         }
 
+        /*!
+        * \brief Get the associativity of the cache bank
+        * \return The associativity
+        */
         uint64_t getAssoc()
         {
             return l2_associativity_;
         }
 
+        /*!
+        * \brief Get the line size
+        * \return The size of a cache line
+        */
         uint64_t getLineSize()
         {
             return l2_line_size_;
@@ -217,7 +244,10 @@ namespace spike_model
         // Callbacks
         ////////////////////////////////////////////////////////////////////////////////
 
-        // Receive MSS access acknowledge from Bus Interface Unit
+        /*!
+        * \brief Sends an acknoledgement for a serviced request
+        * \param req The request to acknowledge
+        */
         void sendAck_(const std::shared_ptr<Request> & req);
 
 
@@ -226,13 +256,22 @@ namespace spike_model
         // Regular Function/Subroutine Call
         ////////////////////////////////////////////////////////////////////////////////
 
-        // Handle cache access request
+        /*!
+        * \brief Handle the cache access for a request
+        * \param mem_access_info_ptr The access to handle
+        */
         bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
 
-        // Access Cache
+        /*!
+        * \brief Lookup the cache
+        * \param The access for the lookup
+        */
         bool cacheLookup_(const MemoryAccessInfoPtr &);
 
-        // Reload cache line
+        /*!
+        * \brief Update the replacement info for an address
+        * \param The address to update
+        */
         void reloadCache_(uint64_t);
 
         //An unordered set indexed by the bits of an instruction and containing all its pending (mmu/cache) accesses
@@ -241,6 +280,8 @@ namespace spike_model
         sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_stall_=sparta::Counter(getStatisticSet(), "stalls", "Stalls due to full in-flight queue", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_hit_on_store_=sparta::Counter(getStatisticSet(), "hits_on_store", "Number of hits on pending stores", sparta::Counter::COUNT_NORMAL);
+        
+        sparta::Counter count_wbs_=sparta::Counter(getStatisticSet(), "writebacks", "Number of writebacks", sparta::Counter::COUNT_NORMAL);
         
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",

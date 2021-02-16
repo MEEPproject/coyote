@@ -8,9 +8,18 @@
 
 namespace spike_model
 {
+    /*!
+     * \class spike_model::LogCapable
+     * \brief An element that has access to a Logger and can consequently write 
+     *  information to the execution trace.
+     */
     class LogCapable
     {
         public:
+            /*!
+             * \brief Set the logger that will be used for tracing.
+             * \param l The logger to use
+             */
             void setLogger(Logger & l)
             {
                 trace_=true;

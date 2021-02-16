@@ -13,19 +13,19 @@
 
 namespace spike_model{
 
-/**
- * @file  CPUFactory.h
- * @brief CPUFactory will act as the place where a user-defined topology
- *        will be translated into actual Resource Treenodes. It is responsible
- *        for binding ports between units.
- *
- * CPUFactory unit will
- * 1. Set recipe for topology and number of cores in processor
- * 2. Build the actual tree nodes
- * 3. Bind the ports of different logical units together
- */
 class CPUFactory : public sparta::ResourceFactory<CPU, CPU::CPUParameterSet>{
 public:
+    /**
+     * \class spike_model::CPUFactory
+     * \brief CPUFactory will act as the place where a user-defined topology
+     *        will be translated into actual Resource Treenodes. It is responsible
+     *        for binding ports between units.
+     *
+     * CPUFactory unit will
+     * 1. Set recipe for topology and number of cores in processor
+     * 2. Build the actual tree nodes
+     * 3. Bind the ports of different logical units together
+     */
 
     /**
      * @brief Constructor for CPUFactory
@@ -67,6 +67,9 @@ private:
     auto buildTree_(sparta::RootTreeNode*,
                     const std::vector<CPUTopology::UnitInfo>&) -> void;
 
+    /**
+     * @brief Implementation : Build the device tree for shared units by instantiating resource nodes
+     */
     auto buildTreeShared_(sparta::RootTreeNode* root_node,
                           const std::vector<spike_model::CPUTopology::UnitInfo>& units) -> void;
     /**

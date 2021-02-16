@@ -53,9 +53,9 @@ namespace spike_model
     {
         bool was_stalled=in_flight_reads_.is_full();
 
+        reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
         if(req->getType()==Request::AccessType::LOAD || req->getType()==Request::AccessType::FETCH)
         {
-            reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
             auto range_misses=in_flight_reads_.equal_range(req);
 
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
@@ -71,7 +71,6 @@ namespace spike_model
         }
         else //STORE-WRITEBACK JUST NOTIFY THIS REQUEST, AS THERE ISN'T ANY OTHER ASSOCIATED
         {
-            out_core_ack_.send(req);
         }
 
         if(pending_requests_.size()>0)
@@ -154,6 +153,7 @@ namespace spike_model
         // Access cache, and check cache hit or miss
         const bool CACHE_HIT = cacheLookup_(mem_access_info_ptr);
 
+
         if (CACHE_HIT) {
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
         }
@@ -183,16 +183,27 @@ namespace spike_model
                     in_flight_reads_.insert(mem_access_info_ptr->getReq());
                 }
 
-
-                if(!already_pending)
+                //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
+                if(!(mem_access_info_ptr->getReq()->getType()==Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==Request::AccessType::FETCH) || !already_pending)
                 {
                     out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
+
+                    //NO FURTHER ACTION IS NEEDED
+                    if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                    {
+                        out_core_ack_.send(mem_access_info_ptr->getReq());
+                    }
                 }
                 else
                 {
                     count_misses_on_already_pending_++;
                 }
 
+                //THE CACHE IS WRITE ALLOCATE, SO MISSES ON WRITEBACKS NEED TO KEEP THE LINE APPART FROM FORWARDING IT
+                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                {
+                    reloadCache_(mem_access_info_ptr->getReq()->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+                }
 
                 if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
                     info_logger_ << "Cache is trying to drive BIU request port!";
@@ -225,6 +236,11 @@ namespace spike_model
             
             if (cache_hit) {
                 l2_cache_->touchMRU(*cache_line);
+                //SET DIRTY BIT IF NECESSARY
+                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                {
+                    cache_line->setModified(true);
+                }
             }
         }
 
@@ -248,6 +264,17 @@ namespace spike_model
     void CacheBank::reloadCache_(uint64_t phyAddr)
     {
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
+
+        //If the line is dirty, send a writeback to the memory
+        if(l2_cache_line->isModified())
+        {
+            out_biu_req_.send(std::make_shared<spike_model::Request> (l2_cache_line->getAddr(), Request::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0), 1);
+            count_wbs_+=1;
+            if(trace_)
+            {
+                logger_.logL2WB(getClock()->currentCycle(), 0, 0, l2_cache_line->getAddr());
+            }
+        }
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
 
 

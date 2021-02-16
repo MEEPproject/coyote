@@ -8,7 +8,6 @@
 #include "sparta/app/Simulation.hpp"
 #include "sparta/trigger/ExpiringExpressionTrigger.hpp"
 #include <cinttypes>
-#include "NoC.hpp"
 #include "Request.hpp"
 #include "ServicedRequests.hpp"
 #include "RequestManagerIF.hpp"
@@ -42,7 +41,7 @@ public:
     // Tear it down
     virtual ~SpikeModel();
 
-    std::shared_ptr<spike_model::RequestManagerIF> createRequestManagerIF();
+    std::shared_ptr<spike_model::RequestManagerIF> createRequestManager();
 
     spike_model::Logger& getLogger();
 

@@ -30,6 +30,14 @@ namespace spike_model
 
     class MemoryBank : public sparta::Unit, public LogCapable
     {
+        /*!
+         * \class spike_model::MemoryBank
+         * \brief A MemoryBank implements a simple state machine that models the operations of a memory bank
+         * 
+         * State changes are triggered by:
+         * 1. Instances of BankCommand received the issue function
+         * 2. Events modelling the behavior of the bank, such as the time it takes to open a row
+         */
         enum class BankState
         {
             OPEN,
@@ -81,18 +89,46 @@ namespace spike_model
 
         public:
 
+            /*!
+             * \brief Issue a command. This will potentially trigger a state change
+             * \param c The command to issue
+             */
             void issue(std::shared_ptr<BankCommand> c);
 
+            /*!
+             * \brief Check if the bank is ready for a new command
+             * \return True if the current state is OPEN or CLOSED
+             */
             bool isReady();
     
+            /*!
+             * \brief Check if a row is currently open
+             * \return True if the state is OPEN
+             */
             bool isOpen();
             
+            /*!
+             * \brief Get the row currently open 
+             * \return The row that is open
+             */
             uint64_t getOpenRow();
-
+ 
+            /*!
+             * \brief Set the memory controller that is in charge if this bank
+             * \param controller The controller
+             */
             void setMemoryController(MemoryController * controller);
             
+            /*!
+             * \brief Get the number of rows in the bank
+             * \return The number of rows
+             */
             uint64_t getNumRows();
             
+            /*!
+             * \brief Get the number of columns in a row
+             * \return The number of columns
+             */
             uint64_t getNumColumns();
 
             //This function needs to be public to be associated to an event, but should not be called otherwise
@@ -106,11 +142,15 @@ namespace spike_model
             uint64_t delay_read;
             uint64_t delay_write;
 
-            uint64_t current_row;
+            uint64_t current_row; //TODO: This is not updated!!!
             BankState state=BankState::CLOSED;
             
             MemoryController * mc;
             
+            /*!
+             * \brief Notify the completion of a command
+             * \param c The command that has been completed
+             */
             void notifyCompletion(const std::shared_ptr<BankCommand>& c);
         
             sparta::PayloadEvent<std::shared_ptr<BankCommand>, sparta::SchedulingPhase::Tick> command_completed_event {&unit_event_set_, "command_completed_", CREATE_SPARTA_HANDLER_WITH_DATA(MemoryBank, notifyCompletion, std::shared_ptr<BankCommand>)};

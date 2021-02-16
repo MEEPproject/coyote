@@ -144,7 +144,18 @@ namespace spike_model
 
         req->setMemoryAccessInfo(memory_controller, rank, bank, row, col);
 
-        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, address_size);
+        uint32_t size=address_size;
+
+        if(req->getType()==Request::AccessType::STORE)
+        {
+            size=req->getSize();
+        }
+        else if(req->getType()==Request::AccessType::WRITEBACK)
+        {
+            size=line_size;
+        }
+
+        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size);
     }
 
     std::shared_ptr<NoCMessage> RequestManagerIF::getMemoryReplyMessage(std::shared_ptr<Request> req)

@@ -31,6 +31,16 @@ namespace spike_model
 
     class Tile : public sparta::Unit, public LogCapable
     {
+
+        /*!
+         * \class spike_model::Tile
+         * \brief A representation of a tile in the modelled architecture.
+         *
+         * Tiles have a chunk of L2 and access to the network on chip, to communicate with
+         * other tiles and the memory. They are the main access and exit point of thr architecture
+         * modelled using Sparta.
+         *
+         */
         public:
  
             /*!
@@ -66,28 +76,35 @@ namespace spike_model
             static const char name[];
 
             /*!
-             * \brief Sets the information on the l2 cache banks associated to this tile
+             * \brief Set the information on the l2 cache banks associated to this tile
+             * \param size The size of rach bank
+             * \param assoc The associativity of the cache
+             * \param line_size The size of the lines of cache
              */
             void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size);
 
             /*!
-             * \brief Sets the request manager for the tile
+             * \brief Set the request manager for the tile
+             * \param r The request manager
              */
             void setRequestManager(std::shared_ptr<RequestManagerIF> r);
 
             /*!
-             * \brief Sets the id for the tile
+             * \brief Set the id for the tile
+             * \param id The id
              */
             void setId(uint16_t id);
 
             /*!
-             * \brief Enqueues an L2 request to the tile
-             * \note lapse is the number of cycles that the request needs to be delayed
+             * \brief Enqueue an L2 request to the tile
+             * \param lapse The number of cycles that the request needs to be delayed to 
+             * accomodate the difference between the Sparta and overall simulation clocks
              */
             void putRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
-             * \brief Notifies the completion of the service for an L2 request
+             * \brief Notify the completion of the service for an L2 request
+             * \param The request
              */
             void notifyAck_(const std::shared_ptr<Request> & req);
             
@@ -122,27 +139,32 @@ namespace spike_model
             std::shared_ptr<RequestManagerIF> request_manager_;
 
             /*!
-             * \brief Sends a request to a memory controller
+             * \brief Send a request to a memory controller
+             * \param req The request
              */
             void issueMemoryControllerRequest_(const std::shared_ptr<Request> & req);
             
             /*!
              * \brief Sends an L2 request to a bank in a different tile
+             * \param req The request
              */
             void issueRemoteRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an L2 request to a bank in the current tile
+             * \param req The request
              */
             void issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an ack to a cache bank of the current tile (a prior remote L2 request or memory request has been serviced)
+             * \param req The request
              */
             void issueBankAck_(const std::shared_ptr<Request> & req);
             
             /*!
              * \brief Handles a message from the NoC
+             * \param req The request
              */
             void handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes);
     };

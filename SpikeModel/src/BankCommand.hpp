@@ -8,6 +8,12 @@ namespace spike_model
 {
     class BankCommand
     {
+        /*!
+         * \class spike_model::BankCommand
+         * \brief Models a MemoryBank command.
+         *
+         * Only a limited subset of commands is currently supported, specified in enum CommandType
+         */
         public:
             enum class CommandType
             {
@@ -23,26 +29,40 @@ namespace spike_model
             
             /*!
              * \brief Constructor for BankCommand
-             *        t is the type of the command
-             *        payload_size is the size in bytes of the data to be sent
+             * \param t The type of the command
+             * \param b The bank that will be accessed
+             * \param v The value associated to the command. E.g. The row to open or the column to read
+             * \note If commands get sufficiently complex an inheritance-based approach would make sense
              */
-            BankCommand(CommandType t, uint64_t bank, uint64_t param)
+            BankCommand(CommandType t, uint64_t b, uint64_t v)
             {
                 type=t;
-                value=param;
-                destination_bank=bank;
+                destination_bank=b;
+                value=v;
             }
 
+            /*!
+             * \brief Get the type of the command
+             * \return The type
+             */
             CommandType getType()
             {
                 return type;
             }
 
+            /*!
+             * \brief Get the value of the command, such as the column to be read or the row to open
+             * \return The value
+             */
             uint64_t getValue()
             {
                 return value;
             }
 
+            /*!
+             * \brief Get the bank that the command will access
+             * \return The bank of the command
+             */
             uint64_t getDestinationBank()
             {
                 return destination_bank;
@@ -50,8 +70,8 @@ namespace spike_model
 
         private:
             CommandType type;
-            uint64_t value;
             uint64_t destination_bank;
+            uint64_t value;
     };
 }
 #endif
