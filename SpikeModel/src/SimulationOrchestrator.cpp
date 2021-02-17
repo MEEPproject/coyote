@@ -87,7 +87,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
                 }
                 else //WRITEBACKS ARE HANDLED LAST
                 {
-                    pending_writebacks_per_core[i].push_back(miss);
+                    pending_writebacks_per_core[core].push_back(miss);
                 }
             }
         }
