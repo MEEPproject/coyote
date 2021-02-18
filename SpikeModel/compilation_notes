@@ -1,0 +1,4 @@
+
+- SPIKE_PATH must contain the path to the root of spike
+- SPIKE_MODEL_SRC must contain the path to the sparta spike model sources
+- Should be placed in "examples" and the CMakeLists.txt of "examples" modified
