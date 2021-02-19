@@ -1,0 +1,3 @@
+[submodule "riscv-isa-sim"]
+	path = riscv-isa-sim
+	url = https://gitlab.bsc.es/meep/meep-performance-modelling/coyote-tool/riscv-isa-sim.git
