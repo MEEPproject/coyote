@@ -469,3 +469,8 @@ long atol(const char* str)
 
   return sign ? -res : res;
 }
+
+void simfence()
+{
+  asm __volatile__ (".word 0x0000006B\n");
+}

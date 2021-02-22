@@ -225,7 +225,7 @@ int thread_entry(int cid, int nc)
       
   static double y[N_ROWS];
 
-  barrier(nc);
+  simfence();
 
 
   if(ALGORITHM==0)
@@ -245,7 +245,7 @@ int thread_entry(int cid, int nc)
     printf("Unsupported algorithm\n");
   }
 
-  barrier(nc);
+  simfence();
 
   #ifdef CHECK_RESULTS
   if(cid==0)
@@ -254,7 +254,7 @@ int thread_entry(int cid, int nc)
       SpMV_ref(a, ia, ja, x, y_ref, nrows);
       test_result(y, y_ref, nrows);
   }
-  barrier(nc);
+  simfence();
   #endif
 
   if(cid==0)

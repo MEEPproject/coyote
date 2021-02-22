@@ -1,10 +1,12 @@
 #include "SimulationOrchestrator.hpp"
 
-SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, bool trace):
+SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
     num_cores(num_cores),
+    num_threads_per_core(num_threads_per_core),
+    thread_switch_latency(thread_switch_latency),
     pending_misses_per_core(num_cores),
     pending_writebacks_per_core(num_cores),
     simulated_instructions_per_core(num_cores),
@@ -18,7 +20,15 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     {
         active_cores.push_back(i);
     }
-    
+
+    for(uint16_t i=0;i<num_cores;i+=num_threads_per_core)
+    {
+        runnable_cores.push_back(i);
+        runnable_after.push_back(0);
+    }
+
+    thread_barrier_cnt = 0;
+    threads_in_barrier.resize(num_cores,false);
 }
         
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -28,9 +38,9 @@ uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
 
 void SimulationOrchestrator::simulateInstInActiveCores()
 {
-    for(uint16_t i=0;i<active_cores.size();i++)
+    for(uint16_t i=0;i<runnable_cores.size();i++)
     {
-        uint16_t core=active_cores[i];
+        uint16_t core=runnable_cores[i];
 
         simulated_instructions_per_core[core]++;
 
@@ -67,6 +77,75 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             {
                 active=false;
                 core_finished=true;
+            }
+            else if(new_misses.front()->getType()==spike_model::Request::AccessType::FENCE)
+            {
+                //set the thread_barrier_cnt to number of threads, if not already set
+                if(thread_barrier_cnt == 0)
+                {
+                    thread_barrier_cnt = num_cores - 1 ;
+                    std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
+                    cur_cycle_suspended_threads.push_back(core);
+                    std::vector<uint16_t>::iterator itr;
+                    itr = std::find(active_cores.begin(), active_cores.end(), core);
+                    if(itr != active_cores.end())
+                    {
+                        active_cores.erase(itr);
+                    }
+
+                    runnable_cores.erase(runnable_cores.begin() + i);
+                    i--;
+                    stalled_cores.push_back(core);
+                    threads_in_barrier[core] = true;
+                    std::cout << "first core " << core
+                              << " waiting for barrier " << current_cycle << std::endl;
+                }
+                else if(thread_barrier_cnt == 1)
+                {
+                    //last thread arrived
+                    thread_barrier_cnt = 0;
+                    for(uint32_t i = 0; i < num_cores;i++)
+                    {
+                        if(i != core)
+                        {
+                            active_cores.push_back(i);
+                        }
+                        threads_in_barrier[i] = false;
+                    }
+
+                    stalled_cores.clear();
+                    uint16_t my_core_gp = core/num_threads_per_core;
+
+                    //Mark the core for which the threads need to be make runnable
+                    for(uint32_t i = 0; i < num_cores;i+=num_threads_per_core)
+                    {
+                        if(i != my_core_gp)
+                        {
+                            runnable_cores.push_back(i);
+                        }
+                    }
+                    cur_cycle_suspended_threads.clear();
+                    std::cout << "Last Core " << core << " reached barrier " << current_cycle << std::endl;
+                    break;
+                }
+                else
+                {
+                    thread_barrier_cnt--;
+                    std::vector<uint16_t>::iterator itr;
+                    itr = std::find(active_cores.begin(), active_cores.end(), core);
+                    if(itr != active_cores.end())
+                    {
+                        active_cores.erase(itr);
+                    }
+
+                    runnable_cores.erase(runnable_cores.begin() + i);
+                    i--;
+                    stalled_cores.push_back(core);
+                    cur_cycle_suspended_threads.push_back(core);
+                    threads_in_barrier[core] = true;
+                    std::cout << "Core " << core << " waiting for barrier " << current_cycle << std::endl;
+                }
+                continue;
             }
         }
 
@@ -107,7 +186,16 @@ void SimulationOrchestrator::simulateInstInActiveCores()
 
         if(!active)
         {
-            active_cores.erase(active_cores.begin()+i);
+            std::vector<uint16_t>::iterator itr;
+            itr = std::find(active_cores.begin(), active_cores.end(), core);
+            if(itr != active_cores.end())
+            {
+                active_cores.erase(itr);
+            }
+
+            runnable_cores.erase(runnable_cores.begin() + i);
+            cur_cycle_suspended_threads.push_back(core);
+            runnable_after[core/num_threads_per_core] = current_cycle + thread_switch_latency;
 
             i--; //We have deleted an element, so we have to update the index that we are using to traverse the data structure
 
@@ -191,7 +279,7 @@ void SimulationOrchestrator::handleEvents()
                 can_run=spike->ackRegister(req, current_cycle);
             }
 
-            if(can_run)
+            if(can_run && !threads_in_barrier[core])
             {
                 std::vector<uint16_t>::iterator it;
 
@@ -213,7 +301,7 @@ void SimulationOrchestrator::handleEvents()
 }
 
 void SimulationOrchestrator::run()
-{    
+{
     //Each iteration of the loop handles a cycle
     //Simulation will end when there are neither pending events nor more instructions to simulate
     while(!spike_model->getScheduler()->isFinished() || !spike_finished)
@@ -222,6 +310,7 @@ void SimulationOrchestrator::run()
         
         simulateInstInActiveCores();
         handleEvents();
+        selectRunnableThreads();
     
         //If there are no active cores and there is a pending event
         if(active_cores.size()==0 && next_event_tick!=sparta::Scheduler::INDEFINITE)
@@ -248,3 +337,33 @@ void SimulationOrchestrator::run()
     printf("Total simulated instructions %lu\n", tot);
     printf("The monitored section took %lu nanoseconds\n", timer);
 }
+
+void SimulationOrchestrator::selectRunnableThreads()
+{
+    //If active core is ehanged, mark the other active thread in RR fashion as runnable
+    for(uint16_t i = 0; i < cur_cycle_suspended_threads.size(); i++)
+    {
+        //Make runnable, the next active thread from the group
+        uint16_t core = cur_cycle_suspended_threads[i];
+        uint16_t core_group = core / num_threads_per_core;
+        if(current_cycle >= runnable_after[core_group])
+        {
+            uint16_t start_core_id = core_group * num_threads_per_core;
+            uint32_t cntr = 1;
+            while(cntr <= num_threads_per_core)
+            {
+                uint16_t next_thread_id = start_core_id + ((core + cntr) % num_threads_per_core);
+                if(std::find(active_cores.begin(), active_cores.end(), 
+                            next_thread_id) != active_cores.end())
+                {
+                    runnable_cores.push_back(next_thread_id);
+                    cur_cycle_suspended_threads.erase(cur_cycle_suspended_threads.begin() + i);
+                    i--;
+                    break;
+                }
+                cntr++;
+            }
+        }
+    }
+}
+

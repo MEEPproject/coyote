@@ -54,14 +54,14 @@ ntsteps = 10;
       positions(N, X, V, dt);
 #else
       compute_forces_prevec(cid, nc, N, X, F); // printf ("Computed forces\n"); print_4D(N, "F", F); printf ("\n");
-      barrier(nc);
+      simfence();
       accel_intr  (cid, nc, N, A, F, M);       // printf ("Computed Accelerations\n"); print_4D(N, "A", A); printf ("\n");
-      barrier(nc);
+      simfence();
       vel_intr  (cid, nc, N, V, A, dt);        // printf ("Computed Velocities\n"); print_4D(N, "V", V); printf ("\n");
-      barrier(nc);
+      simfence();
 //      vel_intr  (N, X, V, dt);        // printf ("Computed Positions\n"); print_4D(N, "X", X); printf ("\n");
       pos_intr  (cid, nc, N, X, V, dt);        // printf ("Computed Positions\n"); print_4D(N, "X", X); printf ("\n");
-      barrier(nc);
+      simfence();
 
 #endif
       compute_stats(N, X, Xcenter);

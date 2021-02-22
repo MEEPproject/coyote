@@ -31,7 +31,7 @@ class SimulationOrchestrator : public spike_model::LogCapable
          * \param num_cores The number of simukated cores
          * \param trace Whether tracing is enabled or not
          */
-        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, bool trace);
+        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace);
 
         /*!
          * \brief Triggers the simulation
@@ -43,13 +43,22 @@ class SimulationOrchestrator : public spike_model::LogCapable
         std::shared_ptr<SpikeModel> spike_model;
         std::shared_ptr<spike_model::RequestManagerIF> request_manager;
         uint32_t num_cores;
+        uint32_t num_threads_per_core;
+        uint32_t thread_switch_latency;
+
 
         std::vector<uint16_t> active_cores;
         std::vector<uint16_t> stalled_cores;
+        std::vector<uint16_t> runnable_cores;
+        std::vector<uint64_t> runnable_after;
+        std::vector<uint16_t> cur_cycle_suspended_threads;
+        std::vector<bool> threads_in_barrier;
+
         std::vector<std::list<std::shared_ptr<spike_model::Request>>> pending_misses_per_core; //(num_cores);
         std::vector<std::list<std::shared_ptr<spike_model::Request>>> pending_writebacks_per_core; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
-    
+
+        uint64_t thread_barrier_cnt;
         uint64_t current_cycle;
         uint64_t next_event_tick;
         uint64_t timer;        
@@ -66,6 +75,11 @@ class SimulationOrchestrator : public spike_model::LogCapable
          * \brief Handle the events for cycles earlier or equal to the current cycle
          */
         void handleEvents();
+
+        /*!
+         * \brief Selects the runnable threads for the next cycle
+         */
+        void selectRunnableThreads();
 
         /*!
          * \brief Calcullate the difference between a cycle value and Sparta time.
