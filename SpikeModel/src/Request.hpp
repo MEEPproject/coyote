@@ -27,7 +27,8 @@ namespace spike_model
                 STORE,
                 FETCH,
                 WRITEBACK,
-                FINISH 
+                FINISH,
+                FENCE
             };
             
             enum class RegType

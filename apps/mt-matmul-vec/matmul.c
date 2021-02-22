@@ -145,7 +145,7 @@ int thread_entry(int cid, int nc)
 
   matmul_builtins(cid, nc, m, k, n, bi, bj, bk, results_data, input1_data, input2_data);
 
-  barrier(nc);
+  simfence();
 
   if(cid==0)
   {

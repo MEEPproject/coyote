@@ -38,6 +38,8 @@ int main(int argc, char **argv)
 {
     std::vector<std::string> datafiles;
     uint32_t num_cores = 1;
+    uint32_t num_threads_per_core = 1;
+    uint64_t thread_switch_latency = 0;
     uint32_t num_tiles = 1;
     uint32_t num_l2_banks = 1;
     uint32_t num_memory_controllers = 1;
@@ -45,6 +47,8 @@ int main(int argc, char **argv)
     std::string application="";
     std::string isa="RV64";
     std::string p="1";
+    std::string t="1";
+    std::string l="0";
     std::string ic;
     std::string dc;
     std::string cmd;
@@ -85,6 +89,12 @@ int main(int argc, char **argv)
             ("p",
              sparta::app::named_value<std::string>("NUM_CORES", &p)->default_value("1"),
              "The total number of cores to simulate", "The number of cores to simulate")
+            ("t",
+             sparta::app::named_value<std::string>("NUM_THREADS_PER_CORE", &t)->default_value("1"),
+             "The total number of threads per core to simulate", "The number of threads per cores to simulate")
+            ("l",
+             sparta::app::named_value<std::string>("THREAD_SWITCH_LATENCY", &l)->default_value("0"),
+             "Number of cycles required to make the thread runnable", "Number of cycles required to make the thread runnable")
             ("num_l2_banks",
              sparta::app::named_value<std::uint32_t>("NUM_CACHE_BANKS", &num_l2_banks)->default_value(1),
              "The number of L2 banks per tile", "The number of L2 banks per tile")
@@ -139,7 +149,9 @@ int main(int argc, char **argv)
         if(vm.count("show-factories") != 0) {
             show_factories = true;
         }
-        
+
+        num_threads_per_core = stoi(t);
+        thread_switch_latency = stoi(l);
         num_cores=stoi(p);
      
         std::string noc_tiles("top.cpu.noc.params.num_tiles");
@@ -257,11 +269,12 @@ int main(int argc, char **argv)
         std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManager();
 
 
-        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,ic,dc,isa,cmd,varch,fast_cache);
+        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,t,ic,dc,isa,cmd,varch,fast_cache);
 
         //printf("Creqated\n");
 
-        SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores, trace);
+        SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores,
+                               num_threads_per_core, thread_switch_latency, trace);
 
         if(trace)
         {

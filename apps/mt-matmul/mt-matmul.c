@@ -48,9 +48,9 @@ void thread_entry(int cid, int nc)
     static data_t results_data[ARRAY_SIZE];
 
     // First do out-of-place vvadd
-    barrier(nc);
+    simfence();
     matmul(cid, nc, DIM_SIZE, input1_data, input2_data, results_data); 
-    barrier(nc);//This barrier is necessary for all the simulated cores to finish
+    simfence();//This barrier is necessary for all the simulated cores to finish
 
     if(cid==0)
     {
