@@ -11,7 +11,6 @@ mkdir -p build
 cd build
 ../configure --prefix=$RISCV
 make -j $threads
-sudo make install
 cd ../../
 
 #SpikeModel
