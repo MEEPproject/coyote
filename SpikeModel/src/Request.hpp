@@ -1,12 +1,13 @@
-#ifndef __L2_REQUEST_HH__
-#define __L2_REQUEST_HH__
+#ifndef __REQUEST_HH__
+#define __REQUEST_HH__
 
 #include "CacheDataMappingPolicy.hpp"
+#include "SpikeEvent.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class Request
+    class Request : public SpikeEvent, public std::enable_shared_from_this<Request>
     {
         /**
          * \class spike_model::Request
@@ -27,8 +28,6 @@ namespace spike_model
                 STORE,
                 FETCH,
                 WRITEBACK,
-                FINISH,
-                FENCE
             };
             
             enum class RegType
@@ -49,7 +48,7 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            Request(uint64_t a, AccessType t, uint64_t pc): address(a), type(t), pc(pc){}
+            Request(uint64_t a, AccessType t, uint64_t pc): SpikeEvent(pc), address(a), type(t){}
 
             /*!
              * \brief Constructor for Request
@@ -59,7 +58,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            Request(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): address(a), type(t), pc(pc), timestamp(time), coreId(c){}
+            Request(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): SpikeEvent(pc, time, c), address(a), type(t) {}
 
             /*!
              * \brief Get the address of the request
@@ -72,30 +71,6 @@ namespace spike_model
              * \return The type of the request
              */
             AccessType getType() const {return type;}
-
-            /*!
-             * \brief Get the timestamp of the request
-             * \return The timestamp
-             */
-            uint64_t getTimestamp() const {return timestamp;}
-
-            /*!
-             * \brief Get the requesting core
-             * \return The core id
-             */
-            uint64_t getCoreId() const {return coreId;}
-
-            /*!
-             * \brief Set the timestamp of the request
-             * \param t The timestamp
-             */
-            void setTimestamp(uint64_t t) {timestamp=t;}
-
-            /*!
-             * \brief Set the requesting core
-             * \param c The id of the core
-             */
-            void setCoreId(uint16_t c) {coreId=c;}
 
             /*!
              * \brief Get the id of the destination register for the request
@@ -197,12 +172,6 @@ namespace spike_model
             uint16_t getCacheBank(){return cache_bank;}
 
             /*!
-             * \brief Get: the program counter for the requesting instruction
-             * \return The PC
-             */
-            uint64_t getPC(){return pc;}
-            
-            /*!
              * \brief Get the address of the first word of the line that contains the requested address
              * \return The address of the line
              */
@@ -249,15 +218,22 @@ namespace spike_model
                 return m.getAddress()==getAddress();
             }
 
+            /*!
+             * \brief Handle the event
+             * \param v The visitor to handle the event
+             */
+            void handle(SpikeEventVisitor * v) override
+            {
+                v->handle(shared_from_this());
+            }
+
+
         private:
             uint64_t address;
 
             uint64_t line_address;
 
             AccessType type;
-            uint64_t pc;
-            uint64_t timestamp;
-            uint16_t coreId;
             uint8_t regId;
             RegType regType;
 

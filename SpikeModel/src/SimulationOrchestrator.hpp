@@ -6,9 +6,13 @@
 #include "spike_wrapper.h"
 #include "RequestManagerIF.hpp"
 #include "SpikeModel.hpp"
+#include "SpikeEvent.hpp"
+#include "SpikeEventVisitor.hpp"
+#include "Request.hpp"
+#include "Finish.hpp"
 #include "LogCapable.hpp"
 
-class SimulationOrchestrator : public spike_model::LogCapable
+class SimulationOrchestrator : public spike_model::LogCapable, spike_model::SpikeEventVisitor
 {
     
     /**
@@ -38,6 +42,25 @@ class SimulationOrchestrator : public spike_model::LogCapable
          */
         void run();
 
+         /*!
+         * \brief Handles a request
+         * \param r The event to handle
+         */
+        void handle(std::shared_ptr<spike_model::Request> r);
+
+        /*!
+         * \brief Handles a finish event
+         * \param f The finish event to handle
+         */
+        void handle(std::shared_ptr<spike_model::Finish> f);
+
+
+        /*!
+         * \brief Handles a finish event
+         * \param f The fence event to handle
+         */
+        void handle(std::shared_ptr<spike_model::Fence> f);
+
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
@@ -64,6 +87,10 @@ class SimulationOrchestrator : public spike_model::LogCapable
         uint64_t timer;        
         bool spike_finished;
 
+        uint32_t current_core;
+        bool core_active;
+        bool core_finished;
+
         bool trace;
 
         /*!
@@ -74,7 +101,7 @@ class SimulationOrchestrator : public spike_model::LogCapable
         /*!
          * \brief Handle the events for cycles earlier or equal to the current cycle
          */
-        void handleEvents();
+        void handleSpartaEvents();
 
         /*!
          * \brief Selects the runnable threads for the next cycle
@@ -87,5 +114,11 @@ class SimulationOrchestrator : public spike_model::LogCapable
          * \return The difference between cycle and the value in the Sparta clock in cycles.
          */
         uint64_t spartaDelay(uint64_t cycle);
+
+        /*!
+         * \brief Submit a request to Sparta.
+         * \param r The request to submit
+         */
+        void submitToSparta(std::shared_ptr<spike_model::Request> r);
 };
 #endif

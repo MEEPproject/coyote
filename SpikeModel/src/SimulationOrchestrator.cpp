@@ -40,169 +40,48 @@ void SimulationOrchestrator::simulateInstInActiveCores()
 {
     for(uint16_t i=0;i<runnable_cores.size();i++)
     {
-        uint16_t core=runnable_cores[i];
+        core_finished=false;
+        current_core=runnable_cores[i];
 
-        simulated_instructions_per_core[core]++;
+        simulated_instructions_per_core[current_core]++;
 
-        if(trace && simulated_instructions_per_core[core]%1000==0)
+        if(trace && simulated_instructions_per_core[current_core]%1000==0)
         {
-           logger_.logKI(current_cycle, core); 
+           logger_.logKI(current_cycle, current_core); 
         }
 
-        std::list<std::shared_ptr<spike_model::Request>> new_misses;
+        std::list<std::shared_ptr<spike_model::SpikeEvent>> new_spike_events;
         //auto t1 = std::chrono::high_resolution_clock::now();
-        bool success=spike->simulateOne(core, current_cycle, new_misses);
+        bool success=spike->simulateOne(current_core, current_cycle, new_spike_events);
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
+        core_active=success;
 
-        bool core_finished=false;
-        bool active=true;
-
-        if(new_misses.size()>0)
+        for(std::shared_ptr<spike_model::SpikeEvent> e:new_spike_events)
         {
-            if(new_misses.front()->getType()==spike_model::Request::AccessType::FETCH)
-            {
-                //Fetch misses are serviced whether there is a raw or not. Subsequent, misses will be submitted later.
-                uint64_t lapse=1;
-                if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
-                {
-                    lapse=lapse+spartaDelay(current_cycle);
-                }
-                request_manager->putRequest(new_misses.front(), lapse);
-                new_misses.pop_front();
-                active=false;
-            }
-            else if(new_misses.front()->getType()==spike_model::Request::AccessType::FINISH)
-            {
-                active=false;
-                core_finished=true;
-            }
-            else if(new_misses.front()->getType()==spike_model::Request::AccessType::FENCE)
-            {
-                //set the thread_barrier_cnt to number of threads, if not already set
-                if(thread_barrier_cnt == 0)
-                {
-                    thread_barrier_cnt = num_cores - 1 ;
-                    std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
-                    cur_cycle_suspended_threads.push_back(core);
-                    std::vector<uint16_t>::iterator itr;
-                    itr = std::find(active_cores.begin(), active_cores.end(), core);
-                    if(itr != active_cores.end())
-                    {
-                        active_cores.erase(itr);
-                    }
-
-                    runnable_cores.erase(runnable_cores.begin() + i);
-                    i--;
-                    stalled_cores.push_back(core);
-                    threads_in_barrier[core] = true;
-                    std::cout << "first core " << core
-                              << " waiting for barrier " << current_cycle << std::endl;
-                }
-                else if(thread_barrier_cnt == 1)
-                {
-                    //last thread arrived
-                    thread_barrier_cnt = 0;
-                    for(uint32_t i = 0; i < num_cores;i++)
-                    {
-                        if(i != core)
-                        {
-                            active_cores.push_back(i);
-                        }
-                        threads_in_barrier[i] = false;
-                    }
-
-                    stalled_cores.clear();
-                    uint16_t my_core_gp = core/num_threads_per_core;
-
-                    //Mark the core for which the threads need to be make runnable
-                    for(uint32_t i = 0; i < num_cores;i+=num_threads_per_core)
-                    {
-                        if(i != my_core_gp)
-                        {
-                            runnable_cores.push_back(i);
-                        }
-                    }
-                    cur_cycle_suspended_threads.clear();
-                    std::cout << "Last Core " << core << " reached barrier " << current_cycle << std::endl;
-                    break;
-                }
-                else
-                {
-                    thread_barrier_cnt--;
-                    std::vector<uint16_t>::iterator itr;
-                    itr = std::find(active_cores.begin(), active_cores.end(), core);
-                    if(itr != active_cores.end())
-                    {
-                        active_cores.erase(itr);
-                    }
-
-                    runnable_cores.erase(runnable_cores.begin() + i);
-                    i--;
-                    stalled_cores.push_back(core);
-                    cur_cycle_suspended_threads.push_back(core);
-                    threads_in_barrier[core] = true;
-                    std::cout << "Core " << core << " waiting for barrier " << current_cycle << std::endl;
-                }
-                continue;
-            }
+            e->handle(this);
         }
 
-        //IF NO RAW AND NO FETCH MISS
-        if(success && active)
-        {
-            //Manage each of the pending misses
-            for(std::shared_ptr<spike_model::Request> miss: new_misses)
-            {
-                if(miss->getType()!=spike_model::Request::AccessType::WRITEBACK)
-                {
-                    uint64_t lapse=1;
-                    if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
-                    {
-                        lapse=lapse+spartaDelay(current_cycle);
-                    }
-                    request_manager->putRequest(miss, lapse);
-                }
-                else //WRITEBACKS ARE HANDLED LAST
-                {
-                    pending_writebacks_per_core[core].push_back(miss);
-                }
-            }
-        }
-        else
-        {
-            active=false;
-            for(std::shared_ptr<spike_model::Request> miss: new_misses)
-            {  
-                pending_misses_per_core[core].push_back(miss); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
-            }
-            
-            if(trace_)
-            {
-                logger_.logStall(current_cycle, core, 0);
-            }
-        }
-
-        if(!active)
+        if(!core_active)
         {
             std::vector<uint16_t>::iterator itr;
-            itr = std::find(active_cores.begin(), active_cores.end(), core);
+            itr = std::find(active_cores.begin(), active_cores.end(), current_core);
             if(itr != active_cores.end())
             {
                 active_cores.erase(itr);
             }
 
             runnable_cores.erase(runnable_cores.begin() + i);
-            cur_cycle_suspended_threads.push_back(core);
-            runnable_after[core/num_threads_per_core] = current_cycle + thread_switch_latency;
+            cur_cycle_suspended_threads.push_back(current_core);
+            runnable_after[current_core/num_threads_per_core] = current_cycle + thread_switch_latency;
 
             i--; //We have deleted an element, so we have to update the index that we are using to traverse the data structure
 
             if(!core_finished)
             {
                 //The core is not active and is not finished, so it goe into the stalled cores list
-                stalled_cores.push_back(core);
+                stalled_cores.push_back(current_core);
             }
             else
             {
@@ -213,11 +92,15 @@ void SimulationOrchestrator::simulateInstInActiveCores()
                     spike_finished=true;
                 }
             }
+            if(trace_)
+            {
+                logger_.logStall(current_cycle, current_core, 0);
+            }
         }
     }
 }
 
-void SimulationOrchestrator::handleEvents()
+void SimulationOrchestrator::handleSpartaEvents()
 {
     //GET NEXT EVENT
     if(next_event_tick==sparta::Scheduler::INDEFINITE)
@@ -309,7 +192,7 @@ void SimulationOrchestrator::run()
 //        printf("Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
         
         simulateInstInActiveCores();
-        handleEvents();
+        handleSpartaEvents();
         selectRunnableThreads();
     
         //If there are no active cores and there is a pending event
@@ -367,3 +250,94 @@ void SimulationOrchestrator::selectRunnableThreads()
     }
 }
 
+
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Request> r)
+{
+    if(r->getType()==spike_model::Request::AccessType::FETCH)
+    {
+        //Fetch misses are serviced whether there is a raw or not. Subsequent, misses will be submitted later.
+        submitToSparta(r);
+        core_active=false;
+    }
+    else if(core_active)
+    {
+        if(r->getType()!=spike_model::Request::AccessType::WRITEBACK)
+        {
+            submitToSparta(r);
+        }
+        else //WRITEBACKS ARE HANDLED LAST
+        {
+            pending_writebacks_per_core[current_core].push_back(r);
+        }
+    }
+    else //A core will be stalled if a RAW or fetch miss is detected
+    {
+        pending_misses_per_core[current_core].push_back(r); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+    }
+}
+
+
+void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Request> r)
+{
+    uint64_t lapse=1;
+    if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
+    {
+       lapse=lapse+spartaDelay(current_cycle);
+    }
+    request_manager->putRequest(r, lapse);
+}
+
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
+{
+    core_active=false;
+    core_finished=true;
+}
+
+
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
+{
+    //set the thread_barrier_cnt to number of threads, if not already set
+    if(thread_barrier_cnt == 0)
+    {
+        thread_barrier_cnt = num_cores - 1 ;
+        std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
+        threads_in_barrier[current_core] = true;
+        core_active=false;
+        std::cout << "first core " << current_core
+                  << " waiting for barrier " << current_cycle << std::endl;
+    }
+    else if(thread_barrier_cnt == 1)
+    {
+        //last thread arrived
+        thread_barrier_cnt = 0;
+        for(uint32_t i = 0; i < num_cores;i++)
+        {
+            if(i != current_core)
+            {
+                active_cores.push_back(i);
+            }
+            threads_in_barrier[i] = false;
+        }
+
+        stalled_cores.clear();
+        uint16_t my_core_gp = current_core/num_threads_per_core;
+
+        //Mark the core for which the threads need to be make runnable
+        for(uint32_t i = 0; i < num_cores;i+=num_threads_per_core)
+        {
+            if(i != my_core_gp)
+            {
+                runnable_cores.push_back(i);
+            }
+        }
+        cur_cycle_suspended_threads.clear();
+        std::cout << "Last Core " << current_core << " reached barrier " << current_cycle << std::endl;
+    }
+    else
+    {
+        thread_barrier_cnt--;
+        threads_in_barrier[current_core] = true;
+        core_active=false;
+        std::cout << "Core " << current_core << " waiting for barrier " << current_cycle << std::endl;
+    }
+}
