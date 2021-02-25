@@ -78,7 +78,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, spike_model::Spik
         std::vector<bool> threads_in_barrier;
 
         std::vector<std::list<std::shared_ptr<spike_model::Request>>> pending_misses_per_core; //(num_cores);
-        std::vector<std::list<std::shared_ptr<spike_model::Request>>> pending_writebacks_per_core; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
 
         uint64_t thread_barrier_cnt;
