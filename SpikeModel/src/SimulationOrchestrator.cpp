@@ -8,7 +8,6 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     num_threads_per_core(num_threads_per_core),
     thread_switch_latency(thread_switch_latency),
     pending_misses_per_core(num_cores),
-    pending_writebacks_per_core(num_cores),
     simulated_instructions_per_core(num_cores),
     current_cycle(1),
     next_event_tick(sparta::Scheduler::INDEFINITE),
@@ -130,31 +129,19 @@ void SimulationOrchestrator::handleSpartaEvents()
                 {
                     std::shared_ptr<spike_model::Request> miss=pending_misses_per_core[core].front();
                     pending_misses_per_core[core].pop_front();
-                    uint64_t lapse=1;
-                    if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
-                    {
-                        lapse=lapse+current_cycle-spartaDelay(current_cycle);
-                    }
-                    request_manager->putRequest(miss, lapse);
-                }
-            }
-            else
-            {
-                while(pending_writebacks_per_core[core].size()>0) //Writebacks are handled last
-                {
-                    std::shared_ptr<spike_model::Request> miss=pending_writebacks_per_core[core].front();
-                    pending_writebacks_per_core[core].pop_front();
-                    uint64_t lapse=0;
-                    if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
-                    {
-                        lapse=lapse+spartaDelay(current_cycle);
-                    }
-                    request_manager->putRequest(miss, lapse);
+                    submitToSparta(miss);
                 }
             }
 
             bool can_run=true;
             bool is_load=req->getType()==spike_model::Request::AccessType::LOAD;
+
+            //Notify Spike that a request has been serviced and generate the writeback
+            std::shared_ptr<spike_model::Request> wb=spike->serviceRequest(req);
+            if(wb!=nullptr)
+            {
+                submitToSparta(wb);
+            }
 
             //Ack the registers if this is a load
             if(is_load)
@@ -261,14 +248,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Request> r)
     }
     else if(core_active)
     {
-        if(r->getType()!=spike_model::Request::AccessType::WRITEBACK)
-        {
-            submitToSparta(r);
-        }
-        else //WRITEBACKS ARE HANDLED LAST
-        {
-            pending_writebacks_per_core[current_core].push_back(r);
-        }
+        submitToSparta(r);
     }
     else //A core will be stalled if a RAW or fetch miss is detected
     {
