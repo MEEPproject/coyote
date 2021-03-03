@@ -100,10 +100,10 @@ int main(int argc, char **argv)
              sparta::app::named_value<std::uint32_t>("NUM_CACHE_BANKS", &num_l2_banks)->default_value(1),
              "The number of L2 banks per tile", "The number of L2 banks per tile")
             ("num_memory_cpus",
-             sparta::app::named_value<std::uint32_t>("num_mcpus", &num_memory_cpus)->default_value(1),
+             sparta::app::named_value<std::uint32_t>("NUM_MCPUS", &num_memory_cpus)->default_value(1),
              "the number of memory cpus", "the number of memory cpus")
             ("num_memory_controllers",
-             sparta::app::named_value<std::uint32_t>("num_mcs", &num_memory_controllers)->default_value(1),
+             sparta::app::named_value<std::uint32_t>("NUM_MCS", &num_memory_controllers)->default_value(1),
              "the number of memory controllers", "the number of memory controllers")
             ("num_memory_banks",
              sparta::app::named_value<std::uint32_t>("NUM_MEMORY_BANKS", &num_memory_banks)->default_value(8),

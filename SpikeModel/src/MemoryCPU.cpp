@@ -23,7 +23,7 @@ namespace spike_model {
 			case Request::AccessType::FETCH:
 			case Request::AccessType::LOAD:
 				count_load_++;
-				std::cout << m << "Loading: " << m << ", coreID: " << m->getCoreId() << std::endl;
+				//std::cout << m << "Loading: " << m << ", coreID: " << m->getCoreId() << std::endl;
 
 				break;
 			case Request::AccessType::WRITEBACK:

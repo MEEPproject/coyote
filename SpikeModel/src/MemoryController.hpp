@@ -93,10 +93,10 @@ namespace spike_model
         private:
 
             sparta::DataOutPort<std::shared_ptr<Request>> out_port_mcpu_
-                {&unit_port_set_, "out_noc"};
+                {&unit_port_set_, "out_mcpu"};
 
             sparta::DataInPort<std::shared_ptr<Request>> in_port_mcpu_
-                {&unit_port_set_, "in_noc"};
+                {&unit_port_set_, "in_mcpu"};
 
             sparta::UniqueEvent<> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};

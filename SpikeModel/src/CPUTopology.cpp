@@ -80,11 +80,11 @@ spike_model::CoreTopology_4::CoreTopology_4(){
         },
         {
             "cpu.noc.ports.in_memory_cpu&",
-            "cpu.memory_controller&.ports.out_noc"
+            "cpu.memory_cpu&.ports.out_noc"
         },
         {
             "cpu.noc.ports.out_memory_cpu&",
-            "cpu.memory_controller&.ports.in_noc"
+            "cpu.memory_cpu&.ports.in_noc"
         },
         {
             "cpu.memory_controller&.ports.in_mcpu",
