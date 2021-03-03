@@ -117,26 +117,33 @@ public:
     }
 
     /**
-     * @brief Set the number of cores in this processor
+     * @brief Set the number of memory CPUs
+     */
+    auto setNumMemoryCPUs(const uint32_t num_of_memory_cpus) -> void{
+        num_memory_cpus = num_of_memory_cpus;
+    }
+
+    /**
+     * @brief Set the number of memory controllers
      */
     auto setNumMemoryControllers(const uint32_t num_of_memory_controllers) -> void{
         num_memory_controllers = num_of_memory_controllers;
     }
-    
+
     /**
      * @brief Set the number of memory banks handled per memory controller
      */
     auto setNumMemoryBanksPerMemoryController(const uint32_t num_of_memory_banks) -> void{
         num_memory_banks = num_of_memory_banks;
     }
-    
+
     /**
      * @brief Set the number of L2 banks in this processor
      */
     auto setNumL2BanksPerTile(const uint32_t num_of_l2_banks) -> void{
         num_banks_per_tile = num_of_l2_banks;
     }
-    
+
     /**
      * @brief Set whether to trace or not
      */
@@ -152,6 +159,7 @@ public:
     //! Public members used by CPUFactory to build and bind tree
     uint32_t num_tiles;
     uint32_t num_banks_per_tile;
+    uint32_t num_memory_cpus;
     uint32_t num_memory_controllers;
     uint32_t num_memory_banks;
     bool trace;

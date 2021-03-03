@@ -14,7 +14,7 @@
 #include "sparta/sparta.hpp"
 
 #include <iostream>
-#include <string> 
+#include <string>
 
 #include <chrono>
 
@@ -32,7 +32,7 @@ const char USAGE[] =
 constexpr char VERSION_VARNAME[] = "version"; // Name of option to show version
 constexpr char DATA_FILE_VARNAME[] = "data-file"; // Name of data file given at the end of command line
 constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which are flag independent
-    
+
 
 int main(int argc, char **argv)
 {
@@ -42,6 +42,7 @@ int main(int argc, char **argv)
     uint64_t thread_switch_latency = 0;
     uint32_t num_tiles = 1;
     uint32_t num_l2_banks = 1;
+    uint32_t num_memory_cpus = 1;
     uint32_t num_memory_controllers = 1;
     uint32_t num_memory_banks = 8;
     std::string application="";
@@ -98,9 +99,12 @@ int main(int argc, char **argv)
             ("num_l2_banks",
              sparta::app::named_value<std::uint32_t>("NUM_CACHE_BANKS", &num_l2_banks)->default_value(1),
              "The number of L2 banks per tile", "The number of L2 banks per tile")
+            ("num_memory_cpus",
+             sparta::app::named_value<std::uint32_t>("num_mcpus", &num_memory_cpus)->default_value(1),
+             "the number of memory cpus", "the number of memory cpus")
             ("num_memory_controllers",
-             sparta::app::named_value<std::uint32_t>("NUM_MCS", &num_memory_controllers)->default_value(1),
-             "The number of memory controllers", "The number of memory controllers")
+             sparta::app::named_value<std::uint32_t>("num_mcs", &num_memory_controllers)->default_value(1),
+             "the number of memory controllers", "the number of memory controllers")
             ("num_memory_banks",
              sparta::app::named_value<std::uint32_t>("NUM_MEMORY_BANKS", &num_memory_banks)->default_value(8),
              "The number of memory banks handled by each memory controller", "The number of memory banks")
@@ -153,14 +157,14 @@ int main(int argc, char **argv)
         num_threads_per_core = stoi(t);
         thread_switch_latency = stoi(l);
         num_cores=stoi(p);
-     
+
         std::string noc_tiles("top.cpu.noc.params.num_tiles");
-        std::string noc_mcs("top.cpu.noc.params.num_memory_controllers");
+        std::string noc_mcs("top.cpu.noc.params.num_memory_cpus");
 //        std::string spike_cores("top.cpu.spike.params.p");
-       
-        //Here I set several model paramteres using a single arg to make usage easier 
+
+        //Here I set several model paramteres using a single arg to make usage easier
         cls.getSimulationConfiguration().processParameter(noc_tiles, sparta::utils::uint32_to_str(num_tiles));
-        cls.getSimulationConfiguration().processParameter(noc_mcs, sparta::utils::uint32_to_str(num_memory_controllers));
+        cls.getSimulationConfiguration().processParameter(noc_mcs, sparta::utils::uint32_to_str(num_memory_cpus));
 //        cls.getSimulationConfiguration().processParameter(spike_cores, sparta::utils::uint32_to_str(num_cores));
 
 
@@ -190,14 +194,14 @@ int main(int argc, char **argv)
                 cls.getSimulationConfiguration().processParameter(bank, line_size);
             }
         }
-        
+
         for(std::size_t i = 0; i < num_memory_controllers; ++i)
         {
             std::string mc_line("top.cpu.memory_controller*.params.line_size");
             size_t start_pos = mc_line.find("*");
             mc_line.replace(start_pos, 1, std::to_string(i));
             cls.getSimulationConfiguration().processParameter(mc_line, line_size);
-            
+
             std::string mc_bank("top.cpu.memory_controller*.params.num_banks");
             start_pos = mc_bank.find("*");
             mc_bank.replace(start_pos, 1, std::to_string(i));
@@ -251,6 +255,7 @@ int main(int argc, char **argv)
                              num_cores/num_tiles,
                              num_tiles,
                              num_l2_banks,
+                             num_memory_cpus,
                              num_memory_controllers,
                              num_memory_banks,
                              a_pol,
@@ -265,7 +270,7 @@ int main(int argc, char **argv)
         std::cout << "Simulating: " << application;
 
         cls.populateSimulation(&(*sim));
-        
+
         std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManager();
 
 
@@ -281,7 +286,7 @@ int main(int argc, char **argv)
             orchestrator.setLogger(sim->getLogger());
         }
         orchestrator.run();
-        
+
         cls.postProcess(&(*sim));
 
     }catch(...){

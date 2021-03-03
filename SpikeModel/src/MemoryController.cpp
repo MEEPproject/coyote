@@ -19,16 +19,16 @@ namespace spike_model
     write_allocate_(p->write_allocate),
     banks()
     {
-        in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<NoCMessage>));
+        in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<Request>));
         sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
         ready_commands=std::make_unique<FifoCommandScheduler>();
     }
 
-    void MemoryController::receiveMessage_(const std::shared_ptr<NoCMessage> & mes)
+    void MemoryController::receiveMessage_(const std::shared_ptr<Request> &mes)
     {
         count_requests_++;
-        uint64_t bank=mes->getRequest()->getMemoryBank();
-        sched->putRequest(mes->getRequest(), bank);
+        uint64_t bank=mes->getMemoryBank();
+        sched->putRequest(mes, bank);
         if(idle_ & sched->hasIdleBanks())
         {
             controller_cycle_event_.schedule();
@@ -39,9 +39,9 @@ namespace spike_model
     void MemoryController::issueAck_(std::shared_ptr<Request> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        out_port_noc_.send(request_manager_->getMemoryReplyMessage(req), 0);
+        out_port_mcpu_.send(req, 0);
     }
-    
+
     std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank)
     {
         std::shared_ptr<BankCommand> res_command;
@@ -57,11 +57,11 @@ namespace spike_model
         }
         return res_command;
     }
-    
+
     std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<Request> req, uint64_t bank)
     {
         sparta_assert(req->getType()==Request::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
-        
+
         std::shared_ptr<BankCommand> res_command;
 
         uint64_t column_to_schedule=req->getCol();
@@ -113,12 +113,12 @@ namespace spike_model
         {
         }
     }
-            
+
     void MemoryController::addBank_(MemoryBank * bank)
     {
         banks.push_back(bank);
-    } 
-    
+    }
+
     void MemoryController::notifyCompletion_(std::shared_ptr<BankCommand> c)
     {
         std::shared_ptr<BankCommand> com=nullptr;
@@ -150,7 +150,7 @@ namespace spike_model
                 }
                 break;
             }
-           
+
             case BankCommand::CommandType::WRITE:
             {
                 std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
@@ -166,21 +166,16 @@ namespace spike_model
                 break;
             }
         }
-        
+
         if(com!=nullptr)
         {
             ready_commands->addCommand(com);
         }
-       
+
         if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
         {
             controller_cycle_event_.schedule();
             idle_=false;
         }
-    }
-    
-    void MemoryController::setRequestManager(std::shared_ptr<RequestManagerIF> r)
-    {
-        request_manager_=r;
     }
 }

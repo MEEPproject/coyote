@@ -22,7 +22,6 @@
 #include <queue>
 
 #include "LogCapable.hpp"
-#include "NoCMessage.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
 #include "RequestManagerIF.hpp"
 #include "BankCommand.hpp"
@@ -89,26 +88,21 @@ namespace spike_model
              * \param c The command
              */
             void notifyCompletion_(std::shared_ptr<BankCommand> c);
-            
-            /*!
-             * \brief Set the request manager
-             * \param r The request manager
-             */
-            void setRequestManager(std::shared_ptr<RequestManagerIF> r);
+
 
         private:
-            
-            sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
+
+            sparta::DataOutPort<std::shared_ptr<Request>> out_port_mcpu_
                 {&unit_port_set_, "out_noc"};
 
-            sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_
+            sparta::DataInPort<std::shared_ptr<Request>> in_port_mcpu_
                 {&unit_port_set_, "in_noc"};
 
-            sparta::UniqueEvent<> controller_cycle_event_ 
+            sparta::UniqueEvent<> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
             uint64_t latency_;
-       
+
             uint64_t line_size_;
 
             uint64_t num_banks_;
@@ -121,30 +115,28 @@ namespace spike_model
 
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
-    
-            std::shared_ptr<RequestManagerIF> request_manager_;
 
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
-    
+
             /*!
              * \brief Receive a message from the NoC
              * \param mes The message
              */
-            void receiveMessage_(const std::shared_ptr<NoCMessage> & mes);
-            
+            void receiveMessage_(const std::shared_ptr<Request> &mes);
+
             /*!
              * \brief Send an acknowledgement through the NoC
              * \param req The request that has been completed and will be acknowledged
              */
             void issueAck_(std::shared_ptr<Request> req);
-    
+
             /*!
              * \brief Execute a memory controller cycle
-             *  This method implements the main operation of the controller and will be 
+             *  This method implements the main operation of the controller and will be
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
-    
+
             /*!
              * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
              * \param req The request
@@ -152,7 +144,7 @@ namespace spike_model
              * \return A command of the correct type to access the specified bank
              */
             std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank);
-    
+
             /*!
              * \brief Create a command to read the line after writing it (if write-allocate is enabled)
              * \param req The request

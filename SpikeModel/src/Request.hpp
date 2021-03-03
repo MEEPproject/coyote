@@ -18,9 +18,9 @@ namespace spike_model
          * and between Sparta Units, either as plain Requests or encapsulated in a NoCMessage.
          *
          */
-        
-        friend class RequestManagerIF; 
-    
+
+        friend class RequestManagerIF;
+
         public:
             enum class AccessType
             {
@@ -29,7 +29,7 @@ namespace spike_model
                 FETCH,
                 WRITEBACK,
             };
-            
+
             enum class RegType
             {
                 INTEGER,
@@ -102,7 +102,7 @@ namespace spike_model
              * \brief Get the type of the destination register for the request
              * \return The type of the register
              */
-            RegType getDestinationRegType() const {return regType;}            
+            RegType getDestinationRegType() const {return regType;}
 
             /*!
              * \brief Set the source tile of the request
@@ -134,7 +134,7 @@ namespace spike_model
             }
 
             /* \brief Obtain the address of the first word of the line that contains the requested address
-             * \param block_offset_bits The number of bits used to specify the block offset in the addres. 
+             * \param block_offset_bits The number of bits used to specify the block offset in the addres.
              *   This is the log2 of the block size
              */
             void calculateLineAddress(uint8_t block_offset_bits)
@@ -176,32 +176,32 @@ namespace spike_model
              * \return The address of the line
              */
             uint64_t getLineAddress(){return line_address;}
-        
-            
+
+
             /*!
-             * \brief Get the memory controller that will be accessed
+             * \brief Get the memory CPU that will be accessed
              * \return The address of the line
              */
-            uint64_t getMemoryController();
-            
+            uint64_t getMemoryCPU();
+
             /*!
              * \brief Get the rank taht will be accessed
              * \return The address of the line
              */
             uint64_t getRank();
-            
+
             /*!
              * \brief Get the bank that will be accessed
              * \return The address of the line
              */
             uint64_t getMemoryBank();
-            
+
             /*!
              * \brief Get the row that will be accessed
              * \return The address of the line
              */
             uint64_t getRow();
-            
+
             /*!
              * \brief Get the column that will be accessed
              * \return The address of the line
@@ -243,24 +243,24 @@ namespace spike_model
             uint16_t source_tile;
             uint16_t cache_bank;
 
-            uint64_t memory_controller_;
+            uint64_t memory_cpu_;
             uint64_t rank_;
             uint64_t memory_bank_;
             uint64_t row_;
             uint64_t col_;
-            
+
             /*!
              * \brief Set the information of the memory access triggered by the Request
-             * \param memory_controller The memory controller that will be accessed
+             * \param memory_cpu The memory CPU that will be accessed
              * \param rank The rank that will be accessed
              * \param bank The bank that will be accessed
              * \param row The row that will be accessed
              * \param col The column that will be accessed
              * \note This method is public but called through friending by instances of RequestManagerIF
              */
-            void setMemoryAccessInfo(uint64_t memory_controller, uint64_t rank, uint64_t bank, uint64_t row, uint64_t col);
+            void setMemoryAccessInfo(uint64_t memory_cpu, uint64_t rank, uint64_t bank, uint64_t row, uint64_t col);
     };
-    
+
     inline std::ostream & operator<<(std::ostream & Str, Request const & req)
     {
         Str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp();
