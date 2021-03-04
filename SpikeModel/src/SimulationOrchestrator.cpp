@@ -305,7 +305,8 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
         //Mark the core for which the threads need to be make runnable
         for(uint32_t i = 0; i < num_cores;i+=num_threads_per_core)
         {
-            if(i != my_core_gp)
+            uint16_t curr_core_gp = i / num_threads_per_core;
+            if(curr_core_gp != my_core_gp)
             {
                 runnable_cores.push_back(i);
             }
