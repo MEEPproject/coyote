@@ -23,17 +23,21 @@ namespace spike_model {
 			case Request::AccessType::FETCH:
 			case Request::AccessType::LOAD:
 				count_load_++;
-				//std::cout << m << "Loading: " << m << ", coreID: " << m->getCoreId() << std::endl;
-
+				std::cout << "Loading: " << m << ", coreID: " << m->getCoreId() << std::endl;
 				break;
 			case Request::AccessType::WRITEBACK:
-			case Request::AccessType::STORE:	count_store_++; break;
+			case Request::AccessType::STORE:
+				count_store_++;
+				std::cout << "Storing: " << m << ", coreID: " << m->getCoreId() << std::endl;
+				break;
+
 		}
 		out_port_mc_.send(m, 0);
 	}
 
 	void MemoryCPU::receiveMessage_mc_(const std::shared_ptr<Request> &mes)	{
 		count_requests_mc_++;
+		std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		out_port_noc_.send(request_manager_->getMemoryReplyMessage(mes), 0);
 	}
 
