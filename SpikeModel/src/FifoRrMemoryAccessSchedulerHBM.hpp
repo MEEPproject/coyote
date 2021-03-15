@@ -3,13 +3,12 @@
 
 #include <queue>
 #include <vector>
+#include <list>
 #include "Request.hpp"
 #include "FifoRrMemoryAccessScheduler.hpp"
 
-namespace spike_model
-{
-    class FifoRrMemoryAccessSchedulerHBM : public FifoRrMemoryAccessScheduler
-    {
+namespace spike_model {
+    class FifoRrMemoryAccessSchedulerHBM : public MemoryAccessSchedulerIF {
         /*!
          * \class spike_model::FifoRrMemoryAccessSchedulerHBM
          * \brief A memory access scheduler that follows the policy as described in the
@@ -63,7 +62,7 @@ namespace spike_model
             * \brief Constructor for FifoRrMemoryAccessScheduler
             * \param num_banks The number of banks handled by the scheduler
             */
-            FifoRrMemoryAccessScheduler(uint64_t num_banks);
+            FifoRrMemoryAccessSchedulerHBM(uint64_t num_banks);
 
             /*!
             * \brief Add a request to the scheduler
@@ -98,7 +97,7 @@ namespace spike_model
             void notifyRequestCompletion(uint64_t bank) override;
 
         private:
-            std::vector<std::queue<std::shared_ptr<Request>>> request_queues;
+            std::vector<std::list<std::shared_ptr<Request>>> request_queues;
             std::queue<uint64_t> banks_to_schedule; //A bank id will be in this queue if the associated bank queue has elements and a request to the buffer is not currently in process
     };
 }

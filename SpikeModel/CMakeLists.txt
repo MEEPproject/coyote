@@ -159,6 +159,7 @@ add_executable(spike_model
   src/MemoryCPU.cpp
   src/MemoryController.cpp
   src/FifoRrMemoryAccessScheduler.cpp
+  src/FifoRrMemoryAccessSchedulerHBM.cpp
   src/FifoCommandScheduler.cpp
   src/MemoryBank.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc
