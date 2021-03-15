@@ -78,21 +78,16 @@ namespace spike_model
             uint64_t row_to_schedule=request_to_schedule->getRow();
 
             std::shared_ptr<BankCommand> com;
-            if(banks[bank_to_schedule]->isOpen() && banks[bank_to_schedule]->getOpenRow()==row_to_schedule)
-            {
-                com=getAccessCommand_(request_to_schedule, bank_to_schedule);
-            }
-            else
-            {
-               if(banks[bank_to_schedule]->isOpen())
-               {
+            if(banks[bank_to_schedule]->isOpen()) {
+				if(banks[bank_to_schedule]->getOpenRow()==row_to_schedule) {
+                	com=getAccessCommand_(request_to_schedule, bank_to_schedule);
+				} else {
                     com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0);
-               }
-               else
-               {
-                    com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
-               }
-            }
+				}
+			} else {
+				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
+			}
+
             ready_commands->addCommand(com);
         }
 
@@ -108,9 +103,6 @@ namespace spike_model
             {
                 idle_=true;
             }
-        }
-        else
-        {
         }
     }
 
@@ -170,6 +162,7 @@ namespace spike_model
         if(com!=nullptr)
         {
             ready_commands->addCommand(com);
+
         }
 
         if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
@@ -179,3 +172,4 @@ namespace spike_model
         }
     }
 }
+// vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:
