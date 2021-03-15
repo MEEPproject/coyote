@@ -3,7 +3,7 @@
 
 #include <queue>
 #include <vector>
-#include "Request.hpp"
+#include "CacheRequest.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
 
 namespace spike_model
@@ -29,14 +29,14 @@ namespace spike_model
             * \param req The request
             * \param bank The bank that the request targets
             */
-            void putRequest(std::shared_ptr<Request> req, uint64_t bank) override;
+            void putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank) override;
             
             /*!
             * \brief Get a request for a particular bank
             * \param bank The bank for which the request is desired
             * \return The first request for the bank in FIFO
             */
-            std::shared_ptr<Request> getRequest(uint64_t bank) override;
+            std::shared_ptr<CacheRequest> getRequest(uint64_t bank) override;
 
             /*!
             * \brief Get the next bank for which a request should be handled. The bank is poped from the list.
@@ -57,7 +57,7 @@ namespace spike_model
             void notifyRequestCompletion(uint64_t bank) override;
             
         private:
-            std::vector<std::queue<std::shared_ptr<Request>>> request_queues;
+            std::vector<std::queue<std::shared_ptr<CacheRequest>>> request_queues;
             std::queue<uint64_t> banks_to_schedule; //A bank id will be in this queue if the associated bank queue has elements and a request to the buffer is not currently in process
     };
 }

@@ -36,18 +36,18 @@ namespace spike_model
         }
     }
 
-    void MemoryController::issueAck_(std::shared_ptr<Request> req)
+    void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
         out_port_noc_.send(request_manager_->getMemoryReplyMessage(req), 0);
     }
     
-    std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank)
+    std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         std::shared_ptr<BankCommand> res_command;
 
         uint64_t column_to_schedule=req->getCol();
-        if(req->getType()==Request::AccessType::STORE || req->getType()==Request::AccessType::WRITEBACK)
+        if(req->getType()==CacheRequest::AccessType::STORE || req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
             res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule);
         }
@@ -58,9 +58,9 @@ namespace spike_model
         return res_command;
     }
     
-    std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<Request> req, uint64_t bank)
+    std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
-        sparta_assert(req->getType()==Request::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
+        sparta_assert(req->getType()==CacheRequest::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
         
         std::shared_ptr<BankCommand> res_command;
 
@@ -74,7 +74,7 @@ namespace spike_model
         while(sched->hasIdleBanks())
         {
             uint64_t bank_to_schedule=sched->getNextBank();
-            std::shared_ptr<Request> request_to_schedule=sched->getRequest(bank_to_schedule);
+            std::shared_ptr<CacheRequest> request_to_schedule=sched->getRequest(bank_to_schedule);
             uint64_t row_to_schedule=request_to_schedule->getRow();
 
             std::shared_ptr<BankCommand> com;
@@ -127,14 +127,14 @@ namespace spike_model
         {
             case BankCommand::CommandType::OPEN:
             {
-                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
                 com=getAccessCommand_(pending_request_for_bank, command_bank);
                 break;
             }
 
             case BankCommand::CommandType::CLOSE:
             {
-                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
                 uint64_t row_to_schedule=pending_request_for_bank->getRow();
                 com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, command_bank, row_to_schedule);
                 break;
@@ -142,9 +142,9 @@ namespace spike_model
 
             case BankCommand::CommandType::READ:
             {
-                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
                 sched->notifyRequestCompletion(command_bank);
-                if(pending_request_for_bank->getType()==Request::AccessType::LOAD || pending_request_for_bank->getType()==Request::AccessType::FETCH || (pending_request_for_bank->getType()==Request::AccessType::STORE && write_allocate_))
+                if(pending_request_for_bank->getType()==CacheRequest::AccessType::LOAD || pending_request_for_bank->getType()==CacheRequest::AccessType::FETCH || (pending_request_for_bank->getType()==CacheRequest::AccessType::STORE && write_allocate_))
                 {
                     issueAck_(pending_request_for_bank);
                 }
@@ -153,9 +153,9 @@ namespace spike_model
            
             case BankCommand::CommandType::WRITE:
             {
-                std::shared_ptr<Request> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
 
-                if(!write_allocate_ || sched->getRequest(command_bank)->getType()==Request::AccessType::WRITEBACK)
+                if(!write_allocate_ || sched->getRequest(command_bank)->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
                     sched->notifyRequestCompletion(command_bank);
                 }

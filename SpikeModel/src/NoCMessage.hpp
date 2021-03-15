@@ -4,7 +4,7 @@
 
 #include <memory>
 #include "NoCMessageType.hpp"
-#include "Request.hpp"
+#include "CacheRequest.hpp"
 #include "RequestManagerIF.hpp"
 
 namespace spike_model
@@ -15,7 +15,7 @@ namespace spike_model
          * \class spike_model::NoCMessage
          * \brief A representation of a message that wille travel through the NoC.
          *
-         * NoCMessages are associated to a particular Request and hold extra information regarding the directionality and size of the message
+         * NoCMessages are associated to a particular CacheRequest and hold extra information regarding the directionality and size of the message
          */
         public:
             NoCMessage() = delete;
@@ -25,11 +25,11 @@ namespace spike_model
             /*!
              * \brief Constructor for NoCMessage. NoCMessages should only be created for requests with full memory destination info. For this reason they are created in class RequestManagerIF. 
              * Think twice before creating directly elsewhere.
-             * \param r The associated Request
+             * \param r The associated CacheRequest
              * \param t The type of the message
              * \param payload_size The size in bytes of the data to be sent
              */
-            NoCMessage(std::shared_ptr<Request> r, NoCMessageType t, uint64_t payload_size);
+            NoCMessage(std::shared_ptr<CacheRequest> r, NoCMessageType t, uint64_t payload_size);
             
 
             /*!
@@ -39,10 +39,10 @@ namespace spike_model
             NoCMessageType getType(){return message_type_;}
             
             /*!
-             * \brief Get the Request associated to the message
-             * \return The Request
+             * \brief Get the CacheRequest associated to the message
+             * \return The CacheRequest
              */
-            std::shared_ptr<Request> getRequest(){return request_;}
+            std::shared_ptr<CacheRequest> getRequest(){return request_;}
 
             
             /*!
@@ -53,7 +53,7 @@ namespace spike_model
             
 
         private:
-            std::shared_ptr<Request> request_;
+            std::shared_ptr<CacheRequest> request_;
             NoCMessageType message_type_;
             uint64_t size_;
 

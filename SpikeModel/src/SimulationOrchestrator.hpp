@@ -1,20 +1,23 @@
 
 #ifndef __SIMULATION_ORCHESTRATOR_HH__
 #define __SIMULATION_ORCHESTRATOR_HH__
-
+    
 #include <memory>
 #include "spike_wrapper.h"
 #include "RequestManagerIF.hpp"
 #include "SpikeModel.hpp"
-#include "SpikeEvent.hpp"
-#include "SpikeEventVisitor.hpp"
-#include "Request.hpp"
+#include "Event.hpp"
+#include "EventVisitor.hpp"
+#include "CacheRequest.hpp"
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 
-class SimulationOrchestrator : public spike_model::LogCapable, spike_model::SpikeEventVisitor
+class SimulationOrchestrator : public spike_model::LogCapable, public spike_model::EventVisitor
 {
     
+    
+    using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
+
     /**
      * \class SimulationOrchestrator
      *
@@ -43,24 +46,24 @@ class SimulationOrchestrator : public spike_model::LogCapable, spike_model::Spik
         void run();
 
          /*!
-         * \brief Handles a request
+         * \brief Handles a cache request
          * \param r The event to handle
          */
-        void handle(std::shared_ptr<spike_model::Request> r);
+        virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 
         /*!
          * \brief Handles a finish event
          * \param f The finish event to handle
          */
-        void handle(std::shared_ptr<spike_model::Finish> f);
+        virtual void handle(std::shared_ptr<spike_model::Finish> f) override;
 
 
         /*!
          * \brief Handles a finish event
          * \param f The fence event to handle
          */
-        void handle(std::shared_ptr<spike_model::Fence> f);
-
+        void handle(std::shared_ptr<spike_model::Fence> f) override;
+        
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
@@ -77,7 +80,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, spike_model::Spik
         std::vector<uint16_t> cur_cycle_suspended_threads;
         std::vector<bool> threads_in_barrier;
 
-        std::vector<std::list<std::shared_ptr<spike_model::Request>>> pending_misses_per_core; //(num_cores);
+        std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
 
         uint64_t thread_barrier_cnt;
@@ -118,6 +121,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, spike_model::Spik
          * \brief Submit a request to Sparta.
          * \param r The request to submit
          */
-        void submitToSparta(std::shared_ptr<spike_model::Request> r);
+        void submitToSparta(std::shared_ptr<spike_model::CacheRequest> r);
 };
 #endif

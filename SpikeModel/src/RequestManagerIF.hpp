@@ -51,15 +51,14 @@ namespace spike_model
             /*!
              * \brief Forward an L2 request to the memory hierarchy.
              * \param req The request to forward 
-             * \param lapse The time for the request to be forwarded with respect to the Sparta clock
              */
-            virtual void putRequest(std::shared_ptr<Request> req, uint64_t lapse);
+            virtual void putRequest(std::shared_ptr<CacheRequest> req);
             
             /*!
              * \brief Notify the completion of request
              * \param req The request that has been completed
              */
-            void notifyAck(const std::shared_ptr<Request>& req);
+            void notifyAck(const std::shared_ptr<CacheRequest>& req);
         
 
             /*!
@@ -72,7 +71,7 @@ namespace spike_model
              * \brief Get a serviced request
              * \return A request that has been serviced
              */
-            std::shared_ptr<Request> getServicedRequest();
+            std::shared_ptr<CacheRequest> getServicedRequest();
 
 
             /*!
@@ -80,25 +79,25 @@ namespace spike_model
              * \param req The request assocaited to the message
              * \return The NoCMessage
              */
-            std::shared_ptr<NoCMessage> getRemoteL2RequestMessage(std::shared_ptr<Request> req);
+            std::shared_ptr<NoCMessage> getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req);
             /*!
              * \brief Get a NoCMessage representing a memory Request
              * \param req The request assocaited to the message
              * \return The NoCMessage
              */
-            std::shared_ptr<NoCMessage> getMemoryRequestMessage(std::shared_ptr<Request> req);
+            std::shared_ptr<NoCMessage> getMemoryRequestMessage(std::shared_ptr<CacheRequest> req);
             /*!
              * \brief Get a NoCMessage representing a reply
              * \param req The request assocaited to the message
              * \return The NoCMessage
              */
-            std::shared_ptr<NoCMessage> getMemoryReplyMessage(std::shared_ptr<Request> req);
+            std::shared_ptr<NoCMessage> getMemoryReplyMessage(std::shared_ptr<CacheRequest> req);
             /*!
              * \brief Get a NoCMessage representing a data forward
              * \param req The request assocaited to the message
              * \return The NoCMessage
              */
-            std::shared_ptr<NoCMessage> getDataForwardMessage(std::shared_ptr<Request> req);
+            std::shared_ptr<NoCMessage> getDataForwardMessage(std::shared_ptr<CacheRequest> req);
 
         protected:
             std::vector<Tile *> tiles_;

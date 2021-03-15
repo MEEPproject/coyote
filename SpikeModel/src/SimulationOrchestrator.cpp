@@ -49,7 +49,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
            logger_.logKI(current_cycle, current_core); 
         }
 
-        std::list<std::shared_ptr<spike_model::SpikeEvent>> new_spike_events;
+        std::list<std::shared_ptr<spike_model::Event>> new_spike_events;
         //auto t1 = std::chrono::high_resolution_clock::now();
         bool success=spike->simulateOne(current_core, current_cycle, new_spike_events);
         //auto t2 = std::chrono::high_resolution_clock::now();
@@ -57,7 +57,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
 
         core_active=success;
 
-        for(std::shared_ptr<spike_model::SpikeEvent> e:new_spike_events)
+        for(std::shared_ptr<spike_model::Event> e:new_spike_events)
         {
             e->handle(this);
         }
@@ -120,52 +120,7 @@ void SimulationOrchestrator::handleSpartaEvents()
         //Check serviced requests
         while(request_manager->hasServicedRequest())
         {
-            std::shared_ptr<spike_model::Request> req=request_manager->getServicedRequest();
-            uint16_t core=req->getCoreId();
-
-            if(pending_misses_per_core[core].size()>0) //If this core has pending misses (previous fetch or raw), handle them
-            {
-                while(pending_misses_per_core[core].size()>0)
-                {
-                    std::shared_ptr<spike_model::Request> miss=pending_misses_per_core[core].front();
-                    pending_misses_per_core[core].pop_front();
-                    submitToSparta(miss);
-                }
-            }
-
-            bool can_run=true;
-            bool is_load=req->getType()==spike_model::Request::AccessType::LOAD;
-
-            //Notify Spike that a request has been serviced and generate the writeback
-            std::shared_ptr<spike_model::Request> wb=spike->serviceRequest(req);
-            if(wb!=nullptr)
-            {
-                submitToSparta(wb);
-            }
-
-            //Ack the registers if this is a load
-            if(is_load)
-            {
-                can_run=spike->ackRegister(req, current_cycle);
-            }
-
-            if(can_run && !threads_in_barrier[core])
-            {
-                std::vector<uint16_t>::iterator it;
-
-                it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
-
-                //If the core was stalled, make it active again
-                if (it != stalled_cores.end())
-                {
-                    stalled_cores.erase(it);
-                    active_cores.push_back(core);
-                    if(trace_)
-                    {
-                        logger_.logResume(current_cycle, core, 0);
-                    }
-                }
-            }
+            handle(request_manager->getServicedRequest());
         }
     }
 }
@@ -238,33 +193,84 @@ void SimulationOrchestrator::selectRunnableThreads()
 }
 
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Request> r)
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
 {
-    if(r->getType()==spike_model::Request::AccessType::FETCH)
+    if(!r->isServiced())
     {
-        //Fetch misses are serviced whether there is a raw or not. Subsequent, misses will be submitted later.
-        submitToSparta(r);
-        core_active=false;
+        if(r->getType()==spike_model::CacheRequest::AccessType::FETCH)
+        {
+            //Fetch misses are serviced whether there is a raw or not. Subsequent, misses will be submitted later.
+            submitToSparta(r);
+            core_active=false;
+        }
+        else if(core_active)
+        {
+            submitToSparta(r);
+        }
+        else //A core will be stalled if a RAW or fetch miss is detected
+        {
+            pending_misses_per_core[current_core].push_back(r); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+        }
     }
-    else if(core_active)
+    else
     {
-        submitToSparta(r);
-    }
-    else //A core will be stalled if a RAW or fetch miss is detected
-    {
-        pending_misses_per_core[current_core].push_back(r); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+        uint16_t core=r->getCoreId();
+
+        if(pending_misses_per_core[core].size()>0) //If this core has pending misses (previous fetch or raw), handle them
+        {
+            while(pending_misses_per_core[core].size()>0)
+            {
+                std::shared_ptr<spike_model::CacheRequest> miss=pending_misses_per_core[core].front();
+                pending_misses_per_core[core].pop_front();
+                submitToSparta(miss);
+            }
+        }
+
+        bool can_run=true;
+        bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
+
+        //Notify Spike that a request has been serviced and generate the writeback
+        std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r);
+        if(wb!=nullptr)
+        {
+            submitToSparta(wb);
+        }
+
+        //Ack the registers if this is a load
+        if(is_load)
+        {
+            can_run=spike->ackRegister(r, current_cycle);
+        }
+
+        if(can_run && !threads_in_barrier[core])
+        {
+            std::vector<uint16_t>::iterator it;
+
+            it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
+
+            //If the core was stalled, make it active again
+            if (it != stalled_cores.end())
+            {
+                stalled_cores.erase(it);
+                active_cores.push_back(core);
+                if(trace_)
+                {
+                    logger_.logResume(current_cycle, core, 0);
+                }
+            }
+        }
     }
 }
 
 
-void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Request> r)
+void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
 {
-    uint64_t lapse=1;
+    /*uint64_t lapse=1;
     if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
     {
        lapse=lapse+spartaDelay(current_cycle);
-    }
-    request_manager->putRequest(r, lapse);
+    }*/
+    request_manager->putRequest(r);
 }
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)

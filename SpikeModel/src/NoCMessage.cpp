@@ -4,7 +4,7 @@
 
 namespace spike_model
 {
-    NoCMessage::NoCMessage(std::shared_ptr<Request> r, NoCMessageType t, uint64_t payload_size)
+    NoCMessage::NoCMessage(std::shared_ptr<CacheRequest> r, NoCMessageType t, uint64_t payload_size)
     {
         request_=r;
         message_type_=t;

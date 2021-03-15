@@ -13,12 +13,12 @@ namespace spike_model
     }
 
 
-    void SharedL2Manager::putRequest(std::shared_ptr<Request> req, uint64_t lapse)
+    void SharedL2Manager::putRequest(std::shared_ptr<CacheRequest> req)
     {
-        RequestManagerIF::putRequest(req, lapse);
+        RequestManagerIF::putRequest(req);
         uint16_t home=req->calculateHome(tile_data_mapping_policy, tag_bits, block_offset_bits, set_bits, tile_bits);
         req->setHomeTile(home);
         //Send
-        tiles_[req->getSourceTile()]->putRequest_(req, lapse);
+        tiles_[req->getSourceTile()]->putRequest_(req);
     }
 }

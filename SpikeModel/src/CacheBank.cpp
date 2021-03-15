@@ -27,10 +27,10 @@ namespace spike_model
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<CacheRequest>));
 
         in_biu_ack_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<Request>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
 
 
         // DL1 cache config
@@ -49,12 +49,14 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     // Receive MSS access acknowledge from Bus Interface Unit
-    void CacheBank::sendAck_(const std::shared_ptr<Request> & req)
+    void CacheBank::sendAck_(const std::shared_ptr<CacheRequest> & req)
     {
         bool was_stalled=in_flight_reads_.is_full();
 
+        req->setServiced();
+
         reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
-        if(req->getType()==Request::AccessType::LOAD || req->getType()==Request::AccessType::FETCH)
+        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
             auto range_misses=in_flight_reads_.equal_range(req);
 
@@ -62,6 +64,7 @@ namespace spike_model
 
             while(range_misses.first != range_misses.second)
             {
+                range_misses.first->second->setServiced();
                 out_core_ack_.send(range_misses.first->second);
                 range_misses.first++;
             }
@@ -69,10 +72,6 @@ namespace spike_model
             in_flight_reads_.erase(req);
         
         }
-        else //STORE-WRITEBACK JUST NOTIFY THIS REQUEST, AS THERE ISN'T ANY OTHER ASSOCIATED
-        {
-        }
-
         if(pending_requests_.size()>0)
         {
             //ISSUE EVENT
@@ -89,24 +88,25 @@ namespace spike_model
     }   
 
 
-    void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
+    void CacheBank::getAccess_(const std::shared_ptr<CacheRequest> & req)
     {
         count_requests_+=1;
 
 
         bool hit_on_store=false;
-        if(req->getType()!=Request::AccessType::LOAD)
+        if(req->getType()!=CacheRequest::AccessType::LOAD)
         {
             //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
-            for (std::list<std::shared_ptr<Request>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
+            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
             {
-                hit_on_store=((*rit)->getType()==Request::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
+                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
             }
         }
 
         if(hit_on_store)
         {
             //AUTO HIT
+            req->setServiced();
             out_core_ack_.send(req,1);
             count_hit_on_store_++;
         }
@@ -155,6 +155,7 @@ namespace spike_model
 
 
         if (CACHE_HIT) {
+                mem_access_info_ptr->getReq()->setServiced();
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
         }
         else {
@@ -177,20 +178,21 @@ namespace spike_model
 
                 bool already_pending=false;
 
-                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==Request::AccessType::FETCH)
+                if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::FETCH)
                 {
                     already_pending=in_flight_reads_.contains(mem_access_info_ptr->getReq());
                     in_flight_reads_.insert(mem_access_info_ptr->getReq());
                 }
 
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
-                if(!(mem_access_info_ptr->getReq()->getType()==Request::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==Request::AccessType::FETCH) || !already_pending)
+                if(!(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::FETCH) || !already_pending)
                 {
                     out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
 
                     //NO FURTHER ACTION IS NEEDED
-                    if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                    if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                     {
+                        mem_access_info_ptr->getReq()->setServiced();
                         out_core_ack_.send(mem_access_info_ptr->getReq());
                     }
                 }
@@ -200,7 +202,7 @@ namespace spike_model
                 }
 
                 //THE CACHE IS WRITE ALLOCATE, SO MISSES ON WRITEBACKS NEED TO KEEP THE LINE APPART FROM FORWARDING IT
-                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
                     reloadCache_(mem_access_info_ptr->getReq()->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
                 }
@@ -237,7 +239,7 @@ namespace spike_model
             if (cache_hit) {
                 l2_cache_->touchMRU(*cache_line);
                 //SET DIRTY BIT IF NECESSARY
-                if(mem_access_info_ptr->getReq()->getType()==Request::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==Request::AccessType::WRITEBACK)
+                if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
                     cache_line->setModified(true);
                 }
@@ -268,7 +270,7 @@ namespace spike_model
         //If the line is dirty, send a writeback to the memory
         if(l2_cache_line->isModified())
         {
-            out_biu_req_.send(std::make_shared<spike_model::Request> (l2_cache_line->getAddr(), Request::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0), 1);
+            out_biu_req_.send(std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0), 1);
             count_wbs_+=1;
             if(trace_)
             {

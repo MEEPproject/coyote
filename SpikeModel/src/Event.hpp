@@ -1,41 +1,42 @@
-#ifndef __SPIKE_EVENT_HH__
-#define __SPIKE_EVENT_HH__
+#ifndef __EVENT_HH__
+#define __EVENT_HH__
 
-#include "SpikeEventVisitor.hpp"
+#include "EventVisitor.hpp"
 
 namespace spike_model
 {
-    class SpikeEvent
+    class EventVisitor;
+    class Event
     {
         /**
-         * \class spike_model::SpikeEvent
+         * \class spike_model::Event
          *
-         * \brief SpikeEvent contains all the information regarding an event to be communicated from Spike to the rest of Coyote.
+         * \brief Event contains all the information regarding an event to be communicated from Spike to the rest of Coyote.
          *
-         * Instances of SpikeEvent (ant its children) are the main data structure that is communicated between Spike and the Sparta model
+         * Instances of Event (ant its children) are the main data structure that is communicated between Spike and the Sparta model
          * and between Sparta Units.
          *
          */
         
         public:
 
-            SpikeEvent() = delete;
-            SpikeEvent(SpikeEvent const&) = delete;
-            SpikeEvent& operator=(SpikeEvent const&) = delete;
+            Event() = delete;
+            Event(Event const&) = delete;
+            Event& operator=(Event const&) = delete;
 
             /*!
-             * \brief Constructor for SpikeEvent
+             * \brief Constructor for Event
              * \param  pc The program counter of the requesting instruction
              */
-            SpikeEvent(uint64_t pc): pc(pc){}
+            Event(uint64_t pc): pc(pc){}
 
             /*!
-             * \brief Constructor for SpikeEvent
+             * \brief Constructor for Event
              * \param pc The program counter of the requesting instruction
              * \param time The timestamp for the request
              * \param c The producinging core
              */
-            SpikeEvent(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
+            Event(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
 
             /*!
              * \brief Get the timestamp of the event
@@ -71,7 +72,7 @@ namespace spike_model
              * \brief Handle the event
              * \param v The visitor to handle the event
              */
-            virtual void handle(SpikeEventVisitor * v)=0;
+            virtual void handle(EventVisitor * v)=0;
 
         private:
             uint64_t pc;

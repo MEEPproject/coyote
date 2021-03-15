@@ -22,7 +22,7 @@
 
 #include <unordered_map>
 
-#include "Request.hpp"
+#include "CacheRequest.hpp"
 
 #include "SimpleDL1.hpp"
 
@@ -99,11 +99,11 @@ namespace spike_model
 
             MemoryAccessInfo() = delete;
 
-            MemoryAccessInfo(std::shared_ptr<Request> req) :
+            MemoryAccessInfo(std::shared_ptr<CacheRequest> req) :
                 l2_request_(req),
                 phyAddrIsReady_(true)
                 {
-                    if(req->getType()==Request::AccessType::LOAD)
+                    if(req->getType()==CacheRequest::AccessType::LOAD)
                     {
                         address=req->getAddress();
                     }
@@ -117,7 +117,7 @@ namespace spike_model
 
             // This ExampleInst pointer will act as our portal to the ExampleInst class
             // and we will use this pointer to query values from functions of ExampleInst class
-            std::shared_ptr<Request> getReq() const { return l2_request_; }
+            std::shared_ptr<CacheRequest> getReq() const { return l2_request_; }
 
             void setPhyAddrStatus(bool isReady) { phyAddrIsReady_ = isReady; }
             bool getPhyAddrStatus() const { return phyAddrIsReady_; }
@@ -140,7 +140,7 @@ namespace spike_model
         private:
 
             // load/store instruction pointer
-            std::shared_ptr<Request> l2_request_;
+            std::shared_ptr<CacheRequest> l2_request_;
 
             // Indicate MMU address translation status
             bool phyAddrIsReady_;
@@ -156,7 +156,7 @@ namespace spike_model
          * \brief Get a request coming from the input port from the tile and store it for later handling
          * \param req The request to store
          */
-        void getAccess_(const std::shared_ptr<Request> & req);
+        void getAccess_(const std::shared_ptr<CacheRequest> & req);
 
         /*!
         * \brief Issue a request from the queue of pending requests
@@ -196,10 +196,10 @@ namespace spike_model
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
 
-        sparta::DataInPort<std::shared_ptr<Request>> in_core_req_
+        sparta::DataInPort<std::shared_ptr<CacheRequest>> in_core_req_
             {&unit_port_set_, "in_tile_req"};
 
-        sparta::DataInPort<std::shared_ptr<Request>> in_biu_ack_
+        sparta::DataInPort<std::shared_ptr<CacheRequest>> in_biu_ack_
             {&unit_port_set_, "in_tile_ack"};
 
 
@@ -207,10 +207,10 @@ namespace spike_model
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
         
-        sparta::DataOutPort<std::shared_ptr<Request>> out_core_ack_
+        sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_core_ack_
             {&unit_port_set_, "out_tile_ack"};
 
-        sparta::DataOutPort<std::shared_ptr<Request>> out_biu_req_
+        sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_biu_req_
             {&unit_port_set_, "out_tile_req", false};
 
 
@@ -248,7 +248,7 @@ namespace spike_model
         * \brief Sends an acknoledgement for a serviced request
         * \param req The request to acknowledge
         */
-        void sendAck_(const std::shared_ptr<Request> & req);
+        void sendAck_(const std::shared_ptr<CacheRequest> & req);
 
 
 
@@ -289,10 +289,10 @@ namespace spike_model
             getStatisticSet(), "cache_misses/requests"
         };
 
-        class RequestHash
+        class CacheRequestHash
         {
             public:
-                size_t operator()(const Request& h) const
+                size_t operator()(const CacheRequest& h) const
                 {
                      return h.getAddress();
                 }
@@ -303,7 +303,7 @@ namespace spike_model
             public:
                 InFlightMissList(uint16_t m, uint64_t l):line_size_(l), max_(m){}
                 
-                bool insert(std::shared_ptr<Request> req)
+                bool insert(std::shared_ptr<CacheRequest> req)
                 {
                     bool res=false;
                     {
@@ -313,17 +313,17 @@ namespace spike_model
                     return res;
                 }
                 
-                auto equal_range(std::shared_ptr<Request> req)
+                auto equal_range(std::shared_ptr<CacheRequest> req)
                 {
                     return misses_.equal_range(getLine(req));
                 }
 
-                void erase(std::shared_ptr<Request> req)
+                void erase(std::shared_ptr<CacheRequest> req)
                 {
                     misses_.erase(getLine(req));
                 }
             
-                bool contains(std::shared_ptr<Request> req)
+                bool contains(std::shared_ptr<CacheRequest> req)
                 {
                     return misses_.find(getLine(req))!=misses_.end();
                 }
@@ -334,11 +334,11 @@ namespace spike_model
                 }
                 
             private:
-                std::unordered_multimap<uint64_t, std::shared_ptr<Request>> misses_;
+                std::unordered_multimap<uint64_t, std::shared_ptr<CacheRequest>> misses_;
                 uint64_t line_size_;
                 uint16_t max_;
 
-                uint64_t getLine(std::shared_ptr<Request> req)
+                uint64_t getLine(std::shared_ptr<CacheRequest> req)
                 {
                     return (req->getAddress()/line_size_)*line_size_;
                 }
@@ -346,7 +346,7 @@ namespace spike_model
 
         InFlightMissList in_flight_reads_;
 
-        std::list<std::shared_ptr<Request>> pending_requests_;
+        std::list<std::shared_ptr<CacheRequest>> pending_requests_;
     
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;

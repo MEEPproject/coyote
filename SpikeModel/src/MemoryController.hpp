@@ -136,7 +136,7 @@ namespace spike_model
              * \brief Send an acknowledgement through the NoC
              * \param req The request that has been completed and will be acknowledged
              */
-            void issueAck_(std::shared_ptr<Request> req);
+            void issueAck_(std::shared_ptr<CacheRequest> req);
     
             /*!
              * \brief Execute a memory controller cycle
@@ -151,7 +151,7 @@ namespace spike_model
              * \param bank The bank to access
              * \return A command of the correct type to access the specified bank
              */
-            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<Request> req, uint64_t bank);
+            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
     
             /*!
              * \brief Create a command to read the line after writing it (if write-allocate is enabled)
@@ -159,7 +159,7 @@ namespace spike_model
              * \param bank The bank to access
              * \return A command for the write allocate
              */
-            std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<Request> req, uint64_t bank);
+            std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
     };
 }
 #endif

@@ -20,7 +20,7 @@ namespace spike_model
         address_mapping_policy_=address_mapping_policy;
     }
 
-    void RequestManagerIF::notifyAck(const std::shared_ptr<Request>& req)
+    void RequestManagerIF::notifyAck(const std::shared_ptr<CacheRequest>& req)
     {
         serviced_requests_.addRequest(req);
     }
@@ -30,7 +30,7 @@ namespace spike_model
         return serviced_requests_.hasRequest();
     }
 
-    std::shared_ptr<Request> RequestManagerIF::getServicedRequest()
+    std::shared_ptr<CacheRequest> RequestManagerIF::getServicedRequest()
     {
         return serviced_requests_.getRequest();
     }
@@ -94,7 +94,7 @@ namespace spike_model
 
     }
 
-    void RequestManagerIF::putRequest(std::shared_ptr<Request> req, uint64_t lapse)
+    void RequestManagerIF::putRequest(std::shared_ptr<CacheRequest> req)
     {
         uint16_t source=req->getCoreId()/cores_per_tile_;
         uint16_t bank=req->calculateHome(bank_data_mapping_policy_, tag_bits, block_offset_bits, set_bits, bank_bits);
@@ -103,12 +103,12 @@ namespace spike_model
         req->calculateLineAddress(block_offset_bits);
     }
             
-    std::shared_ptr<NoCMessage> RequestManagerIF::getRemoteL2RequestMessage(std::shared_ptr<Request> req)
+    std::shared_ptr<NoCMessage> RequestManagerIF::getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req)
     {
         return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size);
     }
             
-    std::shared_ptr<NoCMessage> RequestManagerIF::getMemoryRequestMessage(std::shared_ptr<Request> req)
+    std::shared_ptr<NoCMessage> RequestManagerIF::getMemoryRequestMessage(std::shared_ptr<CacheRequest> req)
     {
         uint64_t address=req->getAddress();
         
@@ -146,11 +146,11 @@ namespace spike_model
 
         uint32_t size=address_size;
 
-        if(req->getType()==Request::AccessType::STORE)
+        if(req->getType()==CacheRequest::AccessType::STORE)
         {
             size=req->getSize();
         }
-        else if(req->getType()==Request::AccessType::WRITEBACK)
+        else if(req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
             size=line_size;
         }
@@ -158,12 +158,12 @@ namespace spike_model
         return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size);
     }
 
-    std::shared_ptr<NoCMessage> RequestManagerIF::getMemoryReplyMessage(std::shared_ptr<Request> req)
+    std::shared_ptr<NoCMessage> RequestManagerIF::getMemoryReplyMessage(std::shared_ptr<CacheRequest> req)
     {
         return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size);
     }
 
-    std::shared_ptr<NoCMessage> RequestManagerIF::getDataForwardMessage(std::shared_ptr<Request> req)
+    std::shared_ptr<NoCMessage> RequestManagerIF::getDataForwardMessage(std::shared_ptr<CacheRequest> req)
     {
         return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size);
     }

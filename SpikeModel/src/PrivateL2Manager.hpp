@@ -35,9 +35,8 @@ namespace spike_model
             /*!
              * \brief Forward an L2 request to the memory hierarchy.
              * \param req The request to forward 
-             * \param lapse The time for the request to be forwarded with respect to the Sparta clock
              */
-            void putRequest(std::shared_ptr<Request> req, uint64_t lapse) override;
+            void putRequest(std::shared_ptr<CacheRequest> req) override;
     };
 }
 #endif

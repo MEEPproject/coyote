@@ -4,7 +4,7 @@ namespace spike_model
 {
     FifoRrMemoryAccessScheduler::FifoRrMemoryAccessScheduler(uint64_t num_banks) : request_queues(num_banks){}
 
-    void FifoRrMemoryAccessScheduler::putRequest(std::shared_ptr<Request> req, uint64_t bank)
+    void FifoRrMemoryAccessScheduler::putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         request_queues[bank].push(req);
         if(request_queues[bank].size()==1)
@@ -13,9 +13,9 @@ namespace spike_model
         }
     }
 
-    std::shared_ptr<Request> FifoRrMemoryAccessScheduler::getRequest(uint64_t bank)
+    std::shared_ptr<CacheRequest> FifoRrMemoryAccessScheduler::getRequest(uint64_t bank)
     {
-        std::shared_ptr<Request> res=request_queues[bank].front();
+        std::shared_ptr<CacheRequest> res=request_queues[bank].front();
         return res;
     }
             

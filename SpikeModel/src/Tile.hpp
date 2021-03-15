@@ -29,8 +29,9 @@ namespace spike_model
     class RequestManagerIF; //Forward declaration
     class NoCMessage; //Forward declaration
 
-    class Tile : public sparta::Unit, public LogCapable
+    class Tile : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
+        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
 
         /*!
          * \class spike_model::Tile
@@ -100,14 +101,19 @@ namespace spike_model
              * \param lapse The number of cycles that the request needs to be delayed to 
              * accomodate the difference between the Sparta and overall simulation clocks
              */
-            void putRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
+            void putRequest_(const std::shared_ptr<CacheRequest> & req);
             
             /*!
              * \brief Notify the completion of the service for an L2 request
              * \param The request
              */
-            void notifyAck_(const std::shared_ptr<Request> & req);
+            void notifyAck_(const std::shared_ptr<CacheRequest> & req);
             
+             /*!
+             * \brief Handles a cache request
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 
         private:
             uint16_t id_;
@@ -115,13 +121,13 @@ namespace spike_model
             uint16_t num_l2_banks_;
             uint64_t latency_;
  
-            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_acks_;
-            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_reqs_;
+            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_acks_;
+            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_reqs_;
             sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_
             {&unit_port_set_, "in_noc"};
 
-            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_acks_;
-            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
+            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_acks_;
+            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_reqs_;
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
 
@@ -142,25 +148,25 @@ namespace spike_model
              * \brief Send a request to a memory controller
              * \param req The request
              */
-            void issueMemoryControllerRequest_(const std::shared_ptr<Request> & req);
+            void issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req);
             
             /*!
              * \brief Sends an L2 request to a bank in a different tile
              * \param req The request
              */
-            void issueRemoteRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
+            void issueRemoteRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an L2 request to a bank in the current tile
              * \param req The request
              */
-            void issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
+            void issueLocalRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an ack to a cache bank of the current tile (a prior remote L2 request or memory request has been serviced)
              * \param req The request
              */
-            void issueBankAck_(const std::shared_ptr<Request> & req);
+            void issueBankAck_(const std::shared_ptr<CacheRequest> & req);
             
             /*!
              * \brief Handles a message from the NoC

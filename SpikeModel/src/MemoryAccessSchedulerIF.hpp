@@ -19,14 +19,14 @@ namespace spike_model
             * \param req The request
             * \param bank The bank that the request targets
             */
-            virtual void putRequest(std::shared_ptr<Request> req, uint64_t bank)=0;
+            virtual void putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank)=0;
             
             /*!
             * \brief Get a request for a particular bank
             * \param bank The bank for which the request is desired
             * \return A request
             */
-            virtual std::shared_ptr<Request> getRequest(uint64_t bank)=0;
+            virtual std::shared_ptr<CacheRequest> getRequest(uint64_t bank)=0;
             
             /*!
             * \brief Get the next bank for which a request should be handled
