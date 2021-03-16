@@ -1,6 +1,8 @@
 
 #include "sparta/utils/SpartaAssert.hpp"
 #include "Tile.hpp"
+#include "PrivateL2Director.hpp"
+#include "SharedL2Director.hpp"
 #include <chrono>
 
 namespace spike_model
@@ -15,6 +17,10 @@ namespace spike_model
         sparta::Unit(node),
         num_l2_banks_(p->num_l2_banks),
         latency_(p->latency),
+        l2_sharing_mode_(p->l2_sharing_mode),
+        bank_policy_(p->bank_policy),
+        tile_policy_(p->tile_policy),
+        address_policy_(p->address_policy),
         in_ports_l2_acks_(num_l2_banks_),
         in_ports_l2_reqs_(num_l2_banks_),
         out_ports_l2_acks_(num_l2_banks_),
@@ -42,18 +48,70 @@ namespace spike_model
             }
 
             in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
+       
+            spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            if(bank_policy_=="page_to_bank")
+            {
+                b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            }
+            else if(bank_policy_=="set_interleaving")
+            {
+                b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+            }
+            else
+            {
+                printf("Unsupported cache data mapping policy\n");
+            }
+
+
+            spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+            if(address_policy_=="open_page")
+            {
+                a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+            }
+            else if(address_policy_=="close_page")
+            {
+                a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
+            }
+            else
+            {
+                printf("Unsupported address data mapping policy\n");
+            }
+
+
+            if(l2_sharing_mode_=="tile_private")
+            {
+                access_director=new PrivateL2Director(this, a_pol, b_pol);
+            }
+            else
+            {
+                spike_model::CacheDataMappingPolicy t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+                if(tile_policy_=="page_to_bank")
+                {
+                    t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+                }
+                else if(tile_policy_=="set_interleaving")
+                {
+                    t_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+                }
+                else
+                {
+                    printf("Unsupported cache data mapping policy\n");
+                }
+                access_director=new SharedL2Director(this, a_pol, b_pol, t_pol);
+            }
     }
 
     void Tile::issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req)
     {
             //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
-            std::shared_ptr<NoCMessage> mes=request_manager_->getMemoryRequestMessage(req);
+            std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
             out_port_noc_.send(mes);  
     }
 
     void Tile::issueRemoteRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
     {
-            out_port_noc_.send(request_manager_->getRemoteL2RequestMessage(req), lapse);  
+            out_port_noc_.send(access_director->getRemoteL2RequestMessage(req), lapse);  
     }
 
     void Tile::issueLocalRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
@@ -137,7 +195,7 @@ namespace spike_model
         std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
     }
 
-    void Tile::setRequestManager(std::shared_ptr<RequestManagerIF> r)
+    void Tile::setRequestManager(std::shared_ptr<EventManager> r)
     {
         request_manager_=r;
     }
@@ -147,59 +205,14 @@ namespace spike_model
         id_=id;
     }
     
-    void Tile::handle(std::shared_ptr<spike_model::CacheRequest> r)
+    void Tile::handle(std::shared_ptr<spike_model::Request> r)
     {
-        if(!r->isServiced())
-        {
-            if(r->getHomeTile()==id_)
-            {
-                //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
-                if(trace_)
-                {
-                    logger_.logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
-                }
-                issueLocalRequest_(r, r->getTimestamp()-getClock()->currentCycle()); //MAYBE +1?
-            }
-            else
-            {
-                if(trace_)
-                {
-                    logger_.logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
-                }
-                //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
-                issueRemoteRequest_(r, r->getTimestamp()-getClock()->currentCycle());
-            }
-        }
-        else
-        {
-            if(r->getType()==CacheRequest::AccessType::STORE || r->getType()==CacheRequest::AccessType::WRITEBACK)
-            {
-                logger_.logMissServiced(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
-                request_manager_->notifyAck(r);
-            }
-            else
-            {
-                //The ack is for this tile
-                if(r->getSourceTile()==id_)
-                {
-                    //std::cout << "Notifying to manager\n";
-                    if(trace_)
-                    {
-                        logger_.logMissServiced(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
-                    }
-                    request_manager_->notifyAck(r);
-                }
-                else
-                {
-                    //std::cout << "Sending ack to remote\n";
-                    if(trace_)
-                    {
-                        logger_.logTileSendAck(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
-                    }
-                    out_port_noc_.send(request_manager_->getDataForwardMessage(r), l2_line_size); 
-                }
-            }
-        }
+        access_director->putAccess(r);
     }
-    
+            
+    void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
+                              uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
+    {
+        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile,  num_tiles, num_mcs, num_banks_per_mc, num_rows_per_bank, num_cols_per_bank);
+    }
 }

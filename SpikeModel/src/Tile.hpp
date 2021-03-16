@@ -20,18 +20,21 @@
 
 #include <memory>
 
-#include "RequestManagerIF.hpp"
+#include "EventManager.hpp"
 #include "NoCMessage.hpp"
 #include "LogCapable.hpp"
+#include "AddressMappingPolicy.hpp"
+#include "AccessDirector.hpp"
 
 namespace spike_model
 {
-    class RequestManagerIF; //Forward declaration
-    class NoCMessage; //Forward declaration
+    class EventManager; //Forward declarations
+    class NoCMessage;
 
     class Tile : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
+        friend class AccessDirector;
 
         /*!
          * \class spike_model::Tile
@@ -42,6 +45,7 @@ namespace spike_model
          * modelled using Sparta.
          *
          */
+            
         public:
  
             /*!
@@ -58,6 +62,10 @@ namespace spike_model
                 }
                 PARAMETER(uint16_t, num_l2_banks, 1, "The number of cache banks in the tile")
                 PARAMETER(uint64_t, latency, 1, "The number of cycles to get to a local cache bank")
+                PARAMETER(std::string, l2_sharing_mode, "tile_private", "How the cache will be shared among the tiles")
+                PARAMETER(std::string, bank_policy, "set_interleaving", "The data mapping policy for banks")
+                PARAMETER(std::string, tile_policy, "page_to_bank", "The data mapping policy for tiles")
+                PARAMETER(std::string, address_policy, "close_page", "The data mapping molicy in main memory")
             };
 
             /*!
@@ -88,7 +96,7 @@ namespace spike_model
              * \brief Set the request manager for the tile
              * \param r The request manager
              */
-            void setRequestManager(std::shared_ptr<RequestManagerIF> r);
+            void setRequestManager(std::shared_ptr<EventManager> r);
 
             /*!
              * \brief Set the id for the tile
@@ -113,13 +121,32 @@ namespace spike_model
              * \brief Handles a cache request
              * \param r The event to handle
              */
-            virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
+            virtual void handle(std::shared_ptr<spike_model::Request> r) override;
+            
+            /*!
+             * \brief Set the information on the memory hierarchy
+             * \param l2_tile_size The total size of the L2 that belongs to each Tile
+             * \param assoc The associativity
+             * \param line_size The line size
+             * \param banks_per_tile The number of banks per Tile
+             * \param num_tiles The number of tiles in the system
+             * \param num_mcs The number of memory controllers
+             * \param num_banks_per_mc The number of banks per memory controller
+             * \param num_rows_per_bank The number of rows per memory bank
+             * \param num_cols_per_bank The number of columns per memory bank
+             */
+            void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
+                                uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank);
 
         private:
             uint16_t id_;
 
             uint16_t num_l2_banks_;
             uint64_t latency_;
+            std::string l2_sharing_mode_;
+            std::string bank_policy_;
+            std::string tile_policy_;
+            std::string address_policy_;
  
             std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_acks_;
             std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_reqs_;
@@ -142,7 +169,7 @@ namespace spike_model
             uint8_t tag_bits;
        
 
-            std::shared_ptr<RequestManagerIF> request_manager_;
+            std::shared_ptr<EventManager> request_manager_;
 
             /*!
              * \brief Send a request to a memory controller
@@ -173,6 +200,9 @@ namespace spike_model
              * \param req The request
              */
             void handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes);
+
+            AccessDirector * access_director;
+
     };
 }
 #endif

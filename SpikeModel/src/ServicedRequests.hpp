@@ -17,7 +17,7 @@ namespace spike_model
          *
          * \brief Stores instances of Request that have been already been serviced.
          *
-         * In general, RequestManagerIF adds requests, while the SimulationOrchestrator gets them.
+         * In general, EventManager adds requests, while the SimulationOrchestrator gets them.
          *
          */
         public:

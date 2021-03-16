@@ -55,7 +55,7 @@ namespace spike_model
 
         req->setServiced();
 
-        reloadCache_(req->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+        reloadCache_(calculateLineAddress(req) | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
         if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
             auto range_misses=in_flight_reads_.equal_range(req);
@@ -99,7 +99,7 @@ namespace spike_model
             //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
             for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
             {
-                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && (*rit)->getLineAddress()==req->getLineAddress());
+                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(req));
             }
         }
 
@@ -204,7 +204,7 @@ namespace spike_model
                 //THE CACHE IS WRITE ALLOCATE, SO MISSES ON WRITEBACKS NEED TO KEEP THE LINE APPART FROM FORWARDING IT
                 if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
-                    reloadCache_(mem_access_info_ptr->getReq()->getLineAddress() | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+                    reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()) | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
                 }
 
                 if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
@@ -283,6 +283,11 @@ namespace spike_model
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "Cache reload complete!";
         }
+    }
+            
+    uint64_t CacheBank::calculateLineAddress(std::shared_ptr<CacheRequest> r)
+    {
+        return (r->getAddress() >> l2_line_size_) << l2_line_size_;
     }
 
 

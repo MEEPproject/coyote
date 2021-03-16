@@ -2,7 +2,7 @@
 
 #include "SpikeModel.hpp" // Core model skeleton simulator
 #include "Request.hpp"
-#include "RequestManagerIF.hpp"
+#include "EventManager.hpp"
 #include "spike_wrapper.h"
 #include "L2SharingPolicy.hpp"
 #include "CacheDataMappingPolicy.hpp"
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
              sparta::app::named_value<std::string>("POLICY", &bank_policy)->default_value("page_to_bank"),
              "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
             ("tile_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("tile_private"),
+             sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("page_to_bank"),
              "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving")
             ("fast_cache",
              sparta::app::named_value<bool>("TRUE/FALSE", &fast_cache)->default_value(false),
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 
 
         std::string line_size=dc.substr(dc.rfind(":") + 1);
-
+        
         //Set the number of banks in each tile and the line size.
         for(uint32_t i=0;i<num_tiles;i++)
         {
@@ -189,6 +189,26 @@ int main(int argc, char **argv)
                 bank.replace(start_pos, 1, std::to_string(j));
                 cls.getSimulationConfiguration().processParameter(bank, line_size);
             }
+
+            std::string l2_sharing_mode("top.cpu.tile*.params.l2_sharing_mode");
+            start_pos = l2_sharing_mode.find("*");
+            l2_sharing_mode.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(l2_sharing_mode, l2_sharing);
+            
+            std::string l2_bank_policy("top.cpu.tile*.params.bank_policy");
+            start_pos = l2_bank_policy.find("*");
+            l2_bank_policy.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(l2_bank_policy, bank_policy);
+
+            std::string l2_tile_policy("top.cpu.tile*.params.tile_policy");
+            start_pos = l2_tile_policy.find("*");
+            l2_tile_policy.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(l2_tile_policy, tile_policy);
+            
+            std::string l2_mapping_policy("top.cpu.tile*.params.address_policy");
+            start_pos = l2_mapping_policy.find("*");
+            l2_mapping_policy.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(l2_mapping_policy, address_mapping);
         }
         
         for(std::size_t i = 0; i < num_memory_controllers; ++i)
@@ -204,45 +224,6 @@ int main(int argc, char **argv)
             cls.getSimulationConfiguration().processParameter(mc_bank, sparta::utils::uint32_to_str(num_memory_banks));
         }
 
-        spike_model::L2SharingPolicy l2_sharing_policy=spike_model::L2SharingPolicy::TILE_PRIVATE;
-        if(l2_sharing=="tile_private")
-        {
-            l2_sharing_policy=spike_model::L2SharingPolicy::TILE_PRIVATE;
-        }
-        else if(l2_sharing=="fully_shared")
-        {
-            l2_sharing_policy=spike_model::L2SharingPolicy::FULLY_SHARED;
-        }
-
-        spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        if(bank_policy=="page_to_bank")
-        {
-            b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        }
-        else if(bank_policy=="set_interleaving")
-        {
-            b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
-        }
-
-        spike_model::CacheDataMappingPolicy t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        if(tile_policy=="page_to_bank")
-        {
-            t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        }
-        else if(tile_policy=="set_interleaving")
-        {
-            t_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
-        }
-
-        spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-        if(address_mapping=="open_page")
-        {
-            a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-        }
-        else if(address_mapping=="close_page")
-        {
-            a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
-        }
 
         // Create the simulator
         sparta::Scheduler scheduler;
@@ -253,10 +234,6 @@ int main(int argc, char **argv)
                              num_l2_banks,
                              num_memory_controllers,
                              num_memory_banks,
-                             a_pol,
-                             l2_sharing_policy,
-                             b_pol,
-                             t_pol,
                              application, //application to simulate
                              isa,
                              show_factories,
@@ -266,7 +243,7 @@ int main(int argc, char **argv)
 
         cls.populateSimulation(&(*sim));
         
-        std::shared_ptr<spike_model::RequestManagerIF> request_manager=sim->createRequestManager();
+        std::shared_ptr<spike_model::EventManager> request_manager=sim->createRequestManager();
 
 
         std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,t,ic,dc,isa,cmd,varch,fast_cache);

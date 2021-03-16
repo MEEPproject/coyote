@@ -23,8 +23,8 @@
 #include "simdb/impl/hdf5/HDF5ConnProxy.hpp"
 #include "simdb/utils/uuids.hpp"
 
-#include "PrivateL2Manager.hpp"
-#include "SharedL2Manager.hpp"
+#include "PrivateL2Director.hpp"
+#include "SharedL2Director.hpp"
 #include <thread>
 
 double calculateAverageOfInternalCounters(
@@ -44,10 +44,6 @@ SpikeModel::SpikeModel(const std::string& topology,
                                    uint32_t num_l2_banks,
                                    uint32_t num_memory_controllers,
                                    uint32_t num_memory_banks,
-                                   spike_model::AddressMappingPolicy address_mapping_policy,
-                                   spike_model::L2SharingPolicy l2_sharing_policy,
-                                   spike_model::CacheDataMappingPolicy bank_policy,
-                                   spike_model::CacheDataMappingPolicy tile_policy,
                                    std::string cmd,
                                    std::string isa,
                                    bool show_factories,
@@ -59,10 +55,6 @@ SpikeModel::SpikeModel(const std::string& topology,
     num_l2_banks_(num_l2_banks),
     num_memory_controllers_(num_memory_controllers),
     num_memory_banks_(num_memory_banks),
-    address_mapping_policy_(address_mapping_policy),
-    l2_sharing_policy_(l2_sharing_policy),
-    bank_policy_(bank_policy),
-    tile_policy_(tile_policy),
     cmd_(cmd),
     isa_(isa),
     show_factories_(show_factories),
@@ -210,7 +202,7 @@ void SpikeModel::bindTree_()
     cpu_factory->bindTree(getRoot());
 }
 
-std::shared_ptr<spike_model::RequestManagerIF> SpikeModel::createRequestManager()
+std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 {
     spike_model::ServicedRequests s;
     std::vector<spike_model::Tile *> tiles;
@@ -225,40 +217,10 @@ std::shared_ptr<spike_model::RequestManagerIF> SpikeModel::createRequestManager(
         tiles.push_back(t);
     }
 
-    std::shared_ptr<spike_model::RequestManagerIF> m;
+    std::shared_ptr<spike_model::EventManager> m=std::make_shared<spike_model::EventManager>(tiles, num_cores_per_tile_);
 
-    switch(l2_sharing_policy_)
-    {
-        case spike_model::L2SharingPolicy::TILE_PRIVATE:
-            m=std::make_shared<spike_model::PrivateL2Manager>(tiles, num_cores_per_tile_, address_mapping_policy_, bank_policy_);
-            break;
-        case spike_model::L2SharingPolicy::FULLY_SHARED:
-            m=std::make_shared<spike_model::SharedL2Manager>(tiles, num_cores_per_tile_, address_mapping_policy_, bank_policy_, tile_policy_);
-            break;
-        default:
-            std::cout << "Unsupported L2 sharing mode\n";
-            exit(-1);
-    }
-
-    //std::shared_ptr<spike_model::PrivateL2Manager> p=std::make_shared<spike_model::PrivateL2Manager>(tiles, num_cores_per_tile_);
-    //std::shared_ptr<spike_model::SharedL2Manager> p=std::make_shared<spike_model::SharedL2Manager>(tiles, num_cores_per_tile_);
-    m->setServicedRequestsStorage(s);
-    for(std::size_t i = 0; i < num_tiles_; ++i)
-    {
-        tiles[i]->setRequestManager(m);
-    }
-    
-    for(std::size_t i = 0; i < num_memory_controllers_; ++i)
-    {
-        auto tile_node = getRoot()->getChild(std::string("cpu.memory_controller") +
-                sparta::utils::uint32_to_str(i));
-        sparta_assert(tile_node != nullptr);
-
-        spike_model::MemoryController * mc=tile_node->getResourceAs<spike_model::MemoryController>();
-        
-        mc->setRequestManager(m);
-    }
-        
+    //std::shared_ptr<spike_model::PrivateL2Director> p=std::make_shared<spike_model::PrivateL2Director>(tiles, num_cores_per_tile_);
+    //std::shared_ptr<spike_model::SharedL2Director> p=std::make_shared<spike_model::SharedL2Director>(tiles, num_cores_per_tile_);
     auto cache_bank_node = getRoot()->getChild(std::string("cpu.tile0.l2_bank0"));
     sparta_assert(cache_bank_node != nullptr);
 
@@ -275,10 +237,26 @@ std::shared_ptr<spike_model::RequestManagerIF> SpikeModel::createRequestManager(
 
     uint64_t num_rows=m_b->getNumRows();
     uint64_t num_cols=m_b->getNumColumns();
-    
-    //ALL THE TILES SHARE A POINTER TO THE SAME REQUEST MANAGER
-    m->setMemoryInfo(bank_size*num_l2_banks_*num_tiles_, bank_associativity, bank_line, num_l2_banks_, num_memory_controllers_, num_memory_banks_, num_rows, num_cols);
 
+    m->setServicedRequestsStorage(s);
+
+    for(std::size_t i = 0; i < num_tiles_; ++i)
+    {
+        tiles[i]->setRequestManager(m);
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_, bank_associativity, bank_line, num_l2_banks_, num_tiles_, num_memory_controllers_, num_memory_banks_, num_rows, num_cols);
+    }
+    
+    for(std::size_t i = 0; i < num_memory_controllers_; ++i)
+    {
+        auto tile_node = getRoot()->getChild(std::string("cpu.memory_controller") +
+                sparta::utils::uint32_to_str(i));
+        sparta_assert(tile_node != nullptr);
+
+        spike_model::MemoryController * mc=tile_node->getResourceAs<spike_model::MemoryController>();
+        
+        mc->setRequestManager(m);
+    }
+        
     return m;
 }
     

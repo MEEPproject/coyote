@@ -152,10 +152,11 @@ add_executable(spike_model
   src/NoCMessage.cpp
   src/Logger.cpp
   src/Tile.cpp
+  src/AccessDirector.cpp
+  src/PrivateL2Director.cpp
+  src/SharedL2Director.cpp
   src/CacheRequest.cpp
-  src/RequestManagerIF.cpp
-  src/PrivateL2Manager.cpp
-  src/SharedL2Manager.cpp
+  src/EventManager.cpp
   src/MemoryController.cpp
   src/FifoRrMemoryAccessScheduler.cpp
   src/FifoCommandScheduler.cpp

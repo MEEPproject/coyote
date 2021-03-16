@@ -19,7 +19,7 @@ namespace spike_model
          *
          */
         
-        friend class EventManager; 
+        friend class AccessDirector; 
     
         public:
             enum class AccessType

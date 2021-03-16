@@ -19,7 +19,7 @@ namespace spike_model
          *
          */
         
-        friend class RequestManagerIF; 
+        friend class EventManager; 
     
         public:
             enum class RegType
@@ -97,29 +97,12 @@ namespace spike_model
                 source_tile=source;
             }
 
-
-            /* \brief Obtain the address of the first word of the line that contains the requested address
-             * \param block_offset_bits The number of bits used to specify the block offset in the addres. 
-             *   This is the log2 of the block size
-             */
-            void calculateLineAddress(uint8_t block_offset_bits)
-            {
-                line_address=(address >> block_offset_bits) << block_offset_bits;
-            }
-
             /*!
              * \brief Get the source tile for the request
              * \return The source tile
              */
             uint16_t getSourceTile(){return source_tile;}
 
-            /*!
-             * \brief Get the address of the first word of the line that contains the requested address
-             * \return The address of the line
-             */
-            uint64_t getLineAddress(){return line_address;}
-
-            
             /*!
              * \brief Get whether the request has been serviced
              * \return True if the request has been serviced
@@ -143,8 +126,6 @@ namespace spike_model
 
         private:
             uint64_t address;
-
-            uint64_t line_address;
 
             uint8_t regId;
             RegType regType;

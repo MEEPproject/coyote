@@ -39,7 +39,7 @@ namespace spike_model
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        out_port_noc_.send(request_manager_->getMemoryReplyMessage(req), 0);
+        out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_), 0);
     }
     
     std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
@@ -179,7 +179,7 @@ namespace spike_model
         }
     }
     
-    void MemoryController::setRequestManager(std::shared_ptr<RequestManagerIF> r)
+    void MemoryController::setRequestManager(std::shared_ptr<EventManager> r)
     {
         request_manager_=r;
     }

@@ -5,7 +5,7 @@
 #include <memory>
 #include "NoCMessageType.hpp"
 #include "CacheRequest.hpp"
-#include "RequestManagerIF.hpp"
+#include "EventManager.hpp"
 
 namespace spike_model
 {
@@ -23,13 +23,15 @@ namespace spike_model
             NoCMessage& operator=(NoCMessage const&) = delete;
             
             /*!
-             * \brief Constructor for NoCMessage. NoCMessages should only be created for requests with full memory destination info. For this reason they are created in class RequestManagerIF. 
+             * \brief Constructor for NoCMessage. NoCMessages should only be created for requests with full memory destination info. For this reason they are created in class EventManager. 
              * Think twice before creating directly elsewhere.
              * \param r The associated CacheRequest
              * \param t The type of the message
              * \param payload_size The size in bytes of the data to be sent
+             * \note NoCMessages must contain fully initialized Requests, including all of the associated destination data. Handle with care.
              */
             NoCMessage(std::shared_ptr<CacheRequest> r, NoCMessageType t, uint64_t payload_size);
+            
             
 
             /*!
@@ -53,6 +55,7 @@ namespace spike_model
             
 
         private:
+
             std::shared_ptr<CacheRequest> request_;
             NoCMessageType message_type_;
             uint64_t size_;

@@ -24,7 +24,7 @@
 #include "LogCapable.hpp"
 #include "NoCMessage.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
-#include "RequestManagerIF.hpp"
+#include "EventManager.hpp"
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
@@ -94,7 +94,7 @@ namespace spike_model
              * \brief Set the request manager
              * \param r The request manager
              */
-            void setRequestManager(std::shared_ptr<RequestManagerIF> r);
+            void setRequestManager(std::shared_ptr<EventManager> r);
 
         private:
             
@@ -122,7 +122,7 @@ namespace spike_model
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
     
-            std::shared_ptr<RequestManagerIF> request_manager_;
+            std::shared_ptr<EventManager> request_manager_;
 
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
     

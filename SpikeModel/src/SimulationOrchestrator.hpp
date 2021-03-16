@@ -4,7 +4,7 @@
     
 #include <memory>
 #include "spike_wrapper.h"
-#include "RequestManagerIF.hpp"
+#include "EventManager.hpp"
 #include "SpikeModel.hpp"
 #include "Event.hpp"
 #include "EventVisitor.hpp"
@@ -38,7 +38,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param num_cores The number of simukated cores
          * \param trace Whether tracing is enabled or not
          */
-        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::RequestManagerIF>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace);
+        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace);
 
         /*!
          * \brief Triggers the simulation
@@ -48,6 +48,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          /*!
          * \brief Handles a cache request
          * \param r The event to handle
+         * \note This function assumes that, for each cycle and core, if a fetch miss has happened it will be handled first.
          */
         virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 
@@ -67,7 +68,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
-        std::shared_ptr<spike_model::RequestManagerIF> request_manager;
+        std::shared_ptr<spike_model::EventManager> request_manager;
         uint32_t num_cores;
         uint32_t num_threads_per_core;
         uint32_t thread_switch_latency;

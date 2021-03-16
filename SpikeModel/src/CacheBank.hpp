@@ -38,7 +38,7 @@ namespace spike_model
          *
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
          * be in service at the sime time. Whether banks are shared or private to the tile is controlled from
-         * the RequestManagerIF class. The Cache is write-back and write-allocate.
+         * the EventManager class. The Cache is write-back and write-allocate.
          */
     public:
         /*!
@@ -103,14 +103,7 @@ namespace spike_model
                 l2_request_(req),
                 phyAddrIsReady_(true)
                 {
-                    if(req->getType()==CacheRequest::AccessType::LOAD)
-                    {
-                        address=req->getAddress();
-                    }
-                    else
-                    {
-                        address=req->getLineAddress();
-                    }
+                    address=req->getAddress();
                 }
 
             virtual ~MemoryAccessInfo() {}
@@ -273,6 +266,13 @@ namespace spike_model
         * \param The address to update
         */
         void reloadCache_(uint64_t);
+    
+        /*
+        * \brief Obtain the address of the first byte in the line containing the request
+        * \param r The Request
+        * \return The address of the line containing the request
+        */
+        uint64_t calculateLineAddress(std::shared_ptr<CacheRequest> r);
 
         //An unordered set indexed by the bits of an instruction and containing all its pending (mmu/cache) accesses
         sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
