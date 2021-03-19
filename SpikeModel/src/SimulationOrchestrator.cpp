@@ -28,6 +28,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
 
     thread_barrier_cnt = 0;
     threads_in_barrier.resize(num_cores,false);
+    pending_get_vec_len.resize(num_cores,NULL);
 }
         
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -120,7 +121,7 @@ void SimulationOrchestrator::handleSpartaEvents()
         //Check serviced requests
         while(request_manager->hasServicedRequest())
         {
-            handle(request_manager->getServicedRequest());
+            request_manager->getServicedRequest()->handle(this);
         }
     }
 }
@@ -192,6 +193,10 @@ void SimulationOrchestrator::selectRunnableThreads()
     }
 }
 
+void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> r)
+{
+    request_manager->putRequest(r);
+}
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
 {
@@ -224,6 +229,12 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 pending_misses_per_core[core].pop_front();
                 submitToSparta(miss);
             }
+        }
+
+        if(pending_get_vec_len[core] != NULL)
+        {
+            submitToSparta(pending_get_vec_len[core]);
+            pending_get_vec_len[core] = NULL;
         }
 
         bool can_run=true;
@@ -262,23 +273,11 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
     }
 }
 
-
-void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
-{
-    /*uint64_t lapse=1;
-    if(current_cycle-spike_model->getScheduler()->getCurrentTick()!=sparta::Scheduler::INDEFINITE)
-    {
-       lapse=lapse+spartaDelay(current_cycle);
-    }*/
-    request_manager->putRequest(r);
-}
-
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
 {
     core_active=false;
     core_finished=true;
 }
-
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
 {
@@ -326,5 +325,38 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
         threads_in_barrier[current_core] = true;
         core_active=false;
         std::cout << "Core " << current_core << " waiting for barrier " << current_cycle << std::endl;
+    }
+}
+
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPURequest> r)
+{
+    if(!r->isServiced())
+    {
+        if(core_active == false) //fetch midss
+        {
+            pending_get_vec_len[current_core] = r;
+        }
+        else
+        {
+            submitToSparta(r);
+        }
+    }
+    else
+    {
+        uint16_t core = r->getCoreId();
+        core_active = spike->ackRegisterAndSetvl(core, r->getReturnedVecLen(), current_cycle);
+        if(core_active && !threads_in_barrier[core])
+        {
+            std::vector<uint16_t>::iterator it;
+
+            it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
+
+            //If the core was stalled, make it active again
+            if (it != stalled_cores.end())
+            {
+                stalled_cores.erase(it);
+                active_cores.push_back(core);
+            }
+        }
     }
 }

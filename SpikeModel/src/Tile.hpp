@@ -25,6 +25,8 @@
 #include "LogCapable.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "AccessDirector.hpp"
+#include "MCPURequest.hpp"
+#include "CacheRequest.hpp"
 
 namespace spike_model
 {
@@ -109,19 +111,20 @@ namespace spike_model
              * \param lapse The number of cycles that the request needs to be delayed to 
              * accomodate the difference between the Sparta and overall simulation clocks
              */
-            void putRequest_(const std::shared_ptr<CacheRequest> & req);
+            void putRequest_(const std::shared_ptr<Event> & req);
             
             /*!
              * \brief Notify the completion of the service for an L2 request
              * \param The request
              */
             void notifyAck_(const std::shared_ptr<CacheRequest> & req);
-            
+
              /*!
              * \brief Handles a cache request
              * \param r The event to handle
              */
             virtual void handle(std::shared_ptr<spike_model::Request> r) override;
+            virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
             
             /*!
              * \brief Set the information on the memory hierarchy
@@ -143,6 +146,8 @@ namespace spike_model
 
             uint16_t num_l2_banks_;
             uint64_t latency_;
+            NoCMessageType msgType;
+            bool handleNocMsg;
             std::string l2_sharing_mode_;
             std::string bank_policy_;
             std::string tile_policy_;
@@ -158,7 +163,6 @@ namespace spike_model
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
 
-
             uint64_t l2_bank_size_kbs;
             uint64_t l2_assoc;
             uint64_t l2_line_size;
@@ -167,6 +171,7 @@ namespace spike_model
             uint8_t bank_bits;
             uint8_t set_bits; 
             uint8_t tag_bits;
+
        
 
             std::shared_ptr<EventManager> request_manager_;

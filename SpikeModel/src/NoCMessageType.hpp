@@ -10,7 +10,8 @@ namespace spike_model
         REMOTE_L2_REQUEST,
         MEMORY_REQUEST,
         REMOTE_L2_ACK,
-        MEMORY_ACK
+        MEMORY_ACK,
+        MCPU_REQUEST
     };
 }
 #endif

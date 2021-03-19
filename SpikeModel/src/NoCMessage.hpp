@@ -4,7 +4,7 @@
 
 #include <memory>
 #include "NoCMessageType.hpp"
-#include "CacheRequest.hpp"
+#include "Event.hpp"
 #include "EventManager.hpp"
 
 namespace spike_model
@@ -30,7 +30,7 @@ namespace spike_model
              * \param payload_size The size in bytes of the data to be sent
              * \note NoCMessages must contain fully initialized Requests, including all of the associated destination data. Handle with care.
              */
-            NoCMessage(std::shared_ptr<CacheRequest> r, NoCMessageType t, uint64_t payload_size);
+            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint64_t payload_size, uint16_t destPort);
             
             
 
@@ -44,7 +44,7 @@ namespace spike_model
              * \brief Get the CacheRequest associated to the message
              * \return The CacheRequest
              */
-            std::shared_ptr<CacheRequest> getRequest(){return request_;}
+            std::shared_ptr<Event> getRequest(){return request_;}
 
             
             /*!
@@ -53,12 +53,15 @@ namespace spike_model
              */
             uint64_t getSize();
             
+            uint16_t getDestPort(){return destPort;}
+            void setDestPort(uint16_t destPort);
 
         private:
 
-            std::shared_ptr<CacheRequest> request_;
+            std::shared_ptr<Event> request_;
             NoCMessageType message_type_;
             uint64_t size_;
+            uint16_t destPort;
 
             //The size of message headers in bytes. TODO: MAKE IT A PARAMETER
             static const uint8_t header_size_=1;

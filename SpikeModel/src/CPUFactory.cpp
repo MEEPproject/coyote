@@ -264,7 +264,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             }
         } 
     }
-       
+
     for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
     {
             auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +

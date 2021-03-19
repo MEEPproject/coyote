@@ -33,7 +33,7 @@ constexpr char VERSION_VARNAME[] = "version"; // Name of option to show version
 constexpr char DATA_FILE_VARNAME[] = "data-file"; // Name of data file given at the end of command line
 constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which are flag independent
     
-
+bool enable_smart_mcpu=false;
 int main(int argc, char **argv)
 {
     std::vector<std::string> datafiles;
@@ -80,6 +80,9 @@ int main(int argc, char **argv)
             ("trace",
              sparta::app::named_value<bool>("trace", &trace)->default_value(false),
              "Whether tracing is enabled or not", "Whether tracing is enabled or not")
+            ("enable_smart_mcpu",
+             sparta::app::named_value<bool>("enable_smart_mcpu", &enable_smart_mcpu)->default_value(false),
+             "Enable smart mcpu", "Enable smart mcpu")
             ("isa",
              sparta::app::named_value<std::string>("isa", &isa)->default_value("RV64IMAFDCV"),
              "The RISC-V isa version to use", "The RISC-V isa version to use")

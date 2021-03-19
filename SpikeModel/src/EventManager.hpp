@@ -7,6 +7,8 @@
 #include "Tile.hpp"
 #include "NoCMessage.hpp"
 #include "AddressMappingPolicy.hpp"
+#include "Event.hpp"
+#include "MCPURequest.hpp"
 
 class SpikeModel; //Forward declaration
 
@@ -42,13 +44,13 @@ namespace spike_model
              * \brief Forward an L2 request to the memory hierarchy.
              * \param req The request to forward 
              */
-            virtual void putRequest(std::shared_ptr<CacheRequest> req);
+            virtual void putRequest(std::shared_ptr<Event> req);
             
             /*!
              * \brief Notify the completion of request
              * \param req The request that has been completed
              */
-            void notifyAck(const std::shared_ptr<CacheRequest>& req);
+            void notifyAck(const std::shared_ptr<Event>& req);
         
 
             /*!
@@ -61,7 +63,7 @@ namespace spike_model
              * \brief Get a serviced request
              * \return A request that has been serviced
              */
-            std::shared_ptr<CacheRequest> getServicedRequest();
+            std::shared_ptr<Event> getServicedRequest();
 
         protected:
             std::vector<Tile *> tiles_;

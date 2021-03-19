@@ -52,23 +52,29 @@ namespace spike_model
         switch(mes->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
-                out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
+                out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
-                if(trace_)
+                //TODO: Figure out the correct params
+                /*if(trace_)
                 {
                     logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getMemoryController(), mes->getRequest()->getAddress());
-                }
-                out_ports_memory_controllers_[mes->getRequest()->getMemoryController()]->send(mes, latency_);
+                }*/
+                out_ports_memory_controllers_[mes->getDestPort()]->send(mes, latency_);
                 break;
 
             case NoCMessageType::REMOTE_L2_ACK:
-                out_ports_tiles_[mes->getRequest()->getSourceTile()]->send(mes, latency_);
+                out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
                 break;
 
             case NoCMessageType::MEMORY_ACK:
                 std::cout << "Memory acks should not use tile ports!!!\n";
+                break;
+
+            case NoCMessageType::MCPU_REQUEST:
+                std::cout << "NOC forwarding the message to MC" << std::endl;
+                out_ports_memory_controllers_[mes->getDestPort()]->send(mes, 0);
                 break;
 
             default:
@@ -80,16 +86,21 @@ namespace spike_model
     {
         if(mes->getType()==NoCMessageType::MEMORY_ACK)
         {
-            if(trace_)
+            //TODO: Figure out the correct params
+            /*if(trace_)
             {
                 logger_.logMemoryControllerAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
-            }
-            out_ports_tiles_[mes->getRequest()->getHomeTile()]->send(mes, latency_);
+            }*/
+            out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
+        }
+        else if(mes->getType() == NoCMessageType::MCPU_REQUEST)
+        {
+            std::cout << "NOC forwarding the message to Tile" << std::endl;
+            out_ports_tiles_[mes->getDestPort()]->send(mes, 0);
         }
         else
         {
             std::cout << "Unsupported message received from a Memory Controller!!!\n";
         }
     }
-        
 }

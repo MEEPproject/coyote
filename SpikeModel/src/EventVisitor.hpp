@@ -13,6 +13,7 @@ namespace spike_model
     class CacheRequest;
     class Fence;
     class Finish;
+    class MCPURequest;
 
     class EventVisitor
     {
@@ -64,7 +65,8 @@ namespace spike_model
              * \param e The event to handle
              */
             virtual void handle(std::shared_ptr<spike_model::CacheRequest> e);
-            
+
+            virtual void handle(std::shared_ptr<spike_model::MCPURequest> e);
     };
 }
 #endif

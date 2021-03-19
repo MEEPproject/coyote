@@ -41,7 +41,7 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t){}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t){memory_ack=false;}
 
             /*!
              * \brief Constructor for CacheRequest
@@ -51,7 +51,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t) {memory_ack=false;}
 
             /*!
              * \brief Get the type of the request
@@ -143,6 +143,15 @@ namespace spike_model
                 v->handle(shared_from_this());
             }
 
+            bool memoryAck()
+            {
+                return memory_ack;
+            }
+
+            void setMemoryAck(bool ack)
+            {
+                memory_ack = ack;
+            }
 
         private:
             AccessType type;
@@ -155,6 +164,7 @@ namespace spike_model
             uint64_t memory_bank_;
             uint64_t row_;
             uint64_t col_;
+            bool memory_ack;
             
             /*!
              * \brief Set the information of the memory access triggered by the CacheRequest

@@ -9,6 +9,7 @@
 #include "Event.hpp"
 #include "EventVisitor.hpp"
 #include "CacheRequest.hpp"
+#include "MCPURequest.hpp"
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 
@@ -64,6 +65,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param f The fence event to handle
          */
         void handle(std::shared_ptr<spike_model::Fence> f) override;
+
+        void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
         
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
@@ -82,6 +85,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<bool> threads_in_barrier;
 
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
+        std::vector<std::shared_ptr<spike_model::MCPURequest>> pending_get_vec_len; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
 
         uint64_t thread_barrier_cnt;
@@ -122,6 +126,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \brief Submit a request to Sparta.
          * \param r The request to submit
          */
-        void submitToSparta(std::shared_ptr<spike_model::CacheRequest> r);
+        void submitToSparta(std::shared_ptr<spike_model::Event> r);
 };
 #endif

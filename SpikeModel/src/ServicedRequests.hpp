@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "Request.hpp"
+#include "Event.hpp"
 #include <queue>
 
 namespace spike_model
@@ -27,14 +27,14 @@ namespace spike_model
              */
             ServicedRequests()
             {
-                serviced_misses=std::make_shared<std::queue<std::shared_ptr<CacheRequest>>> ();
+                serviced_misses=std::make_shared<std::queue<std::shared_ptr<Event>>> ();
             }
 
             /*!
              * \brief Adds a request that has been serviced
              * \param req The request that has been serviced
              */
-            void addRequest(std::shared_ptr<CacheRequest> req)
+            void addRequest(std::shared_ptr<Event> req)
             {
                 serviced_misses->push(req);
             }
@@ -43,9 +43,9 @@ namespace spike_model
              * \brief Get a serviced request
              * \return The Request
              */
-            std::shared_ptr<CacheRequest> getRequest()
+            std::shared_ptr<Event> getRequest()
             {
-                std::shared_ptr<CacheRequest> res=serviced_misses->front();
+                std::shared_ptr<Event> res=serviced_misses->front();
                 serviced_misses->pop();
                 return res;
             }
@@ -60,7 +60,7 @@ namespace spike_model
             }
 
         private:
-           std::shared_ptr<std::queue<std::shared_ptr<CacheRequest>>> serviced_misses;
+           std::shared_ptr<std::queue<std::shared_ptr<Event>>> serviced_misses;
     };
 }
 #endif

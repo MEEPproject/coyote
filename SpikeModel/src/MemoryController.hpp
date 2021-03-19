@@ -28,13 +28,16 @@
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
+#include "Event.hpp"
+#include "MCPURequest.hpp"
 
 namespace spike_model
 {
     class MemoryBank; //Forward declaration
 
-    class MemoryController : public sparta::Unit, public LogCapable
+    class MemoryController : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
+        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading
         /*!
          * \class spike_model::MemoryController
          * \brief MemoryController models a the operation of simple memory controller
@@ -96,6 +99,9 @@ namespace spike_model
              */
             void setRequestManager(std::shared_ptr<EventManager> r);
 
+            virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
+            virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+
         private:
             
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
@@ -106,6 +112,10 @@ namespace spike_model
 
             sparta::UniqueEvent<> controller_cycle_event_ 
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
+
+            sparta::UniqueEvent<> issue_mcpu_event_
+            {&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryController, issueMCPU_)};
+            std::list<std::shared_ptr<MCPURequest>> mcpu_req;
 
             uint64_t latency_;
        
@@ -144,6 +154,7 @@ namespace spike_model
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
+            void issueMCPU_();
     
             /*!
              * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)

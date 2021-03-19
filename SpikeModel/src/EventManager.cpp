@@ -10,7 +10,7 @@ namespace spike_model
         cores_per_tile_=cores_per_tile;
     }
     
-    void EventManager::notifyAck(const std::shared_ptr<CacheRequest>& req)
+    void EventManager::notifyAck(const std::shared_ptr<Event>& req)
     {
         serviced_requests_.addRequest(req);
     }
@@ -20,15 +20,15 @@ namespace spike_model
         return serviced_requests_.hasRequest();
     }
 
-    std::shared_ptr<CacheRequest> EventManager::getServicedRequest()
+    std::shared_ptr<Event> EventManager::getServicedRequest()
     {
         return serviced_requests_.getRequest();
     }
 
-    void EventManager::putRequest(std::shared_ptr<CacheRequest> req)
+    void EventManager::putRequest(std::shared_ptr<Event> req)
     {
         uint16_t source=req->getCoreId()/cores_per_tile_;
         req->setSourceTile(source);
         tiles_[source]->putRequest_(req);
-    } 
+    }
 }

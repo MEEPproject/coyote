@@ -13,7 +13,12 @@ namespace spike_model
                 
     void AccessDirector::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        if(!r->isServiced())
+        if(r->memoryAck())
+        {
+            r->setMemoryAck(false);
+            tile->issueBankAck_(r);
+        }
+        else if(!r->isServiced())
         {
             uint16_t home=calculateHome(r);
             uint16_t bank=calculateBank(r);
@@ -68,7 +73,6 @@ namespace spike_model
                 }
             }
         }
-
     }
     
     uint8_t nextPowerOf2(uint64_t v)
@@ -127,7 +131,7 @@ namespace spike_model
 
     std::shared_ptr<NoCMessage> AccessDirector::getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size);
+        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size, req->getHomeTile());
     }
             
     std::shared_ptr<NoCMessage> AccessDirector::getMemoryRequestMessage(std::shared_ptr<CacheRequest> req)
@@ -178,12 +182,12 @@ namespace spike_model
             size=line_size;
         }         
         
-        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size);     
-    }     
+        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size, req->getMemoryController());
+    }
      
     std::shared_ptr<NoCMessage> AccessDirector::getDataForwardMessage(std::shared_ptr<CacheRequest> req)     
     {         
-        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size);     
+        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size, req->getSourceTile());
     }
 
 }

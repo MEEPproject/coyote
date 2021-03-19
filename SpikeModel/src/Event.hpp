@@ -39,6 +39,21 @@ namespace spike_model
             Event(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
 
             /*!
+             * \brief Set the source tile of the request
+             * \param source The source tile
+             */
+            void setSourceTile(uint16_t source)
+            {
+                source_tile=source;
+            }
+
+            /*!
+             * \brief Get the source tile for the request
+             * \return The source tile
+             */
+            uint16_t getSourceTile(){return source_tile;}
+
+            /*!
              * \brief Get the timestamp of the event
              * \return The timestamp
              */
@@ -69,6 +84,23 @@ namespace spike_model
             uint64_t getPC(){return pc;}
 
             /*!
+             * \brief Get whether the request has been serviced
+             * \return True if the request has been serviced
+             */
+            bool isServiced(){return serviced;}
+
+            /*!
+             * \brief Set the request as serviced
+             */
+            void setServiced(){serviced=true;}
+
+            /*
+             * \brief Equality operator for instances of Request
+             * \param m The request to compare with
+             * \return true if both requests are for the same address
+             */
+
+            /*!
              * \brief Handle the event
              * \param v The visitor to handle the event
              */
@@ -78,6 +110,8 @@ namespace spike_model
             uint64_t pc;
             uint64_t timestamp;
             uint16_t coreId;
+            uint16_t source_tile;
+            bool serviced=false;
     };
     
 /*    inline std::ostream & operator<<(std::ostream & Str, Request const & req)

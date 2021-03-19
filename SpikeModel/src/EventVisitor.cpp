@@ -6,12 +6,13 @@
 #include "CacheRequest.hpp"   
 #include "Fence.hpp"   
 #include "Finish.hpp"   
+#include "MCPURequest.hpp"
 
 namespace spike_model
 {
     void EventVisitor::handle(std::shared_ptr<spike_model::Event> e)
     {
-        printf("Using base event handler. This is usually undesired behavior. Might want to override");
+        printf("Using base event handler. This is usually undesired behavior. Might want to override\n");
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::Sync> e)
@@ -37,5 +38,10 @@ namespace spike_model
     void EventVisitor::handle(std::shared_ptr<spike_model::CacheRequest> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::Request>(e));
+    }
+
+    void EventVisitor::handle(std::shared_ptr<spike_model::MCPURequest> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Event>(e));
     }
 }

@@ -106,7 +106,7 @@ namespace spike_model
     {
             //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
             std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
-            out_port_noc_.send(mes);  
+            out_port_noc_.send(mes);
     }
 
     void Tile::issueRemoteRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
@@ -125,60 +125,62 @@ namespace spike_model
     void Tile::issueBankAck_(const std::shared_ptr<CacheRequest> & req)
     {
         uint16_t bank=req->getCacheBank();
-    //    std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << "\n";
+        //std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << std::endl;
         out_ports_l2_acks_[bank]->send(req);
     }
 
-    void Tile::putRequest_(const std::shared_ptr<CacheRequest> & req)
+    void Tile::putRequest_(const std::shared_ptr<Event> & req)
     {
-        handle(req);
+        req->handle(this);
     }
 
     void Tile::notifyAck_(const std::shared_ptr<CacheRequest> & req)
     {
-        handle(req);
+        req->handle(this);
     }
 
     void Tile::handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes)
     {
         switch(mes->getType())
         {
-            case NoCMessageType::REMOTE_L2_REQUEST:
-                //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
-                if(trace_)
-                {
-                    logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
-                }
-                Tile::issueLocalRequest_(mes->getRequest(), 0);
-                break;
+                case NoCMessageType::REMOTE_L2_REQUEST:
+                    //TODO: Figure out the correct params
+                    //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
+                    /*if(trace_)
+                    {
+                        logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getHomeTile(), mes->getAddress());
+                    }*/
+                    break;
 
-            case NoCMessageType::MEMORY_REQUEST:
-                //SHOULD DO SOMETHING HERE??
-                break;
+                case NoCMessageType::MEMORY_REQUEST:
+                    //SHOULD DO SOMETHING HERE??
+                    break;
 
-            case NoCMessageType::REMOTE_L2_ACK:
-                //std::cout << "Handling remote ack\n";
-                if(trace_)
-                {
-                    logger_.logTileRecAckForwarded(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
-                    logger_.logMissServiced(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
-                }
-                request_manager_->notifyAck(mes->getRequest());
-                break;
+                case NoCMessageType::REMOTE_L2_ACK:
+                    //std::cout << "Handling remote ack\n";
+                    /*if(trace_)
+                    {
+                        logger_.logTileRecAckForwarded(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                        logger_.logMissServiced(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                    }*/
+                    break;
 
-            case NoCMessageType::MEMORY_ACK:
-                if(trace_)
-                {
-                    logger_.logTileRecAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getAddress());
-                }
-                issueBankAck_(mes->getRequest()); 
-                break;
+                case NoCMessageType::MEMORY_ACK:
+                    /*if(trace_)
+                    {
+                        logger_.logTileRecAck(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                    }*/
+                    break;
 
-            default:
-                std::cout << "Unsupported message received from the NoC!!!\n";
-        }
-    }    
-            
+                case NoCMessageType::MCPU_REQUEST:
+                    break;
+
+                default:
+                    std::cout << "Unsupported message received from the NoC!!!\n";
+            }
+            mes->getRequest()->handle(this);
+    }
+
     void Tile::setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size)
     {
         l2_bank_size_kbs=size;
@@ -209,7 +211,22 @@ namespace spike_model
     {
         access_director->putAccess(r);
     }
-            
+
+    void Tile::handle(std::shared_ptr<spike_model::MCPURequest> r)
+    {
+        if(!r->isServiced())
+        {
+            std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //TODO: Add MCPU dest port
+            out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, 0), 0);
+        }
+        else
+        {
+            std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            request_manager_->notifyAck(r);
+        }
+    }
+
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
                               uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
     {

@@ -27,8 +27,13 @@ namespace spike_model
     void MemoryController::receiveMessage_(const std::shared_ptr<NoCMessage> & mes)
     {
         count_requests_++;
-        uint64_t bank=mes->getRequest()->getMemoryBank();
-        sched->putRequest(mes->getRequest(), bank);
+        mes->getRequest()->handle(this);
+    }
+
+    void MemoryController::handle(std::shared_ptr<spike_model::CacheRequest> mes)
+    {
+        uint64_t bank=mes->getMemoryBank();
+        sched->putRequest(mes, bank);
         if(idle_ & sched->hasIdleBanks())
         {
             controller_cycle_event_.schedule();
@@ -36,10 +41,18 @@ namespace spike_model
         }
     }
 
+    void MemoryController::handle(std::shared_ptr<spike_model::MCPURequest> r)
+    {
+        std::cout << "Requesting vec len from MCPU from core " << r->getCoreId()  << " and vector len " << r->getRequestedVecLen() << std::endl;
+        mcpu_req.push_back(r);
+        issue_mcpu_event_.schedule(1);
+    }
+
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_), 0);
+        req->setMemoryAck(true);
+        out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
     }
     
     std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
@@ -67,6 +80,16 @@ namespace spike_model
         uint64_t column_to_schedule=req->getCol();
         res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
         return res_command;
+    }
+
+    void MemoryController::issueMCPU_()
+    {
+        std::shared_ptr<MCPURequest> m = mcpu_req.front();
+        m->setReturnedVecLen(m->getRequestedVecLen());
+        std::cout << "Returning vec len from MCPU from core " << m->getCoreId() << " and vector len " << m->getReturnedVecLen() << std::endl;
+        m->setServiced();
+        mcpu_req.pop_front();
+        out_port_noc_.send(std::make_shared<NoCMessage>(m, NoCMessageType::MCPU_REQUEST, line_size_, m->getSourceTile()), 0);
     }
 
     void MemoryController::controllerCycle_()

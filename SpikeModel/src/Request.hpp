@@ -88,37 +88,8 @@ namespace spike_model
              */
             RegType getDestinationRegType() const {return regType;}            
 
-            /*!
-             * \brief Set the source tile of the request
-             * \param source The source tile
-             */
-            void setSourceTile(uint16_t source)
-            {
-                source_tile=source;
-            }
 
-            /*!
-             * \brief Get the source tile for the request
-             * \return The source tile
-             */
-            uint16_t getSourceTile(){return source_tile;}
-
-            /*!
-             * \brief Get whether the request has been serviced
-             * \return True if the request has been serviced
-             */
-            bool isServiced(){return serviced;}
-
-            /*!
-             * \brief Set the request as serviced
-             */
-            void setServiced(){serviced=true;}
-            /*
-             * \brief Equality operator for instances of Request
-             * \param m The request to compare with
-             * \return true if both requests are for the same address
-             */
-            bool operator ==(const Request & m) const
+                bool operator ==(const Request & m) const
             {
                 return m.getAddress()==getAddress();
             }
@@ -131,10 +102,6 @@ namespace spike_model
             RegType regType;
 
             uint16_t size;
-
-            uint16_t source_tile;
-
-            bool serviced=false;
     };
     
     inline std::ostream & operator<<(std::ostream & Str, Request const & req)
