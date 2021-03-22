@@ -4,7 +4,7 @@ if [ -z "$1" ]; then
 	threads="1"
 fi
 
-git clone https://github.com/sparcians/map.git || cd map;git pull;cd .. 
+git clone https://github.com/sparcians/map.git || { cd map;git pull;cd ..; } 
 
 cd map/sparta
 git pull
@@ -18,3 +18,6 @@ mkdir debug
 cd debug
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j $threads
+
+# Go back to coyote-sim
+cd ..

@@ -1,0 +1,11 @@
+# Directories
+epi_compiler/
+riscv-gnu-toolchain/
+riscv-pk/
+map/
+build/
+# Apps files
+apps/**/dataset.h
+apps/**/matmul
+apps/**/somier
+apps/**/spmv
