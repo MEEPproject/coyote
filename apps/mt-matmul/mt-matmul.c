@@ -52,8 +52,22 @@ void thread_entry(int cid, int nc)
     matmul(cid, nc, DIM_SIZE, input1_data, input2_data, results_data); 
     simfence();//This barrier is necessary for all the simulated cores to finish
 
+    int res = verifyDouble(ARRAY_SIZE, results_data, verify_data);
     if(cid==0)
     {
-        exit(1); //We have to exit with something different from 0
+        if(res==0)
+        {
+            printf("\e[32mTest pass\e[0m\n");
+            res++; // Force to exit with 1 (ok!)
+        } else
+        {
+            printf("\e[31mTest fails on position %d\e[0m\n", res);
+        }
+    }
+    simfence();
+
+    if(cid==0)
+    {
+        exit(res); //We have to exit with something different from 0
     }
 }

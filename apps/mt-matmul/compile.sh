@@ -9,7 +9,14 @@ if [ "$#" -gt 2 ] || [ "$#" -lt 1 ]; then
 fi
 
 if [ "$#" -eq 2 ]; then
-    perl matmul_gendata.pl --size $2 > dataset.h
+    min_size=$((4*$1)); # 4 is the BLOCK_SIZE defined in matmul.c
+    if [ $2 -lt $min_size ]
+    then
+        echo "ERROR: The Mat_dim must be at least 4 * #cores"
+        exit 2
+    else
+        perl matmul_gendata.pl --size $2 > dataset.h
+    fi
 else
     if [ ! -f dataset.h ]
     then

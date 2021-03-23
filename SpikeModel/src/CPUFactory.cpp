@@ -360,8 +360,6 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             mc->setLogger(topology_->logger);
         }
     }
-
-    printf("HOLA\n");
 }
 
 /**

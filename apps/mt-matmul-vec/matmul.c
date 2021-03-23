@@ -146,9 +146,22 @@ int thread_entry(int cid, int nc)
   matmul_builtins(cid, nc, m, k, n, bi, bj, bk, results_data, input1_data, input2_data);
 
   simfence();
+  int res = verifyDouble(ARRAY_SIZE, results_data, verify_data);
+  if(cid==0)
+  {
+    if(res==0)
+    {
+      printf("\e[32mTest pass\e[0m\n");
+      res++; // Force to exit with 1 (ok!)
+    } else
+    {
+      printf("\e[31mTest fails on position %d\e[0m\n", res);
+    }
+  }
+  simfence();
 
   if(cid==0)
   {
-	exit(1);
+	  exit(res);
   }
 }
