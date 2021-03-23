@@ -6,6 +6,8 @@
 #include "CacheDataMappingPolicy.hpp"
 #include "EventVisitor.hpp"
 
+#include <map>
+
 namespace spike_model
 {
     class Tile; //Forward declaration
@@ -27,15 +29,19 @@ namespace spike_model
              * \param address_mapping_policy The mapping policy when accessing main memory
              */
             AccessDirector(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy) 
-                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(CacheDataMappingPolicy::PAGE_TO_BANK){}
+                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(CacheDataMappingPolicy::PAGE_TO_BANK), 
+                                                      scratchpad_data_mapping_policy_(CacheDataMappingPolicy::SET_INTERLEAVING), pending_scratchpad_management_ops(){}
             
             /*!
              * \brief Constructor for AccessDirector
              * \param t The tile that contains the AccessDirector
              * \param address_mapping_policy The mapping policy when accessing main memory
+             * \param b The data mapping policy for cache access
+             * \param s The data mapping policy for scratchpad accesses
              */
-            AccessDirector(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b) 
-                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(b){}
+            AccessDirector(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b, CacheDataMappingPolicy s) 
+                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(b), 
+                                                      scratchpad_data_mapping_policy_(s), pending_scratchpad_management_ops(){}
 
             /*!
              * \brief Forwards an access to the director
@@ -48,6 +54,12 @@ namespace spike_model
              * \param r The event to handle
              */
             void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
+            
+            /*!
+             * \brief Handles a scratchpad request request
+             * \param r The event to handle
+             */
+            void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
             
             /*!
              * \brief Set the information on the memory hierarchy
@@ -98,6 +110,12 @@ namespace spike_model
             Tile * tile;
 
             AddressMappingPolicy address_mapping_policy_;
+
+            uint64_t num_ways;
+            uint64_t way_size;
+
+            uint64_t scratchpad_ways=0;
+            uint64_t scratchpad_available_size=0;
             
             uint64_t mc_shift; //One channel per memory controller
             uint64_t rank_shift;
@@ -121,14 +139,27 @@ namespace spike_model
             virtual uint16_t calculateHome(std::shared_ptr<spike_model::CacheRequest> r)=0;
             
             /*!              
-            * \brief Calculate the bank for a request
-            * \param r A Request
+            * \brief Calculate the bank for a cache request
+            * \param r A CacheRequest
             * \return The bank to access
             */
             virtual uint16_t calculateBank(std::shared_ptr<spike_model::CacheRequest> r)=0;
+    
+            /*!              
+            * \brief Calculate the bank for a scratchpad request
+            * \param r A ScratchpadRequest
+            * \return The bank to access
+            */
+            uint16_t calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r);
+
 
         protected:
             CacheDataMappingPolicy bank_data_mapping_policy_;
+            CacheDataMappingPolicy scratchpad_data_mapping_policy_;
+
+        private: 
+            std::map<std::shared_ptr<spike_model::ScratchpadRequest>, uint64_t> pending_scratchpad_management_ops;
+
     };
 
 }

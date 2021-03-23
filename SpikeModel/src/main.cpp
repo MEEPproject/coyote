@@ -56,6 +56,7 @@ int main(int argc, char **argv)
     std::string address_mapping;
     std::string l2_sharing;
     std::string bank_policy;
+    std::string scratchpad_policy;
     std::string tile_policy;
     bool fast_cache;
     bool trace=false;
@@ -126,10 +127,13 @@ int main(int argc, char **argv)
              sparta::app::named_value<std::string>("POLICY", &l2_sharing)->default_value("tile_private"),
              "The L2 sharing mode", "Supported values: tile_private, fully_shared")
             ("bank_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &bank_policy)->default_value("page_to_bank"),
+             sparta::app::named_value<std::string>("POLICY", &bank_policy)->default_value("set_interleaving"),
+             "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
+            ("scratchpad_data_mapping_policy",
+             sparta::app::named_value<std::string>("POLICY", &scratchpad_policy)->default_value("set_interleaving"),
              "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
             ("tile_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("page_to_bank"),
+             sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("set_interleaving"),
              "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving")
             ("fast_cache",
              sparta::app::named_value<bool>("TRUE/FALSE", &fast_cache)->default_value(false),
@@ -208,10 +212,15 @@ int main(int argc, char **argv)
             l2_tile_policy.replace(start_pos, 1, std::to_string(i));
             cls.getSimulationConfiguration().processParameter(l2_tile_policy, tile_policy);
             
-            std::string l2_mapping_policy("top.cpu.tile*.params.address_policy");
-            start_pos = l2_mapping_policy.find("*");
-            l2_mapping_policy.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(l2_mapping_policy, address_mapping);
+            std::string addr_mapping_policy("top.cpu.tile*.params.address_policy");
+            start_pos = addr_mapping_policy.find("*");
+            addr_mapping_policy.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(addr_mapping_policy, address_mapping);
+            
+            std::string scratchpad_policy("top.cpu.tile*.params.scratchpad_policy");
+            start_pos = scratchpad_policy.find("*");
+            scratchpad_policy.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(scratchpad_policy, scratchpad_policy);
         }
         
         for(std::size_t i = 0; i < num_memory_controllers; ++i)

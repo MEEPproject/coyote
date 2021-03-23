@@ -26,11 +26,14 @@ namespace spike_model
             
             /*!
              * \brief Constructor for SharedL2Director
-             * \param t The tile that contains the SharedL2Director
-             * \param address_mapping_policy The mapping policy when accessing main memory
+             * \param t The tiles handled my the request manager
+             * \param address_mapping_policy The address mapping policy that will be used
+             * \param b The cache data mapping policy for banks within a tile
+             * \param s The data mapping policy for scratchpad accesses
+             * \param d The data mapping policy for tiles
              */
-            SharedL2Director(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b, CacheDataMappingPolicy d) 
-                                                    : AccessDirector(t, address_mapping_policy, b), tile_data_mapping_policy_(d){}
+            SharedL2Director(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b, CacheDataMappingPolicy s, CacheDataMappingPolicy d) 
+                                                    : AccessDirector(t, address_mapping_policy, b, s), tile_data_mapping_policy_(d){}
             
 
         private:

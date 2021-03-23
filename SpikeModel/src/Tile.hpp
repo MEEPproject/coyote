@@ -66,6 +66,7 @@ namespace spike_model
                 PARAMETER(uint64_t, latency, 1, "The number of cycles to get to a local cache bank")
                 PARAMETER(std::string, l2_sharing_mode, "tile_private", "How the cache will be shared among the tiles")
                 PARAMETER(std::string, bank_policy, "set_interleaving", "The data mapping policy for banks")
+                PARAMETER(std::string, scratchpad_policy, "set_interleaving", "The data mapping policy for the scratchpad")
                 PARAMETER(std::string, tile_policy, "page_to_bank", "The data mapping policy for tiles")
                 PARAMETER(std::string, address_policy, "close_page", "The data mapping molicy in main memory")
             };
@@ -115,10 +116,10 @@ namespace spike_model
             
             /*!
              * \brief Notify the completion of the service for an L2 request
-             * \param The request
+             * \param req The request
              */
-            void notifyAck_(const std::shared_ptr<CacheRequest> & req);
-
+            void notifyAck_(const std::shared_ptr<Request> & req);
+            
              /*!
              * \brief Handles a cache request
              * \param r The event to handle
@@ -150,16 +151,17 @@ namespace spike_model
             bool handleNocMsg;
             std::string l2_sharing_mode_;
             std::string bank_policy_;
+            std::string scratchpad_policy_;
             std::string tile_policy_;
             std::string address_policy_;
  
-            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_acks_;
+            std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_acks_;
             std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_reqs_;
             sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_
             {&unit_port_set_, "in_noc"};
 
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_acks_;
-            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_reqs_;
+            std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
 
@@ -192,7 +194,7 @@ namespace spike_model
              * \brief Sends an L2 request to a bank in the current tile
              * \param req The request
              */
-            void issueLocalRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse);
+            void issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse);
             
             /*!
              * \brief Sends an ack to a cache bank of the current tile (a prior remote L2 request or memory request has been serviced)

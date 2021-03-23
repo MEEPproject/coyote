@@ -2,6 +2,7 @@
 #include "AccessDirector.hpp"
 #include "Tile.hpp"
 #include "NoCMessage.hpp"
+#include "ScratchpadRequest.hpp"
 
 namespace spike_model
 {
@@ -75,6 +76,134 @@ namespace spike_model
         }
     }
     
+    // This function is used to handle scratchpad requests both before and after they access the scratchpad.
+    // The scratchpad DOES NOT perform any checks on sizes or address ranges. The MCPU should be clever enough
+    // to not request more size than the L2 size or not read/write to addresses that have not been allocated
+    // for scratchpad.
+    void AccessDirector::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
+    {
+        uint64_t request_size=r->getSize();
+        switch(r->getCommand())
+        {
+            case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
+            {
+                if(!r->isServiced())
+                {
+                    // If there is not enough available scratchpad size, disable the necessary ways to
+                    // obtain it
+                    if(scratchpad_available_size<request_size)
+                    {
+                        uint64_t ways_to_disable=ceil(request_size/way_size);
+                        r->setSize(ways_to_disable); //THIS IS A NASTY TRICK
+
+                        //Ways are disabled in every bank
+                        for(int i=0; i<tile->num_l2_banks_;i++)
+                        {
+                            tile->out_ports_l2_reqs_[i]->send(r, 1); //disableWay(ways_to_disable)
+                        }
+                        pending_scratchpad_management_ops[r]=tile->num_l2_banks_;
+
+                        scratchpad_ways=scratchpad_ways+ways_to_disable;
+                        scratchpad_available_size=scratchpad_available_size+(way_size*ways_to_disable);
+                    }
+                    else //If ways have been disabled the ACK will be sent when all banks finish disabling
+                    {
+                        //SEND ACK TO MCPU
+                    }
+                    scratchpad_available_size=scratchpad_available_size-request_size;
+
+                }
+                else
+                {
+                    pending_scratchpad_management_ops[r]=pending_scratchpad_management_ops[r]-1;
+
+                    if(pending_scratchpad_management_ops[r]==0)
+                    {
+                        //SEND ACK TO MCPU
+                        pending_scratchpad_management_ops.erase(r);
+                    }
+                }
+                break;
+            }
+            case ScratchpadRequest::ScratchpadCommand::FREE:
+            {
+                if(!r->isServiced())
+                {
+                    scratchpad_available_size=scratchpad_available_size+request_size;
+
+                    uint64_t ways_to_enable=0;
+
+                    if(scratchpad_available_size==way_size*scratchpad_ways)//Scratchpad completely unused. Disable it
+                    {
+                        ways_to_enable=scratchpad_ways;
+                    }
+                    else if(scratchpad_available_size>1.5*way_size) //A way is enabled (for cache) if more than a way and a half is available for scratchpad
+                    {
+                        ways_to_enable=round(scratchpad_available_size/(1.5*way_size));
+                    }
+
+                    if(ways_to_enable!=0)
+                    {
+                        r->setSize(ways_to_enable); //THIS IS A NASTY TRICK
+                        
+                        //Ways are enabled in every bank
+                        for(int i=0; i<tile->num_l2_banks_;i++)
+                        {
+                            tile->out_ports_l2_reqs_[i]->send(r, 1); //enableWays(ways_to_enable)
+                        }
+                        pending_scratchpad_management_ops[r]=tile->num_l2_banks_;
+
+                        scratchpad_ways=scratchpad_ways-ways_to_enable;
+                        scratchpad_available_size=scratchpad_available_size-(ways_to_enable*way_size);
+                    }
+                    else //If ways have been enabled the ACK will be sent when all banks finish enabling
+                    {
+                        //SEND ACK TO MCPU
+                    }
+                }
+                else
+                {
+                    pending_scratchpad_management_ops[r]=pending_scratchpad_management_ops[r]-1;
+
+                    if(pending_scratchpad_management_ops[r]==0)
+                    {
+                        //SEND ACK TO MCPU
+                        pending_scratchpad_management_ops.erase(r);
+                    }
+                }
+                break;
+            }
+            case ScratchpadRequest::ScratchpadCommand::READ:
+            {
+                if(!r->isServiced())
+                {
+                    uint16_t b=calculateBank(r);
+                    r->setCacheBank(b);
+                    tile->issueLocalRequest_(r, 1);
+                }
+                else
+                {
+                    //Send ACK to MCPU
+                }
+                break;
+            }
+            case ScratchpadRequest::ScratchpadCommand::WRITE:
+            {
+                if(!r->isServiced())
+                {
+                    uint16_t b=calculateBank(r);
+                    r->setCacheBank(b);
+                    tile->issueLocalRequest_(r, 1);
+                }
+                else if(r->isOperandReady())
+                {
+                    //Send "activate!" to Core
+                }
+                break;
+            }
+        }
+    }
+    
     uint8_t nextPowerOf2(uint64_t v)
     {
         v--;
@@ -100,6 +229,8 @@ namespace spike_model
         uint64_t num_sets=s/(assoc*line_size);
         set_bits=(uint8_t)ceil(log2(num_sets));
         tag_bits=64-(set_bits+block_offset_bits);
+        num_ways=assoc;
+        way_size=(size_kbs/num_ways)*1024;
 
         switch(address_mapping_policy_)
         {
@@ -188,6 +319,28 @@ namespace spike_model
     std::shared_ptr<NoCMessage> AccessDirector::getDataForwardMessage(std::shared_ptr<CacheRequest> req)     
     {         
         return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size, req->getSourceTile());
+    }
+    
+    uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)
+    {
+        uint16_t destination=0;
+        
+        if(bank_bits>0) //If more than one bank
+        {
+            uint8_t left=tag_bits;
+            uint8_t right=block_offset_bits;
+            switch(scratchpad_data_mapping_policy_)
+            {
+                case CacheDataMappingPolicy::SET_INTERLEAVING:
+                    left+=set_bits-bank_bits;
+                    break;
+                case CacheDataMappingPolicy::PAGE_TO_BANK:
+                    right+=set_bits-bank_bits;
+                    break;
+            }
+            destination=(r->getAddress() << left) >> (left+right);
+        }
+        return destination;
     }
 
 }

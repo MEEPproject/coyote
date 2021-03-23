@@ -71,28 +71,10 @@ namespace spike_model
 
 
             /*!
-             * \brief Set the cache bank that will be accessed by the request
-             * \param b The cache bank
-             */
-            void setCacheBank(uint16_t b)
-            {
-                cache_bank=b;
-            }
-
-
-
-            /*!
              * \brief Get the home tile for the request
              * \return The home tile
              */
             uint16_t getHomeTile(){return home_tile;}
-
-            /*!
-             * \brief Get the bank that will be accessed by the request
-             * \return The bank
-             */
-            uint16_t getCacheBank(){return cache_bank;}
-
             
             /*!
              * \brief Get the memory controller that will be accessed
@@ -157,7 +139,6 @@ namespace spike_model
             AccessType type;
 
             uint16_t home_tile;
-            uint16_t cache_bank;
 
             uint64_t memory_controller_;
             uint64_t rank_;

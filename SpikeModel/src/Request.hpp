@@ -74,6 +74,20 @@ namespace spike_model
              */
             uint16_t getSize() const {return size;}
 
+            /*!
+             * \brief Set the cache bank that will be accessed by the request
+             * \param b The cache bank
+             */
+            void setCacheBank(uint16_t b)
+            {
+                cache_bank=b;
+            }
+
+            /*!
+             * \brief Get the bank that will be accessed by the request
+             * \return The bank
+             */
+            uint16_t getCacheBank(){return cache_bank;}
 
             /*!
              * \brief Set the id and type of the destination register for the request
@@ -97,6 +111,7 @@ namespace spike_model
 
         private:
             uint64_t address;
+            uint16_t cache_bank;
 
             uint8_t regId;
             RegType regType;

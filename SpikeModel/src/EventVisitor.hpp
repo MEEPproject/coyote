@@ -11,6 +11,7 @@ namespace spike_model
     class Sync;
     class Request;
     class CacheRequest;
+    class ScratchpadRequest;
     class Fence;
     class Finish;
     class MCPURequest;
@@ -66,6 +67,12 @@ namespace spike_model
              */
             virtual void handle(std::shared_ptr<spike_model::CacheRequest> e);
 
+            /*!
+             * \brief Handles a scratchpad request request
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r);
+            
             virtual void handle(std::shared_ptr<spike_model::MCPURequest> e);
     };
 }

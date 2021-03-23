@@ -17,7 +17,7 @@ namespace spike_model
         public:
             /*!
              * \brief Constructor for the request manager
-             * \param tiles The tiles handled my the request manager
+             * \param t The tiles handled my the request manager
              * \param cores_per_tile The number of cores per tile
              * \param address_mapping_policy The address mapping policy that will be used
              */
@@ -25,12 +25,12 @@ namespace spike_model
             
             /*!
              * \brief Constructor for the request manager
-             * \param tiles The tiles handled my the request manager
-             * \param cores_per_tile The number of cores per tile
+             * \param t The tiles handled my the request manager
              * \param address_mapping_policy The address mapping policy that will be used
              * \param b The cache data mapping policy for banks within a tile
+             * \param s The data mapping policy for scratchpad accesses
              */
-            PrivateL2Director(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b) : AccessDirector(t, address_mapping_policy, b) {}
+            PrivateL2Director(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b, CacheDataMappingPolicy s) : AccessDirector(t, address_mapping_policy, b, s) {}
             
 
         private:

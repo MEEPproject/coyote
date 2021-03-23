@@ -19,6 +19,7 @@ namespace spike_model
         latency_(p->latency),
         l2_sharing_mode_(p->l2_sharing_mode),
         bank_policy_(p->bank_policy),
+        scratchpad_policy_(p->scratchpad_policy),
         tile_policy_(p->tile_policy),
         address_policy_(p->address_policy),
         in_ports_l2_acks_(num_l2_banks_),
@@ -29,7 +30,7 @@ namespace spike_model
             for(uint16_t i=0; i<num_l2_banks_; i++)
             {
                 std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, out_name);
+                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
                 out_ports_l2_reqs_[i]=std::move(out);
                 
                 out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
@@ -37,9 +38,9 @@ namespace spike_model
                 out_ports_l2_acks_[i]=std::move(out_ack);
 
                 std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack"); 
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
+                std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
                 in_ports_l2_acks_[i]=std::move(in_ack);
-                in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<CacheRequest>));
+                in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<Request>));
                 
                 in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req"); 
                 std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
@@ -57,6 +58,20 @@ namespace spike_model
             else if(bank_policy_=="set_interleaving")
             {
                 b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+            }
+            else
+            {
+                printf("Unsupported cache data mapping policy\n");
+            }
+            
+            spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            if(scratchpad_policy_=="page_to_bank")
+            {
+                s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            }
+            else if(scratchpad_policy_=="set_interleaving")
+            {
+                s_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
             }
             else
             {
@@ -81,7 +96,7 @@ namespace spike_model
 
             if(l2_sharing_mode_=="tile_private")
             {
-                access_director=new PrivateL2Director(this, a_pol, b_pol);
+                access_director=new PrivateL2Director(this, a_pol, b_pol, s_pol);
             }
             else
             {
@@ -98,7 +113,7 @@ namespace spike_model
                 {
                     printf("Unsupported cache data mapping policy\n");
                 }
-                access_director=new SharedL2Director(this, a_pol, b_pol, t_pol);
+                access_director=new SharedL2Director(this, a_pol, b_pol, t_pol, s_pol);
             }
     }
 
@@ -114,7 +129,7 @@ namespace spike_model
             out_port_noc_.send(access_director->getRemoteL2RequestMessage(req), lapse);  
     }
 
-    void Tile::issueLocalRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
+    void Tile::issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
     {
         //uint16_t bank=req->calculateHome();
         uint16_t bank=req->getCacheBank(); //TODO: THIS MUST BE FIXED!!
@@ -134,7 +149,7 @@ namespace spike_model
         req->handle(this);
     }
 
-    void Tile::notifyAck_(const std::shared_ptr<CacheRequest> & req)
+    void Tile::notifyAck_(const std::shared_ptr<Request> & req)
     {
         req->handle(this);
     }

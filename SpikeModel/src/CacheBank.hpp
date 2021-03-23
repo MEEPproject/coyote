@@ -23,6 +23,7 @@
 #include <unordered_map>
 
 #include "CacheRequest.hpp"
+#include "ScratchpadRequest.hpp"
 
 #include "SimpleDL1.hpp"
 
@@ -30,8 +31,10 @@
 
 namespace spike_model
 {
-    class CacheBank : public sparta::Unit, public LogCapable
+    class CacheBank : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
+        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
+
         /*!
          * \class spike_model::CacheBank
          * \brief A cache bank that belongs to a Tile in the architecture.
@@ -149,7 +152,7 @@ namespace spike_model
          * \brief Get a request coming from the input port from the tile and store it for later handling
          * \param req The request to store
          */
-        void getAccess_(const std::shared_ptr<CacheRequest> & req);
+        void getAccess_(const std::shared_ptr<Request> & req);
 
         /*!
         * \brief Issue a request from the queue of pending requests
@@ -183,13 +186,25 @@ namespace spike_model
             return l2_line_size_;
         }
             
+        /*!
+         * \brief Handles a cache request
+         * \param r The event to handle
+         */
+        void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
+        
+        /*!
+         * \brief Handles a scratchpad request request
+         * \param r The event to handle
+         */
+        void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
+            
     private:
 
         ////////////////////////////////////////////////////////////////////////////////
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
 
-        sparta::DataInPort<std::shared_ptr<CacheRequest>> in_core_req_
+        sparta::DataInPort<std::shared_ptr<Request>> in_core_req_
             {&unit_port_set_, "in_tile_req"};
 
         sparta::DataInPort<std::shared_ptr<CacheRequest>> in_biu_ack_
@@ -200,7 +215,7 @@ namespace spike_model
         // Output Ports
         ////////////////////////////////////////////////////////////////////////////////
         
-        sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_core_ack_
+        sparta::DataOutPort<std::shared_ptr<Request>> out_core_ack_
             {&unit_port_set_, "out_tile_ack"};
 
         sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_biu_req_
@@ -275,7 +290,8 @@ namespace spike_model
         uint64_t calculateLineAddress(std::shared_ptr<CacheRequest> r);
 
         //An unordered set indexed by the bits of an instruction and containing all its pending (mmu/cache) accesses
-        sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_requests_=sparta::Counter(getStatisticSet(), "cache_requests", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_scratchpad_requests_=sparta::Counter(getStatisticSet(), "scratchpad_requests", "Number of scratchpad requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_misses_on_already_pending_=sparta::Counter(getStatisticSet(), "misses_on_already_pending", "Number of misses on addreses that have already been requested", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_stall_=sparta::Counter(getStatisticSet(), "stalls", "Stalls due to full in-flight queue", sparta::Counter::COUNT_NORMAL);
@@ -286,7 +302,7 @@ namespace spike_model
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",
             "Miss ratio",
-            getStatisticSet(), "cache_misses/requests"
+            getStatisticSet(), "cache_misses/cache_requests"
         };
 
         class CacheRequestHash
@@ -346,7 +362,8 @@ namespace spike_model
 
         InFlightMissList in_flight_reads_;
 
-        std::list<std::shared_ptr<CacheRequest>> pending_requests_;
+        std::list<std::shared_ptr<CacheRequest>> pending_cache_requests_;
+        std::list<std::shared_ptr<ScratchpadRequest>> pending_scratchpad_requests_;
     
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;

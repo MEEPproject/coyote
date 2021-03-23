@@ -200,6 +200,16 @@ namespace sparta
                 return num_ways_;
             }
 
+            void disableWays(uint64_t ways_to_disable)
+            {
+                num_ways_=num_ways_-ways_to_disable;
+            }
+            
+            void enableWays(uint64_t ways_to_enable)
+            {
+                num_ways_=num_ways_+ways_to_enable;
+            }
+
             /**
              * Determine if the cache set has any open ways.
              */
@@ -214,7 +224,7 @@ namespace sparta
             const_iterator end()   const { return ways_.end(); }
         protected:
             const uint32_t          set_idx_;
-            const uint32_t          num_ways_;
+            uint32_t          num_ways_;
             ReplacementIF          *replacement_policy_;
             std::vector<CacheItemT> ways_;
         }; // class Cache

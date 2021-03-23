@@ -279,6 +279,22 @@ namespace sparta
             const_iterator begin() const { return cache_.begin(); }
             const_iterator end() const { return cache_.end(); }
 
+            void disableWays(uint64_t ways_to_disable)
+            {
+                auto set_it = cache_.begin();
+                for (; set_it != cache_.end(); ++set_it) {
+                    set_it->disableWays(ways_to_disable);
+                }
+            }
+            
+            void enableWays(uint64_t ways_to_enable)
+            {
+                auto set_it = cache_.begin();
+                for (; set_it != cache_.end(); ++set_it) {
+                    set_it->enableWays(ways_to_enable);
+                }
+            }
+
         protected:
 
             Cache<CacheItemT, CacheSetT> cache_;

@@ -20,14 +20,15 @@ namespace spike_model
         max_outstanding_misses_(p->max_outstanding_misses),
         busy_(false),
         in_flight_reads_(max_outstanding_misses_, p->line_size),
-        pending_requests_(),
+        pending_cache_requests_(),
+        pending_scratchpad_requests_(),
         l2_size_kb_ (p->size_kb),
         l2_associativity_ (p->associativity),
         l2_line_size_ (p->line_size)
     {
 
         in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<CacheRequest>));
+                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<Request>));
 
         in_biu_ack_.registerConsumerHandler
                 (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
@@ -72,7 +73,7 @@ namespace spike_model
             in_flight_reads_.erase(req);
         
         }
-        if(pending_requests_.size()>0)
+        if(pending_cache_requests_.size()>0)
         {
             //ISSUE EVENT
             if(was_stalled)
@@ -88,55 +89,44 @@ namespace spike_model
     }   
 
 
-    void CacheBank::getAccess_(const std::shared_ptr<CacheRequest> & req)
+    void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
     {
-        count_requests_+=1;
-
-
-        bool hit_on_store=false;
-        if(req->getType()!=CacheRequest::AccessType::LOAD)
-        {
-            //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
-            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_requests_.rbegin(); rit!=pending_requests_.rend() && !hit_on_store; ++rit)
-            {
-                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(req));
-            }
-        }
-
-        if(hit_on_store)
-        {
-            //AUTO HIT
-            req->setServiced();
-            out_core_ack_.send(req,1);
-            count_hit_on_store_++;
-        }
-        else
-        {
-            pending_requests_.push_back(req);
-            if(!busy_ && !in_flight_reads_.is_full())
-            {
-                busy_=true;
-                //ISSUE EVENT
-                issue_access_event_.schedule(sparta::Clock::Cycle(0));
-            }
-        }
+        req->handle(this);
     }
 
     void CacheBank::issueAccess_()
     {
-        MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_requests_.front());
-        pending_requests_.pop_front();
-        handleCacheLookupReq_(m);
-
         bool stall=false;
-        if(in_flight_reads_.is_full())
+        if(pending_scratchpad_requests_.size()>0) //Scratchpad requests are handled first
         {
-            stall=true;
-            count_stall_++;
+            const std::shared_ptr<ScratchpadRequest> s=pending_scratchpad_requests_.front();
+            pending_scratchpad_requests_.pop_front(); //We always hit in the scratchpad. Nothing to check.
+
+            if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::ALLOCATE)
+            {
+                l2_cache_->disableWays(s->getSize());
+            }
+            else if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::FREE)
+            {
+                l2_cache_->enableWays(s->getSize());
+            }
+            s->setServiced();
+            out_core_ack_.send(s, hit_latency_);
+        }
+        else
+        {
+            MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_cache_requests_.front());
+            pending_cache_requests_.pop_front();
+            handleCacheLookupReq_(m);
+
+            if(in_flight_reads_.is_full())
+            {
+                stall=true;
+                count_stall_++;
+            }
         }
 
-
-        if(!stall && pending_requests_.size()>0) //IF THERE ARE PENDING REQUESTS, TRY TO SCHEDULE NEXT ISSUE
+        if(!stall && (pending_cache_requests_.size()>0 || pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
         {
             issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
         }
@@ -288,6 +278,51 @@ namespace spike_model
     uint64_t CacheBank::calculateLineAddress(std::shared_ptr<CacheRequest> r)
     {
         return (r->getAddress() >> l2_line_size_) << l2_line_size_;
+    }
+        
+    void CacheBank::handle(std::shared_ptr<spike_model::CacheRequest> r)
+    {
+        count_cache_requests_+=1;
+
+        bool hit_on_store=false;
+        if(r->getType()!=CacheRequest::AccessType::LOAD)
+        {
+            //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
+            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_cache_requests_.rbegin(); rit!=pending_cache_requests_.rend() && !hit_on_store; ++rit)
+            {
+                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(r));
+            }
+        }
+
+        if(hit_on_store)
+        {
+            //AUTO HIT
+            r->setServiced();
+            out_core_ack_.send(r,1);
+            count_hit_on_store_++;
+        }
+        else
+        {
+            pending_cache_requests_.push_back(r);
+            if(!busy_ && !in_flight_reads_.is_full())
+            {
+                busy_=true;
+                //ISSUE EVENT
+                issue_access_event_.schedule(sparta::Clock::Cycle(0));
+            }
+        }
+
+    }
+    
+    void CacheBank::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
+    {
+        count_scratchpad_requests_+=1;
+        pending_scratchpad_requests_.push_back(r);
+        if(!busy_)
+        {
+            busy_=true;
+            issue_access_event_.schedule(sparta::Clock::Cycle(0));
+        }
     }
 
 

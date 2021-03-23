@@ -3,7 +3,8 @@
 #include "Event.hpp"   
 #include "Sync.hpp"   
 #include "Request.hpp"   
-#include "CacheRequest.hpp"   
+#include "CacheRequest.hpp" 
+#include "ScratchpadRequest.hpp" 
 #include "Fence.hpp"   
 #include "Finish.hpp"   
 #include "MCPURequest.hpp"
@@ -36,6 +37,11 @@ namespace spike_model
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::CacheRequest> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Request>(e));
+    }
+            
+    void EventVisitor::handle(std::shared_ptr<spike_model::ScratchpadRequest> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::Request>(e));
     }
