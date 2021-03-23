@@ -36,7 +36,7 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
      for (ii = 0; ii < M-15; ii += bi) {                        //unroll rows (no possibility of indirection on register addressing)
 		__epi_1xf64 vc0, vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8, vc9, vc10, vc11, vc12, vc13, vc14, vc15;
         __epi_1xf64 vb0;
-        vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
+        vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl);
 
 #if 0
 	vc1=vc2=vc3=vc4=vc5=vc6=vc7=vc8=vc9=vc10=vc11=vc12=vc13=vc14=vc15=vc0;
@@ -61,8 +61,8 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
         for (int kk = 0; kk < K; kk += bk) {
            vb0 = __builtin_epi_vload_1xf64(&b[kk][jj], gvl);
 	   {
-           FMA( vc0,  vb0,   a[ii][kk], gvl );
-           FMA( vc1,  vb0,  a[ii+1][kk], gvl );
+           FMA( vc0,  vb0,   a[ii][kk], gvl ); //vc0 calculates the first  value of row0
+           FMA( vc1,  vb0,  a[ii+1][kk], gvl ); //vc1 calculates the first  value of row1
            FMA( vc2,  vb0,  a[ii+2][kk], gvl );
            FMA( vc3,  vb0,  a[ii+3][kk], gvl );
            FMA( vc4,  vb0,  a[ii+4][kk], gvl );
@@ -96,14 +96,14 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
         __builtin_epi_vstore_1xf64(&c[ii+14][jj], vc14, gvl);
         __builtin_epi_vstore_1xf64(&c[ii+15][jj], vc15, gvl);
      }
-    jj += gvl; 
+    jj += gvl;
   }
   
   int ii_left=ii;
   for (int jj = start; jj < end; ) {
      __epi_1xf64 vc0, vc1, vc2, vc3;
      __epi_1xf64 vb0;
-     unsigned long int gvl = __builtin_epi_vsetvl(N-jj, __epi_e64, __epi_m1);
+     unsigned long int gvl = __builtin_epi_vsetvl(end-jj, __epi_e64, __epi_m1);
      for (ii=ii_left; ii < M; ii += 2) {
         vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
         vc1  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 

@@ -73,7 +73,7 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
-                std::cout << "NOC forwarding the message to MC" << std::endl;
+                //std::cout << "NOC forwarding the message to MC" << std::endl;
                 out_ports_memory_controllers_[mes->getDestPort()]->send(mes, 0);
                 break;
 
@@ -95,7 +95,7 @@ namespace spike_model
         }
         else if(mes->getType() == NoCMessageType::MCPU_REQUEST)
         {
-            std::cout << "NOC forwarding the message to Tile" << std::endl;
+            //std::cout << "NOC forwarding the message to Tile" << std::endl;
             out_ports_tiles_[mes->getDestPort()]->send(mes, 0);
         }
         else

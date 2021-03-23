@@ -231,13 +231,13 @@ namespace spike_model
     {
         if(!r->isServiced())
         {
-            std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             //TODO: Add MCPU dest port
             out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, 0), 0);
         }
         else
         {
-            std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             request_manager_->notifyAck(r);
         }
     }

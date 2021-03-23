@@ -231,7 +231,8 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             }
         }
 
-        if(pending_get_vec_len[core] != NULL)
+        bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
+        if(is_fetch && (pending_get_vec_len[core] != NULL))
         {
             submitToSparta(pending_get_vec_len[core]);
             pending_get_vec_len[core] = NULL;
@@ -253,7 +254,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             can_run=spike->ackRegister(r, current_cycle);
         }
 
-        if(can_run && !threads_in_barrier[core])
+        if(can_run && !threads_in_barrier[core] && spike->isVecAvailable(core))
         {
             std::vector<uint16_t>::iterator it;
 
@@ -332,8 +333,9 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPURequest> r)
 {
     if(!r->isServiced())
     {
-        if(core_active == false) //fetch midss
+        if(core_active == false) //RAW miss and a Fetch miss
         {
+            //Fetch miss could be handled by this. RAW miss cannot
             pending_get_vec_len[current_core] = r;
         }
         else

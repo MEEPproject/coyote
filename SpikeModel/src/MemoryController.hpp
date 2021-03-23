@@ -113,10 +113,6 @@ namespace spike_model
             sparta::UniqueEvent<> controller_cycle_event_ 
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
-            sparta::UniqueEvent<> issue_mcpu_event_
-            {&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryController, issueMCPU_)};
-            std::list<std::shared_ptr<MCPURequest>> mcpu_req;
-
             uint64_t latency_;
        
             uint64_t line_size_;
@@ -154,7 +150,6 @@ namespace spike_model
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
-            void issueMCPU_();
     
             /*!
              * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)

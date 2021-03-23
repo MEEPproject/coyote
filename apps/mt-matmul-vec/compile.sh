@@ -24,11 +24,11 @@ sudo service docker status
 if [ $? != 0 ]; then
     sudo service docker start #If docker inactive, activate
     if [ $? = 0 ]; then
-	sleep 1
+       sleep 1
     sudo docker run -v$PWD/..:/tmp --rm epi_compiler_docker /bin/bash -c "cd /tmp/mt-matmul-vec; /llvm-EPI-release-toolchain-cross/bin/clang --target=riscv64-unknown-elf -mepi -I../common/env -I../common -I/usr/include/ -DPREALLOCATE=1 -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -march=rv64g ../common/syscalls.c ./my_crt.S -static -nostdlib -nostartfiles -T ../common/test.ld matmul.c -o matmul"
     else # docker is not able to start or not exists -> run epi_compiler directly
         ../../epi_compiler/llvm-EPI-release-toolchain-cross/bin/clang --target=riscv64-unknown-elf -mepi -I../common/env -I../common -I/usr/include/ -DPREALLOCATE=1 -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -march=rv64g ../common/syscalls.c ./my_crt.S -static -nostdlib -nostartfiles -T ../common/test.ld matmul.c -o matmul
     fi
 else
-	sudo docker run -v$PWD/..:/tmp --rm epi_compiler_docker /bin/bash -c "cd /tmp/mt-matmul-vec; /llvm-EPI-release-toolchain-cross/bin/clang --target=riscv64-unknown-elf -mepi -I../common/env -I../common -I/usr/include/ -DPREALLOCATE=1 -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -march=rv64g ../common/syscalls.c ./my_crt.S -static -nostdlib -nostartfiles -T ../common/test.ld matmul.c -o matmul"
+       sudo docker run -v$PWD/..:/tmp --rm epi_compiler_docker /bin/bash -c "cd /tmp/mt-matmul-vec; /llvm-EPI-release-toolchain-cross/bin/clang --target=riscv64-unknown-elf -mepi -I../common/env -I../common -I/usr/include/ -DPREALLOCATE=1 -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -march=rv64g ../common/syscalls.c ./my_crt.S -static -nostdlib -nostartfiles -T ../common/test.ld matmul.c -o matmul"
 fi
