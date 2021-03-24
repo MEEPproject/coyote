@@ -26,14 +26,14 @@
 
 namespace spike_model
 {
-    //class Core; //Forward declaration    
+    //class Core; //Forward declaration
 
     class NoC : public sparta::Unit, public LogCapable
     {
         /*!
          * \class spike_model::NoC
          * \brief NoC models the network on chip interconnecting tiles and memory controllers
-         * 
+         *
          * It currently models a highly idelized crossbar, but more realistic NoCs are work in progress
          */
     public:
@@ -50,7 +50,7 @@ namespace spike_model
             {
             }
             PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
-            PARAMETER(uint16_t, num_memory_controllers, 1, "The number of memory controllers")
+            PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
             PARAMETER(uint16_t, latency, 1, "The cycles to cross the NoC")
         };
 
@@ -75,21 +75,21 @@ namespace spike_model
         */
         void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
 
-        /*! \brief Forward a message sent from a memory controller to the correct destination
+        /*! \brief Forward a message sent from a memory CPU to the correct destination
         * \param mes The message
         */
-        void handleMessageFromMemoryController_(const std::shared_ptr<NoCMessage> & mes);
+        void handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mes);
 
     private:
 
         uint16_t num_tiles_;
-        uint16_t num_memory_controllers_;
+        uint16_t num_memory_cpus_;
         uint16_t latency_;
- 
+
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_tiles_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_controllers_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_controllers_;
+        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
+        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
     };
 }
 #endif

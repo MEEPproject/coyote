@@ -18,9 +18,8 @@ namespace spike_model
          * and between Sparta Units, either as plain Requests or encapsulated in a NoCMessage.
          *
          */
-        
-        friend class EventManager; 
-    
+        friend class EventManager;
+
         public:
             enum class RegType
             {
@@ -100,7 +99,7 @@ namespace spike_model
              * \brief Get the type of the destination register for the request
              * \return The type of the register
              */
-            RegType getDestinationRegType() const {return regType;}            
+            RegType getDestinationRegType() const {return regType;}
 
 
                 bool operator ==(const Request & m) const
@@ -118,7 +117,7 @@ namespace spike_model
 
             uint16_t size;
     };
-    
+
     inline std::ostream & operator<<(std::ostream & Str, Request const & req)
     {
         Str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp();

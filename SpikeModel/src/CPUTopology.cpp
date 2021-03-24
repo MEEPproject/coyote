@@ -28,6 +28,14 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 &factories->cache_bank_rf
             },
             {
+                "memory_cpu&",
+                "cpu",
+                "Memory CPU &",
+                sparta::TreeNode::GROUP_NAME_NONE,
+                sparta::TreeNode::GROUP_IDX_NONE,
+                &factories->memory_cpu_rf
+            },
+            {
                 "memory_controller&",
                 "cpu",
                 "Memory Controller &",
@@ -67,16 +75,24 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.tile*.ports.in_noc"
         },
         {
-            "cpu.noc.ports.in_tile*", 
+            "cpu.noc.ports.in_tile*",
             "cpu.tile*.ports.out_noc"
         },
         {
-            "cpu.noc.ports.in_memory_controller&", 
-            "cpu.memory_controller&.ports.out_noc"
+            "cpu.noc.ports.in_memory_cpu&",
+            "cpu.memory_cpu&.ports.out_noc"
         },
         {
-            "cpu.noc.ports.out_memory_controller&", 
-            "cpu.memory_controller&.ports.in_noc"
+            "cpu.noc.ports.out_memory_cpu&",
+            "cpu.memory_cpu&.ports.in_noc"
+        },
+        {
+            "cpu.memory_controller&.ports.in_mcpu",
+            "cpu.memory_cpu&.ports.out_mc"
+        },
+        {
+            "cpu.memory_controller&.ports.out_mcpu",
+            "cpu.memory_cpu&.ports.in_mc"
         },
     };
 

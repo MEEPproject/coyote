@@ -23,7 +23,7 @@ namespace sparta_simdb {
     class DatabaseTester;
 }
 
-namespace spike_model{ class CPUFactory;} 
+namespace spike_model{ class CPUFactory;}
 
 /*!
  * \brief SpikeModel which builds the model and configures it
@@ -36,7 +36,7 @@ public:
      * \brief Construct SpikeModel
      * \param be_noisy Be verbose -- not necessary, just an skeleton
      */
-    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores_per_tile, uint32_t num_tiles, uint32_t num_l2_banks, uint32_t num_memory_controllers, uint32_t num_memory_banks, std::string cmd, std::string isa, bool show_factories, bool trace);
+    SpikeModel(const std::string& topology, sparta::Scheduler & scheduler, uint32_t num_cores_per_tile, uint32_t num_tiles, uint32_t num_l2_banks, uint32_t num_memory_cpus, uint32_t num_memory_controllers, uint32_t num_memory_banks, std::string cmd, std::string isa, bool show_factories, bool trace);
 
     // Tear it down
     virtual ~SpikeModel();
@@ -70,18 +70,19 @@ private:
     const uint32_t num_cores_per_tile_;
     const uint32_t num_tiles_;
     const uint32_t num_l2_banks_;
+    const uint32_t num_memory_cpus_;
     const uint32_t num_memory_controllers_;
     const uint32_t num_memory_banks_;
 
 
     std::string cmd_;
     std::string isa_;
-    
-    /*! 
- 
-     * \brief Get the factory for topology build 
-     */ 
-    auto getCPUFactory_() -> spike_model::CPUFactory*; 
+
+    /*!
+
+     * \brief Get the factory for topology build
+     */
+    auto getCPUFactory_() -> spike_model::CPUFactory*;
 
     bool show_factories_;
     bool trace_;
@@ -105,7 +106,7 @@ private:
      * \brief If present, test tree node extensions
      */
     void validateTreeNodeExtensions_();
-   
+
 };
 
 // __SPIKE_MODEL_H__

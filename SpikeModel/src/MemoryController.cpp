@@ -19,12 +19,12 @@ namespace spike_model
     write_allocate_(p->write_allocate),
     banks()
     {
-        in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<NoCMessage>));
+        in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<Request>));
         sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
         ready_commands=std::make_unique<FifoCommandScheduler>();
     }
 
-    void MemoryController::receiveMessage_(const std::shared_ptr<NoCMessage> & mes)
+    void MemoryController::receiveMessage_(const std::shared_ptr<Request> &mes)
     {
         count_requests_++;
         mes->getRequest()->handle(this);
@@ -52,9 +52,10 @@ namespace spike_model
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
         req->setMemoryAck(true);
-        out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
+        //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
+        out_port_mcpu_.send(req, 0);
     }
-    
+
     std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         std::shared_ptr<BankCommand> res_command;
@@ -70,11 +71,10 @@ namespace spike_model
         }
         return res_command;
     }
-    
+
     std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         sparta_assert(req->getType()==CacheRequest::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
-        
         std::shared_ptr<BankCommand> res_command;
 
         uint64_t column_to_schedule=req->getCol();
@@ -101,21 +101,16 @@ namespace spike_model
             uint64_t row_to_schedule=request_to_schedule->getRow();
 
             std::shared_ptr<BankCommand> com;
-            if(banks[bank_to_schedule]->isOpen() && banks[bank_to_schedule]->getOpenRow()==row_to_schedule)
-            {
-                com=getAccessCommand_(request_to_schedule, bank_to_schedule);
-            }
-            else
-            {
-               if(banks[bank_to_schedule]->isOpen())
-               {
+            if(banks[bank_to_schedule]->isOpen()) {
+				if(banks[bank_to_schedule]->getOpenRow()==row_to_schedule) {
+                	com=getAccessCommand_(request_to_schedule, bank_to_schedule);
+				} else {
                     com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0);
-               }
-               else
-               {
-                    com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
-               }
-            }
+				}
+			} else {
+				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
+			}
+
             ready_commands->addCommand(com);
         }
 
@@ -132,16 +127,13 @@ namespace spike_model
                 idle_=true;
             }
         }
-        else
-        {
-        }
     }
-            
+
     void MemoryController::addBank_(MemoryBank * bank)
     {
         banks.push_back(bank);
-    } 
-    
+    }
+
     void MemoryController::notifyCompletion_(std::shared_ptr<BankCommand> c)
     {
         std::shared_ptr<BankCommand> com=nullptr;
@@ -173,7 +165,7 @@ namespace spike_model
                 }
                 break;
             }
-           
+
             case BankCommand::CommandType::WRITE:
             {
                 std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
@@ -189,21 +181,23 @@ namespace spike_model
                 break;
             }
         }
-        
+
         if(com!=nullptr)
         {
             ready_commands->addCommand(com);
+
         }
-       
+
         if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
         {
             controller_cycle_event_.schedule();
             idle_=false;
         }
     }
-    
+
     void MemoryController::setRequestManager(std::shared_ptr<EventManager> r)
     {
         request_manager_=r;
     }
 }
+// vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

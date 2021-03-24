@@ -42,6 +42,7 @@ SpikeModel::SpikeModel(const std::string& topology,
                                    uint32_t num_cores_per_tile,
                                    uint32_t num_tiles,
                                    uint32_t num_l2_banks,
+                                   uint32_t num_memory_cpus,
                                    uint32_t num_memory_controllers,
                                    uint32_t num_memory_banks,
                                    std::string cmd,
@@ -53,6 +54,7 @@ SpikeModel::SpikeModel(const std::string& topology,
     num_cores_per_tile_(num_cores_per_tile),
     num_tiles_(num_tiles),
     num_l2_banks_(num_l2_banks),
+    num_memory_cpus_(num_memory_cpus),
     num_memory_controllers_(num_memory_controllers),
     num_memory_banks_(num_memory_banks),
     cmd_(cmd),
@@ -137,10 +139,10 @@ void SpikeModel::buildTree_()
     auto cpu_factory = getCPUFactory_();
 
 
-    printf("There are %u\n", num_memory_controllers_);
+    printf("There are %u Memory CPUs and %u Memory Controllers.\n", num_memory_cpus_, num_memory_controllers_);
 
     // Set the cpu topology that will be built
-    cpu_factory->setTopology(cpu_topology_, num_tiles_, num_l2_banks_, num_memory_controllers_, num_memory_banks_, trace_);
+    cpu_factory->setTopology(cpu_topology_, num_tiles_, num_l2_banks_, num_memory_cpus_, num_memory_controllers_, num_memory_banks_, trace_);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
@@ -229,7 +231,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     uint64_t bank_size=c_b->getSize();
     uint64_t bank_line=c_b->getLineSize();
     uint64_t bank_associativity=c_b->getAssoc();
-    
+
     auto memory_bank_node = getRoot()->getChild(std::string("cpu.memory_controller0.memory_bank0"));
     sparta_assert(memory_bank_node != nullptr);
 
@@ -245,7 +247,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         tiles[i]->setRequestManager(m);
         tiles[i]->setMemoryInfo(bank_size*num_l2_banks_, bank_associativity, bank_line, num_l2_banks_, num_tiles_, num_memory_controllers_, num_memory_banks_, num_rows, num_cols);
     }
-    
+
     for(std::size_t i = 0; i < num_memory_controllers_; ++i)
     {
         auto tile_node = getRoot()->getChild(std::string("cpu.memory_controller") +
@@ -253,13 +255,24 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         sparta_assert(tile_node != nullptr);
 
         spike_model::MemoryController * mc=tile_node->getResourceAs<spike_model::MemoryController>();
-        
+
         mc->setRequestManager(m);
     }
-        
+
+    for(std::size_t i = 0; i < num_memory_cpus_; ++i)
+    {
+        auto tile_node = getRoot()->getChild(std::string("cpu.memory_cpu") +
+                sparta::utils::uint32_to_str(i));
+        sparta_assert(tile_node != nullptr);
+
+        spike_model::MemoryCPU *mcpu=tile_node->getResourceAs<spike_model::MemoryCPU>();
+
+        mcpu->setRequestManager(m);
+    }
+
     return m;
 }
-    
+
 void SpikeModel::validateTreeNodeExtensions_()
 {
 }
