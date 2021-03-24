@@ -64,7 +64,7 @@ void vel_intr(int coreid, int ncores, int n, double (*V)[n][n][n], double (*A)[n
       i = cid/(n*n);
       j = (cid/n)%n;
       k= cid%n;
-      rvl = n*n*n-cid;
+      rvl = end-cid;
 #else
    int chunk=n/ncores;
    int start=coreid*(chunk);
