@@ -31,9 +31,8 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
   int start=coreid*(chunk);
   int end = (coreid==ncores-1) ?  N : start+chunk;
 
-
   for (int jj = start; jj < end; ) {
-     unsigned long gvl = __builtin_epi_vsetvl(N-jj, __epi_e64, __epi_m1); // system selected columm block size (C & B)
+     unsigned long gvl = __builtin_epi_vsetvl(end-jj, __epi_e64, __epi_m1); // system selected columm block size (C & B)
      for (ii = 0; ii < M-15; ii += bi) {                        //unroll rows (no possibility of indirection on register addressing)
 		__epi_1xf64 vc0, vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8, vc9, vc10, vc11, vc12, vc13, vc14, vc15;
         __epi_1xf64 vb0;
