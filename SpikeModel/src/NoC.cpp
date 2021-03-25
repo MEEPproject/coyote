@@ -74,8 +74,8 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
-                std::cout << "NOC forwarding the message to MC" << std::endl;
-                out_ports_memory_controllers_[mes->getDestPort()]->send(mes, 0);
+                std::cout << "NOC forwarding the message to MCPU" << std::endl;
+                out_ports_memory_cpus_[mes->getDestPort()]->send(mes, 0); // latency = 0 to simulate a separate network for those requests
                 break;
 
             default:

@@ -309,6 +309,44 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             }
     }
 
+	for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
+		auto mcpu_node = root_node->getChild(std::string("cpu.memory_cpu") +
+				sparta::utils::uint32_to_str(num_of_memory_cpus));
+		sparta_assert(mcpu_node != nullptr);
+
+		auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
+				sparta::utils::uint32_to_str(num_of_memory_cpus)); 					// the MPCU is bound to one MC
+
+		sparta_assert(mc_node != nullptr);
+
+		for(const auto& port : ports) {
+			bool bind = false;
+			out_port_name = port.output_port_name;
+			in_port_name  = port.input_port_name;
+			replace_with  = std::to_string(num_of_memory_cpus);
+			if(out_port_name.find("memory_cpu&") != std::string::npos) {
+				replace(out_port_name, to_replace_memory_cpus_, replace_with);
+				bind = true;
+			}
+			if(in_port_name.find("memory_cpu&") != std::string::npos) {
+				replace(in_port_name, to_replace_memory_cpus_, replace_with);
+				bind = true;
+			}
+			if(out_port_name.find("memory_controller&") != std::string::npos) {
+				replace(out_port_name, to_replace_memory_controllers_, replace_with);
+				bind = true;
+			}
+			if(in_port_name.find("memory_controller&") != std::string::npos) {
+				replace(in_port_name, to_replace_memory_controllers_, replace_with);
+				bind = true;
+			}
+			if(bind && !root_node->getChildAs<sparta::Port>(out_port_name)->isBound()) {
+				std::cout << "Binding " << out_port_name << " and " << in_port_name << std::endl;
+				sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name), root_node->getChildAs<sparta::Port>(in_port_name));
+			}
+		}
+	}
+
 
     for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
             auto core_node = root_node->getChild(std::string("cpu.tile") +
@@ -353,8 +391,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                     sparta::utils::uint32_to_str(num_of_memory_cpus));
             sparta_assert(mcpu_node != nullptr);
 
-            MemoryCPU *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPU>();
-
+            MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
             mcpu->setLogger(topology_->logger);
         }
 
@@ -399,3 +436,4 @@ spike_model::Logger& spike_model::CPUFactory::getLogger()
 {
     return topology_->logger;
 }
+// vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

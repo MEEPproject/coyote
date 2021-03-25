@@ -8,7 +8,7 @@
 #include "Tile.hpp"
 #include "CacheBank.hpp"
 #include "NoC.hpp"
-#include "MemoryCPU.hpp"
+#include "MemoryCPUWrapper.hpp"
 #include "MemoryController.hpp"
 #include "MemoryBank.hpp"
 
@@ -36,8 +36,8 @@ struct CPUFactories{
                           spike_model::Tile::TileParameterSet> tile_rf;
 
     //! \brief Resource Factory to build a Memory CPU
-    sparta::ResourceFactory<spike_model::MemoryCPU,
-                          spike_model::MemoryCPU::MemoryCPUParameterSet> memory_cpu_rf;
+    sparta::ResourceFactory<spike_model::MemoryCPUWrapper,
+                          spike_model::MemoryCPUWrapper::MemoryCPUWrapperParameterSet> memory_cpu_rf;
 
     //! \brief Resource Factory to build a MemoryController Unit
     sparta::ResourceFactory<spike_model::MemoryController,

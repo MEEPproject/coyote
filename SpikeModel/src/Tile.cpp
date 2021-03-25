@@ -32,24 +32,24 @@ namespace spike_model
                 std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
                 std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
                 out_ports_l2_reqs_[i]=std::move(out);
-                
+
                 out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
                 std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, out_name);
                 out_ports_l2_acks_[i]=std::move(out_ack);
 
-                std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack"); 
+                std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
                 std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
                 in_ports_l2_acks_[i]=std::move(in_ack);
                 in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<Request>));
-                
-                in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req"); 
+
+                in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
                 std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
                 in_ports_l2_reqs_[i]=std::move(in_req);
                 in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<CacheRequest>));
             }
 
             in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
-       
+
             spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
             if(bank_policy_=="page_to_bank")
             {
@@ -63,7 +63,7 @@ namespace spike_model
             {
                 printf("Unsupported cache data mapping policy\n");
             }
-            
+
             spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
             if(scratchpad_policy_=="page_to_bank")
             {
@@ -126,7 +126,7 @@ namespace spike_model
 
     void Tile::issueRemoteRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
     {
-            out_port_noc_.send(access_director->getRemoteL2RequestMessage(req), lapse);  
+            out_port_noc_.send(access_director->getRemoteL2RequestMessage(req), lapse);
     }
 
     void Tile::issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
@@ -221,7 +221,7 @@ namespace spike_model
     {
         id_=id;
     }
-    
+
     void Tile::handle(std::shared_ptr<spike_model::Request> r)
     {
         access_director->putAccess(r);
@@ -232,7 +232,6 @@ namespace spike_model
         if(!r->isServiced())
         {
             std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
-            //TODO: Add MCPU dest port
             out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, 0), 0);
         }
         else
@@ -242,7 +241,7 @@ namespace spike_model
         }
     }
 
-    void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
+    void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
                               uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
     {
         access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile,  num_tiles, num_mcs, num_banks_per_mc, num_rows_per_bank, num_cols_per_bank);

@@ -23,20 +23,16 @@
 
 #include "LogCapable.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
-#include "EventManager.hpp"
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
-#include "Event.hpp"
-#include "MCPURequest.hpp"
 
 namespace spike_model
 {
     class MemoryBank; //Forward declaration
 
-    class MemoryController : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
+    class MemoryController : public sparta::Unit, public LogCapable
     {
-        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading
         /*!
          * \class spike_model::MemoryController
          * \brief MemoryController models a the operation of simple memory controller
@@ -60,7 +56,6 @@ namespace spike_model
                 }
                 PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
-                PARAMETER(uint64_t, line_size, 128, "The cache line size")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
             };
 
@@ -92,33 +87,18 @@ namespace spike_model
              */
             void notifyCompletion_(std::shared_ptr<BankCommand> c);
 
-            /*!
-             * \brief Set the request manager
-             * \param r The request manager
-             */
-            void setRequestManager(std::shared_ptr<EventManager> r);
-
-            virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
-            virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
-
         private:
 
-            sparta::DataOutPort<std::shared_ptr<Request>> out_port_mcpu_
+            sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_mcpu_
                 {&unit_port_set_, "out_mcpu"};
 
-            sparta::DataInPort<std::shared_ptr<Request>> in_port_mcpu_
+            sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_mcpu_
                 {&unit_port_set_, "in_mcpu"};
 
             sparta::UniqueEvent<> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
-            sparta::UniqueEvent<> issue_mcpu_event_
-            {&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryController, issueMCPU_)};
-            std::list<std::shared_ptr<MCPURequest>> mcpu_req;
-
             uint64_t latency_;
-
-            uint64_t line_size_;
 
             uint64_t num_banks_;
 
@@ -130,7 +110,6 @@ namespace spike_model
 
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
-            std::shared_ptr<EventManager> request_manager_;
 
             sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
 
@@ -138,7 +117,7 @@ namespace spike_model
              * \brief Receive a message from the NoC
              * \param mes The message
              */
-            void receiveMessage_(const std::shared_ptr<Request> &mes);
+            void receiveMessage_(const std::shared_ptr<CacheRequest> &mes);
 
             /*!
              * \brief Send an acknowledgement through the NoC
@@ -152,7 +131,6 @@ namespace spike_model
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
-            void issueMCPU_();
 
             /*!
              * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)

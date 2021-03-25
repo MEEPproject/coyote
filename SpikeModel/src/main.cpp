@@ -231,15 +231,19 @@ int main(int argc, char **argv)
 
         for(std::size_t i = 0; i < num_memory_controllers; ++i)
         {
-            std::string mc_line("top.cpu.memory_controller*.params.line_size");
-            size_t start_pos = mc_line.find("*");
-            mc_line.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(mc_line, line_size);
-
             std::string mc_bank("top.cpu.memory_controller*.params.num_banks");
-            start_pos = mc_bank.find("*");
+            size_t start_pos = mc_bank.find("*");
             mc_bank.replace(start_pos, 1, std::to_string(i));
             cls.getSimulationConfiguration().processParameter(mc_bank, sparta::utils::uint32_to_str(num_memory_banks));
+        }
+
+
+        for(std::size_t i = 0; i < num_memory_cpus; ++i)
+        {
+            std::string mcpu_line("top.cpu.memory_cpu*.params.line_size");
+            size_t start_pos = mcpu_line.find("*");
+            mcpu_line.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(mcpu_line, line_size);
         }
 
 

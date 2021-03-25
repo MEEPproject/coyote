@@ -248,24 +248,13 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         tiles[i]->setMemoryInfo(bank_size*num_l2_banks_, bank_associativity, bank_line, num_l2_banks_, num_tiles_, num_memory_controllers_, num_memory_banks_, num_rows, num_cols);
     }
 
-    for(std::size_t i = 0; i < num_memory_controllers_; ++i)
-    {
-        auto tile_node = getRoot()->getChild(std::string("cpu.memory_controller") +
-                sparta::utils::uint32_to_str(i));
-        sparta_assert(tile_node != nullptr);
-
-        spike_model::MemoryController * mc=tile_node->getResourceAs<spike_model::MemoryController>();
-
-        mc->setRequestManager(m);
-    }
-
     for(std::size_t i = 0; i < num_memory_cpus_; ++i)
     {
         auto tile_node = getRoot()->getChild(std::string("cpu.memory_cpu") +
                 sparta::utils::uint32_to_str(i));
         sparta_assert(tile_node != nullptr);
 
-        spike_model::MemoryCPU *mcpu=tile_node->getResourceAs<spike_model::MemoryCPU>();
+        spike_model::MemoryCPUWrapper *mcpu=tile_node->getResourceAs<spike_model::MemoryCPUWrapper>();
 
         mcpu->setRequestManager(m);
     }
