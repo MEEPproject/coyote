@@ -236,7 +236,7 @@ namespace spike_model
         }
         else
         {
-            std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             request_manager_->notifyAck(r);
         }
     }

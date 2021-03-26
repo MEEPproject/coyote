@@ -35,7 +35,6 @@ constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which ar
 bool enable_smart_mcpu=false;
 
 
-
 int main(int argc, char **argv)
 {
     std::vector<std::string> datafiles;
@@ -63,6 +62,7 @@ int main(int argc, char **argv)
     std::string tile_policy;
     bool fast_cache;
     bool trace=false;
+    bool enable_smart_mcpu=false;
 
     sparta::app::DefaultValues DEFAULTS;
     DEFAULTS.auto_summary_default = "on";
@@ -266,7 +266,8 @@ int main(int argc, char **argv)
 
         cls.populateSimulation(&(*sim));
         std::shared_ptr<spike_model::EventManager> request_manager=sim->createRequestManager();
-        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,t,ic,dc,isa,cmd,varch,fast_cache);
+
+        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,t,ic,dc,isa,cmd,varch,fast_cache,enable_smart_mcpu);
 
         //printf("Creqated\n");
 

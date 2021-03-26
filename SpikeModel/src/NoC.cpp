@@ -59,7 +59,6 @@ namespace spike_model
                 //TODO: Figure out the correct params
                 /*if(trace_)
                 {
-<<<<<<< HEAD
                     logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getMemoryController(), mes->getRequest()->getAddress());
                 }*/
                 out_ports_memory_cpus_[mes->getDestPort()]->send(mes, latency_);
@@ -74,7 +73,7 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
-                std::cout << "NOC forwarding the message to MCPU" << std::endl;
+                //std::cout << "NOC forwarding the message to MCPU" << std::endl;
                 out_ports_memory_cpus_[mes->getDestPort()]->send(mes, 0); // latency = 0 to simulate a separate network for those requests
                 break;
 
@@ -90,14 +89,13 @@ namespace spike_model
             //TODO: Figure out the correct params
             /*if(trace_)
             {
-<<<<<<< HEAD
                 logger_.logMemoryControllerAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
             }*/
             out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
         }
         else if(mes->getType() == NoCMessageType::MCPU_REQUEST)
         {
-            std::cout << "NOC forwarding the message to Tile" << std::endl;
+            //std::cout << "NOC forwarding the message to Tile" << std::endl;
             out_ports_tiles_[mes->getDestPort()]->send(mes, 0);
         }
         else
