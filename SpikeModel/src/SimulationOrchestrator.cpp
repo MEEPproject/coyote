@@ -286,11 +286,14 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
     if(thread_barrier_cnt == 0)
     {
         thread_barrier_cnt = num_cores - 1 ;
-        std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
-        threads_in_barrier[current_core] = true;
-        core_active=false;
-        std::cout << "first core " << current_core
+        if(thread_barrier_cnt != 0) //ensure that more than one cores are getting simulated
+        {
+            std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
+            threads_in_barrier[current_core] = true;
+            core_active=false;
+            std::cout << "first core " << current_core
                   << " waiting for barrier " << current_cycle << std::endl;
+        }
     }
     else if(thread_barrier_cnt == 1)
     {
