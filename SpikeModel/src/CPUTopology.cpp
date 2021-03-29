@@ -103,7 +103,7 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 "NoC",
                 sparta::TreeNode::GROUP_NAME_NONE,
                 sparta::TreeNode::GROUP_IDX_NONE,
-                &factories->noc_rf
+                NULL                                // This is filled in CPUFactory when it is instantiated
             },
     };
 }

@@ -141,6 +141,14 @@ void SpikeModel::buildTree_()
 
     printf("There are %u Memory CPUs and %u Memory Controllers.\n", num_memory_cpus_, num_memory_controllers_);
 
+    
+    //TODO: Remove this when cleaning SpikeModel constructor task will be done
+    /*
+     * Example of reading parameters from UnboundParameterTree
+     * const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
+     * std::string noc_model = upt.get("top.cpu.noc.params.noc_model");
+     */
+
     // Set the cpu topology that will be built
     cpu_factory->setTopology(cpu_topology_, num_tiles_, num_l2_banks_, num_memory_cpus_, num_memory_controllers_, num_memory_banks_, trace_);
 

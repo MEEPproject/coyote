@@ -4,6 +4,8 @@
 #include "CPUFactory.hpp"
 #include <string>
 #include <algorithm>
+#include <sparta/app/Simulation.hpp>
+#include <sparta/app/SimulationConfiguration.hpp>
 
 /**
  * @brief Constructor for CPUFactory
@@ -195,6 +197,11 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
     {
         for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks)
         {
+            //FIX: This code assumes that this buildTreeShared is only for NoC
+            const std::string noc_model = root_node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_model")->getAs<std::string>();
+            sparta::ResourceFactoryBase* noc_rf;
+            if(noc_model == "functional")
+                noc_rf = &topology_->factories->functional_noc_rf;
             og_name=unit.name;
             parent_name = unit.parent_name;
             node_name = unit.name;
@@ -209,7 +216,7 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
                     unit.group_name,
                     unit.group_id,
                     human_name,
-                    unit.factory);
+                    noc_rf);
             if(unit.is_private_subtree){
                 rtn->makeSubtreePrivate();
                 private_nodes_.emplace_back(rtn);

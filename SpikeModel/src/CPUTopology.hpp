@@ -92,8 +92,8 @@ public:
             input_port_name{input_port_name}{}
     };
 
-    /**
-     * @brief Constructor for CPUTopology
+    /*!
+     * \brief Constructor for CPUTopology
      */
     CPUTopology() : factories{new CPUFactories()}{}
 

@@ -149,6 +149,7 @@ add_executable(spike_model
   src/CPU.cpp
   src/CacheBank.cpp
   src/NoC.cpp
+  src/FunctionalNoC.cpp
   src/NoCMessage.cpp
   src/Logger.cpp
   src/Tile.cpp

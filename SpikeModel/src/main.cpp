@@ -12,10 +12,10 @@
 #include "sparta/app/CommandLineSimulator.hpp"
 #include "sparta/app/MultiDetailOptions.hpp"
 #include "sparta/sparta.hpp"
+#include "sparta/utils/SpartaAssert.hpp"
 
 #include <iostream>
-#include <string>
-
+#include <string> 
 #include <chrono>
 
 // User-friendly usage that correspond with sparta::app::CommandLineSimulator
@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     std::string scratchpad_policy;
     std::string tile_policy;
     bool fast_cache;
+    std::string noc_model;
     bool trace=false;
     bool enable_smart_mcpu=false;
 
@@ -143,19 +144,25 @@ int main(int argc, char **argv)
              "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving")
             ("fast_cache",
              sparta::app::named_value<bool>("TRUE/FALSE", &fast_cache)->default_value(false),
-             "Whether to use a fast L1 cache model instead of the default spike cache.", "Whether to use a fast L1 cache model instead of the default spike cache.");
+             "Whether to use a fast L1 cache model instead of the default spike cache.", "Whether to use a fast L1 cache model instead of the default spike cache.")
+            ("noc_model",
+             sparta::app::named_value<std::string>("NOC_MODEL", &noc_model)->default_value("functional"),
+             "The noc model to use.", "Supported values: functional, simple, detailed");
 
         // Add any positional command-line options
         // po::positional_options_description& pos_opts = cls.getPositionalOptions();
         // (void)pos_opts;
         // pos_opts.add(TRACE_POS_VARNAME, -1); // example
 
-
         // Parse command line options and configure simulator
         int err_code = 0;
         if(!cls.parse(argc, argv, err_code)){
             return err_code; // Any errors already printed to cerr
         }
+
+        // Verify supported values for parameters
+        sparta_assert(noc_model == "functional", //|| noc_model == "simple" || noc_model == "detailed",
+                      "noc_model must be: functional, simple or detailed. Not: " << noc_model);
 
         bool show_factories = false;
         auto& vm = cls.getVariablesMap();
@@ -167,13 +174,15 @@ int main(int argc, char **argv)
         thread_switch_latency = stoi(l);
         num_cores=stoi(p);
 
-        std::string noc_tiles("top.cpu.noc.params.num_tiles");
-        std::string noc_mcs("top.cpu.noc.params.num_memory_cpus");
+        std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
+        std::string num_mcpus_p  ("top.cpu.noc.params.num_memory_cpus");
+        std::string noc_model_p ("top.cpu.noc.params.noc_model");
 //        std::string spike_cores("top.cpu.spike.params.p");
-
-        //Here I set several model paramteres using a single arg to make usage easier
-        cls.getSimulationConfiguration().processParameter(noc_tiles, sparta::utils::uint32_to_str(num_tiles));
-        cls.getSimulationConfiguration().processParameter(noc_mcs, sparta::utils::uint32_to_str(num_memory_cpus));
+       
+        //Here I set several model paramteres using a single arg to make usage easier 
+        cls.getSimulationConfiguration().processParameter(num_tiles_p, sparta::utils::uint32_to_str(num_tiles));
+        cls.getSimulationConfiguration().processParameter(num_mcpus_p, sparta::utils::uint32_to_str(num_memory_cpus));
+        cls.getSimulationConfiguration().processParameter(noc_model_p, noc_model);
 //        cls.getSimulationConfiguration().processParameter(spike_cores, sparta::utils::uint32_to_str(num_cores));
 
 
@@ -222,11 +231,11 @@ int main(int argc, char **argv)
             start_pos = addr_mapping_policy.find("*");
             addr_mapping_policy.replace(start_pos, 1, std::to_string(i));
             cls.getSimulationConfiguration().processParameter(addr_mapping_policy, address_mapping);
-
-            std::string scratchpad_policy("top.cpu.tile*.params.scratchpad_policy");
-            start_pos = scratchpad_policy.find("*");
-            scratchpad_policy.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(scratchpad_policy, scratchpad_policy);
+            
+            std::string scratchpad_policy_p("top.cpu.tile*.params.scratchpad_policy");
+            start_pos = scratchpad_policy_p.find("*");
+            scratchpad_policy_p.replace(start_pos, 1, std::to_string(i));
+            cls.getSimulationConfiguration().processParameter(scratchpad_policy_p, scratchpad_policy);
         }
 
         for(std::size_t i = 0; i < num_memory_controllers; ++i)

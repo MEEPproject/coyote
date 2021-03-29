@@ -1,26 +1,20 @@
 
-
-#include "sparta/utils/SpartaAssert.hpp"
 #include "NoC.hpp"
+#include "sparta/utils/SpartaAssert.hpp"
 #include <chrono>
 
 namespace spike_model
 {
     const char NoC::name[] = "noc";
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Constructor
-    ////////////////////////////////////////////////////////////////////////////////
-
-    NoC::NoC(sparta::TreeNode *node, const NoCParameterSet *p) :
+    NoC::NoC(sparta::TreeNode *node, const NoCParameterSet *params) :
         sparta::Unit(node),
-        num_tiles_(p->num_tiles),
-        num_memory_cpus_(p->num_memory_cpus),
-        latency_(p->latency),
-        in_ports_tiles_(num_tiles_),
-        out_ports_tiles_(num_tiles_),
-        in_ports_memory_cpus_(num_memory_cpus_),
-        out_ports_memory_cpus_(num_memory_cpus_)
+        in_ports_tiles_(params->num_tiles),
+        out_ports_tiles_(params->num_tiles),
+        in_ports_memory_cpus_(params->num_memory_cpus),
+        out_ports_memory_cpus_(params->num_memory_cpus),
+        num_tiles_(params->num_tiles),
+        num_memory_cpus_(params->num_memory_cpus)
     {
             for(uint16_t i=0; i<num_tiles_; i++)
             {
@@ -47,60 +41,36 @@ namespace spike_model
             }
     }
 
-    void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes)
+    void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
-        switch(mes->getType())
+        count_rx_packets_++;
+        switch(mess->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
-                out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
-                break;
-
             case NoCMessageType::MEMORY_REQUEST:
-                //TODO: Figure out the correct params
-                /*if(trace_)
-                {
-                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getMemoryController(), mes->getRequest()->getAddress());
-                }*/
-                out_ports_memory_cpus_[mes->getDestPort()]->send(mes, latency_);
-                break;
-
             case NoCMessageType::REMOTE_L2_ACK:
-                out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
-                break;
-
-            case NoCMessageType::MEMORY_ACK:
-                std::cout << "Memory acks should not use tile ports!!!\n";
-                break;
-
             case NoCMessageType::MCPU_REQUEST:
-                //std::cout << "NOC forwarding the message to MCPU" << std::endl;
-                out_ports_memory_cpus_[mes->getDestPort()]->send(mes, 0); // latency = 0 to simulate a separate network for those requests
+                count_tx_packets_++;
                 break;
 
             default:
-                std::cout << "Unsupported message received from a Tile!!!\n";
+                sparta_assert(false, "Unsupported message received from a Tile!!!");
         }
     }
 
-    void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mes)
+    void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
     {
-        if(mes->getType()==NoCMessageType::MEMORY_ACK)
+        count_rx_packets_++;
+        switch(mess->getType())
         {
-            //TODO: Figure out the correct params
-            /*if(trace_)
-            {
-                logger_.logMemoryControllerAck(getClock()->currentCycle(), mes->getRequest()->getCoreId(), mes->getRequest()->getPC(), mes->getRequest()->getHomeTile(), mes->getRequest()->getAddress());
-            }*/
-            out_ports_tiles_[mes->getDestPort()]->send(mes, latency_);
-        }
-        else if(mes->getType() == NoCMessageType::MCPU_REQUEST)
-        {
-            //std::cout << "NOC forwarding the message to Tile" << std::endl;
-            out_ports_tiles_[mes->getDestPort()]->send(mes, 0);
-        }
-        else
-        {
-            std::cout << "Unsupported message received from a Memory CPU!!!\n";
+            case NoCMessageType::MEMORY_ACK:
+            case NoCMessageType::MCPU_REQUEST:
+                count_tx_packets_++;
+                break;
+
+            default:
+                sparta_assert(false, "Unsupported message received from a Memory Controller!!!");
         }
     }
-}
+
+} // spike_model

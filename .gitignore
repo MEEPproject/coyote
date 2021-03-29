@@ -4,6 +4,7 @@ riscv-gnu-toolchain/
 riscv-pk/
 map/
 build/
+.vscode/
 # Apps files
 apps/**/dataset.h
 apps/**/matmul
