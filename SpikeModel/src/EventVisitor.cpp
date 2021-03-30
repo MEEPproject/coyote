@@ -8,6 +8,7 @@
 #include "Fence.hpp"   
 #include "Finish.hpp"   
 #include "MCPURequest.hpp"
+#include "MCPUInstruction.hpp"
 
 namespace spike_model
 {
@@ -49,5 +50,10 @@ namespace spike_model
     void EventVisitor::handle(std::shared_ptr<spike_model::MCPURequest> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::Event>(e));
+    }
+            
+    void EventVisitor::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Event>(i));
     }
 }

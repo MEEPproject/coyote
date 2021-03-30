@@ -113,7 +113,7 @@ namespace spike_model
             s->setServiced();
             out_core_ack_.send(s, hit_latency_);
         }
-        else
+        else if(pending_cache_requests_.size()>0)
         {
             MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_cache_requests_.front());
             pending_cache_requests_.pop_front();

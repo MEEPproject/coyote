@@ -26,6 +26,7 @@
 #include "AddressMappingPolicy.hpp"
 #include "AccessDirector.hpp"
 #include "MCPURequest.hpp"
+#include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 
 namespace spike_model
@@ -126,6 +127,13 @@ namespace spike_model
              */
             virtual void handle(std::shared_ptr<spike_model::Request> r) override;
             virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+            
+            
+            /*!
+             * \brief Handles an instruction forwarded to the MCPU
+             * \param r The instruction to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
             
             /*!
              * \brief Set the information on the memory hierarchy

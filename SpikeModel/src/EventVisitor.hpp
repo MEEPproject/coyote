@@ -15,6 +15,7 @@ namespace spike_model
     class Fence;
     class Finish;
     class MCPURequest;
+    class MCPUInstruction;
 
     class EventVisitor
     {
@@ -74,6 +75,12 @@ namespace spike_model
             virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r);
             
             virtual void handle(std::shared_ptr<spike_model::MCPURequest> e);
+            
+            /*!
+             * \brief Handles an MCPUInstruction
+             * \param i The instruction to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> i);
     };
 }
 #endif

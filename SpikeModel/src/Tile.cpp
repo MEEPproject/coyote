@@ -232,6 +232,8 @@ namespace spike_model
         if(!r->isServiced())
         {
             std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+
+            //TODO: The actual MCPU that will handle the request needs to be defined
             out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, 0), 0);
         }
         else
@@ -239,6 +241,12 @@ namespace spike_model
             //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             request_manager_->notifyAck(r);
         }
+    }
+            
+    void Tile::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
+    {
+        //TODO: The actual MCPU that will handle the request needs to be defined
+        out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, 0), 0);
     }
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,

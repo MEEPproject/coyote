@@ -9,7 +9,9 @@
 #include "Event.hpp"
 #include "EventVisitor.hpp"
 #include "CacheRequest.hpp"
+#include "ScratchpadRequest.hpp"
 #include "MCPURequest.hpp"
+#include "MCPUInstruction.hpp"
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 
@@ -67,6 +69,19 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         void handle(std::shared_ptr<spike_model::Fence> f) override;
 
         void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+        
+                
+        /*!
+         * \brief Handles an MCPUInstruction
+         * \param i The instruction to handle
+         */
+        void handle(std::shared_ptr<spike_model::MCPUInstruction> i) override;
+
+        /*!
+         * \brief Handles a scratchpad event
+         * \param f The scratchpad event to handle
+         */
+        void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
         
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
@@ -127,5 +142,11 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param r The request to submit
          */
         void submitToSparta(std::shared_ptr<spike_model::Event> r);
+
+        /*
+         * \brief Resume simulation on a core that is stalled
+         * \param core The id of the core that will resume simulation
+         */
+        void resumeCore(uint64_t core);
 };
 #endif

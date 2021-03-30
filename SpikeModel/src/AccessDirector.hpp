@@ -96,6 +96,13 @@ namespace spike_model
              */
             std::shared_ptr<NoCMessage> getDataForwardMessage(std::shared_ptr<CacheRequest> req);
 
+            /*!
+             * \brief Get a NoCMessage representing a data forward
+             * \param req The request assocaited to the message
+             * \return The NoCMessage
+             */
+            std::shared_ptr<NoCMessage> getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req);
+
         protected:
             uint64_t line_size;
 

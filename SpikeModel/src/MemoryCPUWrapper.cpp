@@ -30,12 +30,12 @@ namespace spike_model {
 			case CacheRequest::AccessType::FETCH:
 			case CacheRequest::AccessType::LOAD:
 				count_load_++;
-				std::cout << "Loading: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
+				//std::cout << "Loading: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 				break;
 			case CacheRequest::AccessType::WRITEBACK:
 			case CacheRequest::AccessType::STORE:
 				count_store_++;
-				std::cout << "Storing: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
+				//std::cout << "Storing: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 				break;
 
 		}
@@ -61,6 +61,14 @@ namespace spike_model {
 			issue_mcpu_event_.schedule(1);
 		}
 	}
+            
+
+    void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
+    {
+        printf("Memory instruction received in the MCPU\n");
+        //TODO: Something interesting :)
+        //Generate memory accesses/ scratchpad requests
+    }
 
 
 	/////////////////////////////////////
@@ -68,7 +76,7 @@ namespace spike_model {
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
 		count_requests_mc_++;
-		std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
+		//std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		mes->setServiced();
 		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getHomeTile()), 0);
 	}

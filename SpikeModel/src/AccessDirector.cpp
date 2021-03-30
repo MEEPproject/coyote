@@ -32,7 +32,13 @@ namespace spike_model
                 {
                     tile->logger_.logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
                 }
-                tile->issueLocalRequest_(r, r->getTimestamp()-tile->getClock()->currentCycle()); //MAYBE +1?
+
+                uint64_t lapse=0;
+                if(r->getTimestamp()+1>tile->getClock()->currentCycle())
+                {
+                    lapse=(r->getTimestamp()+1)-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
+                }
+                tile->issueLocalRequest_(r, lapse);
             }
             else
             {
@@ -41,7 +47,7 @@ namespace spike_model
                     tile->logger_.logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
                 }
                 //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
-                tile->issueRemoteRequest_(r, r->getTimestamp()-tile->getClock()->currentCycle());
+                tile->issueRemoteRequest_(r, (r->getTimestamp()+1)-tile->getClock()->currentCycle());
             }
         }
         else
@@ -70,7 +76,7 @@ namespace spike_model
                     {
                         tile->logger_.logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
                     }
-                    tile->out_port_noc_.send(getDataForwardMessage(r), tile->l2_line_size); 
+                    tile->out_port_noc_.send(getDataForwardMessage(r)); 
                 }
             }
         }
@@ -109,6 +115,7 @@ namespace spike_model
                     else //If ways have been disabled the ACK will be sent when all banks finish disabling
                     {
                         //SEND ACK TO MCPU
+                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
                     }
                     scratchpad_available_size=scratchpad_available_size-request_size;
 
@@ -120,6 +127,7 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
+                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -159,6 +167,7 @@ namespace spike_model
                     else //If ways have been enabled the ACK will be sent when all banks finish enabling
                     {
                         //SEND ACK TO MCPU
+                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
                     }
                 }
                 else
@@ -168,6 +177,7 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
+                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -184,6 +194,7 @@ namespace spike_model
                 else
                 {
                     //Send ACK to MCPU
+                    tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
                 }
                 break;
             }
@@ -198,6 +209,7 @@ namespace spike_model
                 else if(r->isOperandReady())
                 {
                     //Send "activate!" to Core
+                    tile->request_manager_->notifyAck(r);
                 }
                 break;
             }
@@ -321,6 +333,11 @@ namespace spike_model
         return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size, req->getSourceTile());
     }
     
+    std::shared_ptr<NoCMessage> AccessDirector::getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req)
+    {
+        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, 0);
+    }
+
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)
     {
         uint16_t destination=0;

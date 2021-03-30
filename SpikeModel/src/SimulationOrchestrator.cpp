@@ -113,7 +113,38 @@ void SimulationOrchestrator::handleSpartaEvents()
     {
         //Obtains how much sparta needs to advance. Add 1 because the  run method is not inclusive.
         uint64_t advance=spartaDelay(next_event_tick)+1;
-        spike_model->runRaw(advance);
+        std::exception_ptr eptr;
+        try
+        {
+            spike_model->runRaw(advance);
+        } 
+        catch (...) 
+        {
+            eptr = std::current_exception();
+        }
+        
+        if(eptr != std::exception_ptr())
+        {
+            std::cerr << SPARTA_CMDLINE_COLOR_ERROR "Exception while running" SPARTA_CMDLINE_COLOR_NORMAL
+                      << std::endl;
+            try 
+            {
+                std::rethrow_exception(eptr);
+            }
+            catch(const std::exception &e) 
+            {
+                std::cerr << e.what() << std::endl;
+                eptr =  std::current_exception();
+            }
+        }
+
+        // Rethrow exception if necessary
+        if(eptr != std::exception_ptr())
+        {
+            std::rethrow_exception(eptr);
+        }
+
+
         //Now the Sparta Scheduler and the Orchestrator are in sync
 
         next_event_tick=spike_model->getScheduler()->nextEventTick();
@@ -132,7 +163,7 @@ void SimulationOrchestrator::run()
     //Simulation will end when there are neither pending events nor more instructions to simulate
     while(!spike_model->getScheduler()->isFinished() || !spike_finished)
     {
-//        printf("Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
+        //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
         
         simulateInstInActiveCores();
         handleSpartaEvents();
@@ -198,6 +229,24 @@ void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> 
     request_manager->putRequest(r);
 }
 
+void SimulationOrchestrator::resumeCore(uint64_t core)
+{
+    std::vector<uint16_t>::iterator it;
+
+    it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
+
+    //If the core was stalled, make it active again
+    if (it != stalled_cores.end())
+    {
+        stalled_cores.erase(it);
+        active_cores.push_back(core);
+        if(trace_)
+        {
+            logger_.logResume(current_cycle, core, 0);
+        }
+    }
+}
+
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
 {
     if(!r->isServiced())
@@ -227,6 +276,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             {
                 std::shared_ptr<spike_model::CacheRequest> miss=pending_misses_per_core[core].front();
                 pending_misses_per_core[core].pop_front();
+                miss->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the miss actually happens
                 submitToSparta(miss);
             }
         }
@@ -234,6 +284,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
         if(is_fetch && (pending_get_vec_len[core] != NULL))
         {
+            pending_get_vec_len[core]->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the request actually happens
             submitToSparta(pending_get_vec_len[core]);
             pending_get_vec_len[core] = NULL;
         }
@@ -242,7 +293,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
 
         //Notify Spike that a request has been serviced and generate the writeback
-        std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r);
+        std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
         if(wb!=nullptr)
         {
             submitToSparta(wb);
@@ -256,20 +307,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
 
         if(can_run && !threads_in_barrier[core] && spike->isVecAvailable(core))
         {
-            std::vector<uint16_t>::iterator it;
-
-            it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
-
-            //If the core was stalled, make it active again
-            if (it != stalled_cores.end())
-            {
-                stalled_cores.erase(it);
-                active_cores.push_back(core);
-                if(trace_)
-                {
-                    logger_.logResume(current_cycle, core, 0);
-                }
-            }
+            resumeCore(core);
         }
     }
 }
@@ -303,7 +341,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
         {
             if(i != current_core)
             {
-                active_cores.push_back(i);
+                resumeCore(i);
             }
             threads_in_barrier[i] = false;
         }
@@ -364,4 +402,23 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPURequest> r)
             }
         }
     }
+}
+
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
+{
+    sparta_assert(r->isServiced());
+
+    uint64_t core=r->getCoreId();
+
+    bool can_run=spike->ackRegister(r, current_cycle);
+    if(can_run && !threads_in_barrier[core])
+    {
+        resumeCore(core);
+    }
+}
+        
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
+{
+    //printf("Hey! I got it!\n");
+    submitToSparta(i);
 }

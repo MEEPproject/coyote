@@ -199,7 +199,7 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
         {
             //FIX: This code assumes that this buildTreeShared is only for NoC
             const std::string noc_model = root_node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_model")->getAs<std::string>();
-            sparta::ResourceFactoryBase* noc_rf;
+            sparta::ResourceFactoryBase* noc_rf=unit.factory;
             if(noc_model == "functional")
                 noc_rf = &topology_->factories->functional_noc_rf;
             og_name=unit.name;
@@ -211,6 +211,7 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
             replace(node_name, to_replace_tiles_, replace_with);
             replace(human_name, to_replace_tiles_, replace_with);
             auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+            sparta_assert(noc_rf!=nullptr);
             auto rtn = new sparta::ResourceTreeNode(parent_node,
                     node_name,
                     unit.group_name,

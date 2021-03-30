@@ -22,6 +22,7 @@
 #include "Event.hpp"
 #include "EventManager.hpp"
 #include "MCPURequest.hpp"
+#include "MCPUInstruction.hpp"
 
 namespace spike_model {
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {
@@ -103,6 +104,12 @@ namespace spike_model {
 			void receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes);
 			virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+            
+            /*!
+             * \brief Handles an instruction forwarded to the MCPU
+             * \param r The instruction to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
 
 
 			//-- reporting and logging

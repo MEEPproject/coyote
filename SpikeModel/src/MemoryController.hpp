@@ -90,12 +90,12 @@ namespace spike_model
         private:
 
             sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_mcpu_
-                {&unit_port_set_, "out_mcpu"};
+                {&unit_port_set_, "out_mcpu", 1};
 
             sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_mcpu_
                 {&unit_port_set_, "in_mcpu"};
 
-            sparta::UniqueEvent<> controller_cycle_event_
+            sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
             uint64_t latency_;

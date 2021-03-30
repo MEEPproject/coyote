@@ -95,7 +95,7 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.memory_cpu&.ports.in_mc"
         },
     };
-
+    
     shared_units = {
             {
                 "noc",
