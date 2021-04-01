@@ -34,9 +34,18 @@ public:
     class CPUParameterSet : public sparta::ParameterSet{
     public:
         CPUParameterSet(sparta::TreeNode* n) : sparta::ParameterSet(n){}
-
         // Dummy configuration parameters and environment variables that affect CPU utilization
         PARAMETER(double, frequency_ghz, 1.2, "CPU Clock frequency")
+        PARAMETER(uint16_t, num_cores, 1, "The number of cores to simulate")
+        PARAMETER(uint16_t, num_threads_per_core, 1, "The number of threads per core to simulate")
+        PARAMETER(uint16_t, thread_switch_latency, 0, "Number of cycles required to make the thread runnable")
+        PARAMETER(uint16_t, num_tiles, 1, "The number of tiles to simulate")
+        PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory cpus")
+        PARAMETER(uint16_t, num_memory_controllers, 1, "The number of memory controllers")
+        PARAMETER(std::string, isa, "RV64IMAFDCV", "The RISC-V isa version to use")
+        PARAMETER(std::string, icache_config, "64:8:64", "The icache configuration")
+        PARAMETER(std::string, dcache_config, "64:8:64", "The dcache configuration")
+        PARAMETER(std::string, varch, "v128:e64:s128", "The varch to simulate")
     };
 
     //! \brief Name of this resource. Required by sparta::UnitFactory
@@ -56,6 +65,17 @@ private:
 
     //! \brief Internal configuration units of this processor
     double frequency_ghz_;
+    uint16_t num_cores_;
+    uint16_t num_threads_per_core_;
+    uint16_t thread_switch_latency_;
+    uint16_t num_tiles_;
+    uint16_t num_memory_cpus_;
+    uint16_t num_memory_controllers_;
+    std::string isa_;
+    std::string icache_config_;
+    std::string dcache_config_;
+    std::string varch_;
+
 }; // class CPU
 }  // namespace spike_model
 #endif

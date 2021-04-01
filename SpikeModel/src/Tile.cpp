@@ -27,94 +27,100 @@ namespace spike_model
         out_ports_l2_acks_(num_l2_banks_),
         out_ports_l2_reqs_(num_l2_banks_)
     {
-            for(uint16_t i=0; i<num_l2_banks_; i++)
+        sparta_assert(l2_sharing_mode_ == "tile_private" || l2_sharing_mode_ == "fully_shared", 
+            "The top.cpu.tile*.params.l2_sharing_mode must be tile_private or fully_shared");
+        sparta_assert(bank_policy_ == "page_to_bank" || bank_policy_ == "set_interleaving", 
+            "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
+        sparta_assert(scratchpad_policy_ == "page_to_bank" || scratchpad_policy_ == "set_interleaving",
+            "The top.cpu.tile*.params.scratchpad_policy must be page_to_bank or set_interleaving");
+        for(uint16_t i=0; i<num_l2_banks_; i++)
+        {
+            std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
+            std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
+            out_ports_l2_reqs_[i]=std::move(out);
+
+            out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
+            std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, out_name);
+            out_ports_l2_acks_[i]=std::move(out_ack);
+
+            std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
+            std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
+            in_ports_l2_acks_[i]=std::move(in_ack);
+            in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<Request>));
+
+            in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
+            std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
+            in_ports_l2_reqs_[i]=std::move(in_req);
+            in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<CacheRequest>));
+        }
+
+        in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
+
+        spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+        if(bank_policy_=="page_to_bank")
+        {
+            b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+        }
+        else if(bank_policy_=="set_interleaving")
+        {
+            b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+        }
+        else
+        {
+            printf("Unsupported cache data mapping policy\n");
+        }
+
+        spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+        if(scratchpad_policy_=="page_to_bank")
+        {
+            s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+        }
+        else if(scratchpad_policy_=="set_interleaving")
+        {
+            s_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+        }
+        else
+        {
+            printf("Unsupported cache data mapping policy\n");
+        }
+
+
+        spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        if(address_policy_=="open_page")
+        {
+            a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        }
+        else if(address_policy_=="close_page")
+        {
+            a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
+        }
+        else
+        {
+            printf("Unsupported address data mapping policy\n");
+        }
+
+
+        if(l2_sharing_mode_=="tile_private")
+        {
+            access_director=new PrivateL2Director(this, a_pol, b_pol, s_pol);
+        }
+        else
+        {
+            spike_model::CacheDataMappingPolicy t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            if(tile_policy_=="page_to_bank")
             {
-                std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name);
-                out_ports_l2_reqs_[i]=std::move(out);
-
-                out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
-                std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, out_name);
-                out_ports_l2_acks_[i]=std::move(out_ack);
-
-                std::string in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_ack");
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
-                in_ports_l2_acks_[i]=std::move(in_ack);
-                in_ports_l2_acks_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, notifyAck_, std::shared_ptr<Request>));
-
-                in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
-                std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
-                in_ports_l2_reqs_[i]=std::move(in_req);
-                in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<CacheRequest>));
+                t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
             }
-
-            in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
-
-            spike_model::CacheDataMappingPolicy b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-            if(bank_policy_=="page_to_bank")
+            else if(tile_policy_=="set_interleaving")
             {
-                b_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-            }
-            else if(bank_policy_=="set_interleaving")
-            {
-                b_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+                t_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
             }
             else
             {
                 printf("Unsupported cache data mapping policy\n");
             }
-
-            spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-            if(scratchpad_policy_=="page_to_bank")
-            {
-                s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-            }
-            else if(scratchpad_policy_=="set_interleaving")
-            {
-                s_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
-            }
-            else
-            {
-                printf("Unsupported cache data mapping policy\n");
-            }
-
-
-            spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-            if(address_policy_=="open_page")
-            {
-                a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-            }
-            else if(address_policy_=="close_page")
-            {
-                a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
-            }
-            else
-            {
-                printf("Unsupported address data mapping policy\n");
-            }
-
-
-            if(l2_sharing_mode_=="tile_private")
-            {
-                access_director=new PrivateL2Director(this, a_pol, b_pol, s_pol);
-            }
-            else
-            {
-                spike_model::CacheDataMappingPolicy t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-                if(tile_policy_=="page_to_bank")
-                {
-                    t_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-                }
-                else if(tile_policy_=="set_interleaving")
-                {
-                    t_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
-                }
-                else
-                {
-                    printf("Unsupported cache data mapping policy\n");
-                }
-                access_director=new SharedL2Director(this, a_pol, b_pol, t_pol, s_pol);
-            }
+            access_director=new SharedL2Director(this, a_pol, b_pol, t_pol, s_pol);
+        }
     }
 
     void Tile::issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req)

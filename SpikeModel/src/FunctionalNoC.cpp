@@ -8,6 +8,7 @@ namespace spike_model
         NoC(node, params),
         packet_latency_(params->packet_latency)
     {
+        sparta_assert(noc_model_ == "functional");
     }
 
     void FunctionalNoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)

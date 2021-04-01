@@ -13,6 +13,7 @@ namespace spike_model
         out_ports_tiles_(params->num_tiles),
         in_ports_memory_cpus_(params->num_memory_cpus),
         out_ports_memory_cpus_(params->num_memory_cpus),
+        noc_model_(params->noc_model),
         num_tiles_(params->num_tiles),
         num_memory_cpus_(params->num_memory_cpus)
     {

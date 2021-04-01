@@ -54,7 +54,6 @@ namespace spike_model
                     sparta::ParameterSet(n)
                 {
                 }
-                PARAMETER(uint64_t, latency, 100, "The latency in the memory controller")
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
             };
@@ -97,8 +96,6 @@ namespace spike_model
 
             sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
-
-            uint64_t latency_;
 
             uint64_t num_banks_;
 

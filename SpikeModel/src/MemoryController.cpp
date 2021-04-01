@@ -13,7 +13,6 @@ namespace spike_model
 
     MemoryController::MemoryController(sparta::TreeNode *node, const MemoryControllerParameterSet *p):
     sparta::Unit(node),
-    latency_(p->latency),
     num_banks_(p->num_banks),
     write_allocate_(p->write_allocate),
     banks()

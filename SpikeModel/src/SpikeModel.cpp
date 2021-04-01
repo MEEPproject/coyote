@@ -37,30 +37,8 @@ double calculateAverageOfInternalCounters(
     return agg / counters.size();
 }
 
-SpikeModel::SpikeModel(const std::string& topology,
-                                   sparta::Scheduler & scheduler,
-                                   uint32_t num_cores_per_tile,
-                                   uint32_t num_tiles,
-                                   uint32_t num_l2_banks,
-                                   uint32_t num_memory_cpus,
-                                   uint32_t num_memory_controllers,
-                                   uint32_t num_memory_banks,
-                                   std::string cmd,
-                                   std::string isa,
-                                   bool show_factories,
-                                   bool trace) :
-    sparta::app::Simulation("spike_model", &scheduler),
-    cpu_topology_(topology),
-    num_cores_per_tile_(num_cores_per_tile),
-    num_tiles_(num_tiles),
-    num_l2_banks_(num_l2_banks),
-    num_memory_cpus_(num_memory_cpus),
-    num_memory_controllers_(num_memory_controllers),
-    num_memory_banks_(num_memory_banks),
-    cmd_(cmd),
-    isa_(isa),
-    show_factories_(show_factories),
-    trace_(trace)
+SpikeModel::SpikeModel(sparta::Scheduler & scheduler) :
+    sparta::app::Simulation("spike_model", &scheduler)
 {
     // Set up the CPU Resource Factory to be available through ResourceTreeNode
     getResourceSet()->addResourceFactory<spike_model::CPUFactory>();
@@ -136,21 +114,24 @@ void SpikeModel::buildTree_()
     // TREE_BUILDING Phase.  See sparta::PhasedObject::TreePhase
     // Register all the custom stat calculation functions with (cycle)histogram nodes
 
+    // Reading general parameters
+    const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
+    // meta parameters
+    auto    trace                   = upt.get("meta.params.trace").getAs<bool>();
+    auto    show_factories          = upt.get("meta.params.show_factories").getAs<bool>();
+    auto    arch_topology           = upt.get("meta.params.architecture").getAs<std::string>();
+    // architectural parameters
+    auto    num_tiles               = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    auto    num_memory_cpus         = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
+    auto    num_memory_controllers  = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
+    auto    num_memory_banks        = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
+    auto    num_l2_banks_in_tile    = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+
+
     auto cpu_factory = getCPUFactory_();
 
-
-    printf("There are %u Memory CPUs and %u Memory Controllers.\n", num_memory_cpus_, num_memory_controllers_);
-
-    
-    //TODO: Remove this when cleaning SpikeModel constructor task will be done
-    /*
-     * Example of reading parameters from UnboundParameterTree
-     * const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
-     * std::string noc_model = upt.get("top.cpu.noc.params.noc_model");
-     */
-
-    // Set the cpu topology that will be built
-    cpu_factory->setTopology(cpu_topology_, num_tiles_, num_l2_banks_, num_memory_cpus_, num_memory_controllers_, num_memory_banks_, trace_);
+    // Set the ACME topology that will be built
+    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_memory_controllers, num_memory_banks, trace);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
@@ -165,7 +146,7 @@ void SpikeModel::buildTree_()
     cpu_factory->buildTree(getRoot());
 
     // Print the registered factories
-    if(show_factories_){
+    if(show_factories){
         std::cout << "Registered factories: \n";
         for(const auto& f : getCPUFactory_()->getResourceNames()){
             std::cout << "\t" << f << std::endl;
@@ -214,9 +195,18 @@ void SpikeModel::bindTree_()
 
 std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 {
+    // Reading general parameters
+    const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
+    auto num_memory_banks = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
+    auto num_cores = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
+    auto num_tiles = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    auto num_memory_cpus = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
+    auto num_memory_controllers = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
+    auto num_l2_banks_in_tile = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+
     spike_model::ServicedRequests s;
     std::vector<spike_model::Tile *> tiles;
-    for(std::size_t i = 0; i < num_tiles_; ++i)
+    for(std::size_t i = 0; i < num_tiles; ++i)
     {
         auto tile_node = getRoot()->getChild(std::string("cpu.tile") +
                 sparta::utils::uint32_to_str(i));
@@ -227,7 +217,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         tiles.push_back(t);
     }
 
-    std::shared_ptr<spike_model::EventManager> m=std::make_shared<spike_model::EventManager>(tiles, num_cores_per_tile_);
+    std::shared_ptr<spike_model::EventManager> m=std::make_shared<spike_model::EventManager>(tiles, num_cores/num_tiles);
 
     //std::shared_ptr<spike_model::PrivateL2Director> p=std::make_shared<spike_model::PrivateL2Director>(tiles, num_cores_per_tile_);
     //std::shared_ptr<spike_model::SharedL2Director> p=std::make_shared<spike_model::SharedL2Director>(tiles, num_cores_per_tile_);
@@ -250,13 +240,13 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 
     m->setServicedRequestsStorage(s);
 
-    for(std::size_t i = 0; i < num_tiles_; ++i)
+    for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_, bank_associativity, bank_line, num_l2_banks_, num_tiles_, num_memory_controllers_, num_memory_banks_, num_rows, num_cols);
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, num_memory_banks, num_rows, num_cols);
     }
 
-    for(std::size_t i = 0; i < num_memory_cpus_; ++i)
+    for(std::size_t i = 0; i < num_memory_cpus; ++i)
     {
         auto tile_node = getRoot()->getChild(std::string("cpu.memory_cpu") +
                 sparta::utils::uint32_to_str(i));

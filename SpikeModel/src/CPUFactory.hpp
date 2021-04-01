@@ -84,7 +84,7 @@ private:
     std::string to_replace_tiles_ {"*"};
     std::string to_replace_banks_ {"$"};
     std::string to_replace_memory_cpus_ {"&"};
-    std::string to_replace_memory_controllers_ {"&"};
+    std::string to_replace_memory_controllers_ {"#"};
     std::string to_replace_memory_banks_ {"!"};
 
     /**

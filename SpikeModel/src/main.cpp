@@ -17,6 +17,7 @@
 #include <iostream>
 #include <string> 
 #include <chrono>
+#include "stdlib.h"
 
 // User-friendly usage that correspond with sparta::app::CommandLineSimulator
 // options
@@ -32,38 +33,10 @@ const char USAGE[] =
 constexpr char VERSION_VARNAME[] = "version"; // Name of option to show version
 constexpr char DATA_FILE_VARNAME[] = "data-file"; // Name of data file given at the end of command line
 constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which are flag independent
-bool enable_smart_mcpu=false;
-
 
 int main(int argc, char **argv)
 {
     std::vector<std::string> datafiles;
-    uint32_t num_cores = 1;
-    uint32_t num_threads_per_core = 1;
-    uint64_t thread_switch_latency = 0;
-    uint32_t num_tiles = 1;
-    uint32_t num_l2_banks = 1;
-    uint32_t num_memory_cpus = 1;
-    uint32_t num_memory_controllers = 1;
-    uint32_t num_memory_banks = 8;
-    std::string application="";
-    std::string isa="RV64";
-    std::string p="1";
-    std::string t="1";
-    std::string l="0";
-    std::string ic;
-    std::string dc;
-    std::string cmd;
-    std::string varch;
-    std::string address_mapping;
-    std::string l2_sharing;
-    std::string bank_policy;
-    std::string scratchpad_policy;
-    std::string tile_policy;
-    bool fast_cache;
-    std::string noc_model;
-    bool trace=false;
-    bool enable_smart_mcpu=false;
 
     sparta::app::DefaultValues DEFAULTS;
     DEFAULTS.auto_summary_default = "on";
@@ -75,79 +48,17 @@ int main(int argc, char **argv)
         // classs can be done manually if desired. Use the source for the
         // CommandLineSimulator class as a starting point
         sparta::app::CommandLineSimulator cls(USAGE, DEFAULTS);
-        auto& app_opts = cls.getApplicationOptions();
+        // Maintain this code as an example of additional options
+        /*
+         auto& app_opts = cls.getApplicationOptions();
         app_opts.add_options()
-            /*(VERSION_VARNAME,
+            (VERSION_VARNAME,
              "produce version message",
-             "produce version message") // Brief*/
-            ("show-factories",
-             "Show the registered factories")
-            ("trace",
-             sparta::app::named_value<bool>("trace", &trace)->default_value(false),
-             "Whether tracing is enabled or not", "Whether tracing is enabled or not")
+             "produce version message") // Brief
             ("enable_smart_mcpu",
              sparta::app::named_value<bool>("enable_smart_mcpu", &enable_smart_mcpu)->default_value(false),
-             "Enable smart mcpu", "Enable smart mcpu")
-            ("isa",
-             sparta::app::named_value<std::string>("isa", &isa)->default_value("RV64IMAFDCV"),
-             "The RISC-V isa version to use", "The RISC-V isa version to use")
-            ("num_tiles",
-             sparta::app::named_value<std::uint32_t>("num_tiles", &num_tiles)->default_value(1),
-             "The number of tiles to simulate", "The number of tiles to simulate (must be a divider of the number of cores)")
-            ("p",
-             sparta::app::named_value<std::string>("NUM_CORES", &p)->default_value("1"),
-             "The total number of cores to simulate", "The number of cores to simulate")
-            ("t",
-             sparta::app::named_value<std::string>("NUM_THREADS_PER_CORE", &t)->default_value("1"),
-             "The total number of threads per core to simulate", "The number of threads per cores to simulate")
-            ("l",
-             sparta::app::named_value<std::string>("THREAD_SWITCH_LATENCY", &l)->default_value("0"),
-             "Number of cycles required to make the thread runnable", "Number of cycles required to make the thread runnable")
-            ("num_l2_banks",
-             sparta::app::named_value<std::uint32_t>("NUM_CACHE_BANKS", &num_l2_banks)->default_value(1),
-             "The number of L2 banks per tile", "The number of L2 banks per tile")
-            ("num_memory_cpus",
-             sparta::app::named_value<std::uint32_t>("NUM_MCPUS", &num_memory_cpus)->default_value(1),
-             "the number of memory cpus", "the number of memory cpus")
-            ("num_memory_controllers",
-             sparta::app::named_value<std::uint32_t>("NUM_MCS", &num_memory_controllers)->default_value(1),
-             "the number of memory controllers", "the number of memory controllers")
-            ("num_memory_banks",
-             sparta::app::named_value<std::uint32_t>("NUM_MEMORY_BANKS", &num_memory_banks)->default_value(8),
-             "The number of memory banks handled by each memory controller", "The number of memory banks")
-            ("ic",
-             sparta::app::named_value<std::string>("ic", &ic)->default_value("64:8:64"),
-             "The icache configuration", "The icache configuration")
-            ("dc",
-             sparta::app::named_value<std::string>("dc", &dc)->default_value("64:8:64"),
-             "The dcache configuration", "The dcache configuration")
-            ("cmd",
-             sparta::app::named_value<std::string>("cmd", &cmd)->default_value(""),
-             "The command to simulate", "The command to simulate")
-            ("varch",
-             sparta::app::named_value<std::string>("varch", &varch)->default_value("v128:e64:s128"),
-             "The varch to use", "The varch to use")
-            ("address_mapping_mode",
-             sparta::app::named_value<std::string>("POLICY", &address_mapping)->default_value("open_page"),
-             "The memory addressing mode", "Supported values: open_page, close_page")
-            ("l2_sharing_mode",
-             sparta::app::named_value<std::string>("POLICY", &l2_sharing)->default_value("tile_private"),
-             "The L2 sharing mode", "Supported values: tile_private, fully_shared")
-            ("bank_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &bank_policy)->default_value("set_interleaving"),
-             "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
-            ("scratchpad_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &scratchpad_policy)->default_value("set_interleaving"),
-             "The data mapping policy for the accesses to banks within a tile.", "Supported values: page_to_bank, set_interleaving")
-            ("tile_data_mapping_policy",
-             sparta::app::named_value<std::string>("POLICY", &tile_policy)->default_value("set_interleaving"),
-             "The data mapping policy for the accesses to remote tiles.", "Ignored if l2_sharing_mode=tile_private, supported values: page_to_bank, set_interleaving")
-            ("fast_cache",
-             sparta::app::named_value<bool>("TRUE/FALSE", &fast_cache)->default_value(false),
-             "Whether to use a fast L1 cache model instead of the default spike cache.", "Whether to use a fast L1 cache model instead of the default spike cache.")
-            ("noc_model",
-             sparta::app::named_value<std::string>("NOC_MODEL", &noc_model)->default_value("functional"),
-             "The noc model to use.", "Supported values: functional, simple, detailed");
+             "Enable smart mcpu", "Enable smart mcpu");
+        */
 
         // Add any positional command-line options
         // po::positional_options_description& pos_opts = cls.getPositionalOptions();
@@ -155,130 +66,72 @@ int main(int argc, char **argv)
         // pos_opts.add(TRACE_POS_VARNAME, -1); // example
 
         // Parse command line options and configure simulator
-        int err_code = 0;
-        if(!cls.parse(argc, argv, err_code)){
+        int err_code = EXIT_SUCCESS;
+        if(!cls.parse(argc, argv, err_code))
+        {
             return err_code; // Any errors already printed to cerr
         }
 
-        // Verify supported values for parameters
-        sparta_assert(noc_model == "functional", //|| noc_model == "simple" || noc_model == "detailed",
-                      "noc_model must be: functional, simple or detailed. Not: " << noc_model);
+        // Read general parameters
+        const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
+        // simulation parameters
+        auto trace                  = upt.get("meta.params.trace").getAs<bool>();
+        auto fast_cache             = upt.get("meta.params.fast_cache").getAs<bool>();
+        auto cmd                    = upt.get("meta.params.cmd").getAs<std::string>();
+        auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
+        // architectural parameters
+        auto isa                    = upt.get("top.cpu.params.isa").getAs<std::string>();
+        auto num_tiles              = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+        auto num_cores              = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
+        auto num_threads_per_core   = upt.get("top.cpu.params.num_threads_per_core").getAs<uint16_t>();
+        auto thread_switch_latency  = upt.get("top.cpu.params.thread_switch_latency").getAs<uint16_t>();
+        auto varch                  = upt.get("top.cpu.params.varch").getAs<std::string>();
+        auto icache_config          = upt.get("top.cpu.params.icache_config").getAs<std::string>();
+        auto dcache_config          = upt.get("top.cpu.params.dcache_config").getAs<std::string>();
+        auto l2bank_line_size       = upt.get("top.cpu.tile0.l2_bank0.params.line_size").getAs<uint64_t>();
+        auto mcpu_line_size         = upt.get("top.cpu.memory_cpu0.params.line_size").getAs<uint64_t>();
+        auto num_memory_cpus        = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
+        auto noc_model              = upt.get("top.cpu.noc.params.noc_model").getAs<std::string>();
 
-        bool show_factories = false;
-        auto& vm = cls.getVariablesMap();
-        if(vm.count("show-factories") != 0) {
-            show_factories = true;
-        }
-
-        num_threads_per_core = stoi(t);
-        thread_switch_latency = stoi(l);
-        num_cores=stoi(p);
-
+        // Copy parameters shared by multiple units
         std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
-        std::string num_mcpus_p  ("top.cpu.noc.params.num_memory_cpus");
-        std::string noc_model_p ("top.cpu.noc.params.noc_model");
-//        std::string spike_cores("top.cpu.spike.params.p");
-       
-        //Here I set several model paramteres using a single arg to make usage easier 
         cls.getSimulationConfiguration().processParameter(num_tiles_p, sparta::utils::uint32_to_str(num_tiles));
+        std::string num_mcpus_p ("top.cpu.noc.params.num_memory_cpus");
         cls.getSimulationConfiguration().processParameter(num_mcpus_p, sparta::utils::uint32_to_str(num_memory_cpus));
-        cls.getSimulationConfiguration().processParameter(noc_model_p, noc_model);
-//        cls.getSimulationConfiguration().processParameter(spike_cores, sparta::utils::uint32_to_str(num_cores));
+        std::string num_mcs_p ("top.cpu.params.num_memory_controllers");
+        cls.getSimulationConfiguration().processParameter(num_mcs_p, sparta::utils::uint32_to_str(num_memory_cpus));
 
-
-        std::string line_size=dc.substr(dc.rfind(":") + 1);
-
-        //Set the number of banks in each tile and the line size.
-        for(uint32_t i=0;i<num_tiles;i++)
-        {
-            std::string tile_bank("top.cpu.tile*.params.num_l2_banks");
-            size_t start_pos = tile_bank.find("*");
-            tile_bank.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(tile_bank, sparta::utils::uint32_to_str(num_l2_banks));
-        }
-
-        //Set the line size in each bank
-        for(uint32_t i=0;i<num_tiles;i++)
-        {
-            std::string tile("top.cpu.tile*.l2_bank&.params.line_size");
-            size_t start_pos = tile.find("*");
-            tile.replace(start_pos, 1, std::to_string(i));
-            for(uint32_t j=0;j<num_l2_banks;j++)
-            {
-                std::string bank=tile;
-                size_t start_pos = bank.find("&");
-                std::cout << bank;
-                bank.replace(start_pos, 1, std::to_string(j));
-                cls.getSimulationConfiguration().processParameter(bank, line_size);
-            }
-
-            std::string l2_sharing_mode("top.cpu.tile*.params.l2_sharing_mode");
-            start_pos = l2_sharing_mode.find("*");
-            l2_sharing_mode.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(l2_sharing_mode, l2_sharing);
-
-            std::string l2_bank_policy("top.cpu.tile*.params.bank_policy");
-            start_pos = l2_bank_policy.find("*");
-            l2_bank_policy.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(l2_bank_policy, bank_policy);
-
-            std::string l2_tile_policy("top.cpu.tile*.params.tile_policy");
-            start_pos = l2_tile_policy.find("*");
-            l2_tile_policy.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(l2_tile_policy, tile_policy);
-
-            std::string addr_mapping_policy("top.cpu.tile*.params.address_policy");
-            start_pos = addr_mapping_policy.find("*");
-            addr_mapping_policy.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(addr_mapping_policy, address_mapping);
-            
-            std::string scratchpad_policy_p("top.cpu.tile*.params.scratchpad_policy");
-            start_pos = scratchpad_policy_p.find("*");
-            scratchpad_policy_p.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(scratchpad_policy_p, scratchpad_policy);
-        }
-
-        for(std::size_t i = 0; i < num_memory_controllers; ++i)
-        {
-            std::string mc_bank("top.cpu.memory_controller*.params.num_banks");
-            size_t start_pos = mc_bank.find("*");
-            mc_bank.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(mc_bank, sparta::utils::uint32_to_str(num_memory_banks));
-        }
-
-
-        for(std::size_t i = 0; i < num_memory_cpus; ++i)
-        {
-            std::string mcpu_line("top.cpu.memory_cpu*.params.line_size");
-            size_t start_pos = mcpu_line.find("*");
-            mcpu_line.replace(start_pos, 1, std::to_string(i));
-            cls.getSimulationConfiguration().processParameter(mcpu_line, line_size);
-        }
-
+       // Some general parameters checks
+        std::string dcache_line_size=dcache_config.substr(dcache_config.rfind(":") + 1);
+        std::string icache_line_size=icache_config.substr(icache_config.rfind(":") + 1);
+        sparta_assert((l2bank_line_size == mcpu_line_size)            &&
+                      (l2bank_line_size == stoul(dcache_line_size)) &&
+                      (l2bank_line_size == stoul(icache_line_size)),
+            "The L1$D, L1$I, l2_bank and MCPU line size parameters must have the same value. Current values are:" << 
+            "\ntop.cpu.tile*.l2_bank*.params.line_size: " << l2bank_line_size <<
+            "\ntop.cpu.memory_cpu*.params.line_size: " << mcpu_line_size <<
+            "\nL1$D line size: " << dcache_line_size << " because top.cpu.params.dcache_config is: " << dcache_config <<
+            "\nL1$I line size: " << icache_line_size << " because top.cpu.params.icache_config is: " << icache_config);
 
         // Create the simulator
         sparta::Scheduler scheduler;
-        std::shared_ptr<SpikeModel> sim=std::make_shared<SpikeModel>("core_topology_4",
-                             scheduler,
-                             num_cores/num_tiles,
-                             num_tiles,
-                             num_l2_banks,
-                             num_memory_cpus,
-                             num_memory_controllers,
-                             num_memory_banks,
-                             application, //application to simulate
-                             isa,
-                             show_factories,
-                             trace); // run for ilimit instructions
+        std::shared_ptr<SpikeModel> sim=std::make_shared<SpikeModel>(scheduler);
 
-        std::cout << "Simulating: " << application;
+        std::cout << "Simulating: " << cmd;
 
         cls.populateSimulation(&(*sim));
         std::shared_ptr<spike_model::EventManager> request_manager=sim->createRequestManager();
 
-        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(p,t,ic,dc,isa,cmd,varch,fast_cache,enable_smart_mcpu);
-
-        //printf("Creqated\n");
+        std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(
+            std::to_string(num_cores),              // Number of cores to simulate
+            std::to_string(num_threads_per_core),   // Number of cores in each core
+            icache_config,                          // L1$I cache configuration
+            dcache_config,                          // L1$D cache configuration
+            isa,                                    // RISC-V ISA
+            cmd,                                    // Application to execute
+            varch,                                  // RISC-V Vector uArch string
+            fast_cache,                             // Use a fast L1 cache model instead of the default spike cache
+            enable_smart_mcpu);                     // Enable smart mcpu
 
         SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores,
                                num_threads_per_core, thread_switch_latency, trace);

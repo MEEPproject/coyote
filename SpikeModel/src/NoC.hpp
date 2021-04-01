@@ -53,6 +53,7 @@ namespace spike_model
             }
             PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
             PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
+            PARAMETER(std::string, noc_model, "functional", "The noc model to use (functional, simple, detailed)")
         };
 
         //! name of this resource.
@@ -88,6 +89,7 @@ namespace spike_model
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
+        std::string noc_model_;      //! The model of NoC to simulate
 
     private:
 

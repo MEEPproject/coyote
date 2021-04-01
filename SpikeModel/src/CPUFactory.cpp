@@ -202,6 +202,8 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
             sparta::ResourceFactoryBase* noc_rf=unit.factory;
             if(noc_model == "functional")
                 noc_rf = &topology_->factories->functional_noc_rf;
+            else
+                sparta_assert(false, "top.cpu.noc.params.noc_model must be: functional, simple or detailed. Not: " << noc_model);
             og_name=unit.name;
             parent_name = unit.parent_name;
             node_name = unit.name;
@@ -340,11 +342,11 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 				replace(in_port_name, to_replace_memory_cpus_, replace_with);
 				bind = true;
 			}
-			if(out_port_name.find("memory_controller&") != std::string::npos) {
+			if(out_port_name.find("memory_controller#") != std::string::npos) {
 				replace(out_port_name, to_replace_memory_controllers_, replace_with);
 				bind = true;
 			}
-			if(in_port_name.find("memory_controller&") != std::string::npos) {
+			if(in_port_name.find("memory_controller#") != std::string::npos) {
 				replace(in_port_name, to_replace_memory_controllers_, replace_with);
 				bind = true;
 			}
