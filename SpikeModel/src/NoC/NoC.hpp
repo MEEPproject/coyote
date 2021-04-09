@@ -21,8 +21,7 @@
 #include <memory>
 
 #include "NoCMessage.hpp"
-#include "LogCapable.hpp"
-#include "ServicedRequests.hpp"
+#include "../LogCapable.hpp"
 
 namespace spike_model
 {
@@ -89,12 +88,9 @@ namespace spike_model
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
-        std::string noc_model_;      //! The model of NoC to simulate
-
-    private:
-
-        uint16_t num_tiles_;         //! The number of tiles connected
-        uint16_t num_memory_cpus_;   //! The numer of memory controllers connected
+        std::string noc_model_;         //! The model of NoC to simulate
+        uint16_t    num_tiles_;         //! The number of tiles connected
+        uint16_t    num_memory_cpus_;   //! The number of memory cpus connected
         /* Statistics */
         sparta::Counter count_rx_packets_ = sparta::Counter
         (

@@ -4,8 +4,8 @@
 
 #include <memory>
 #include "NoCMessageType.hpp"
-#include "Event.hpp"
-#include "EventManager.hpp"
+#include "../Event.hpp"
+#include "../EventManager.hpp"
 
 namespace spike_model
 {
@@ -28,9 +28,11 @@ namespace spike_model
              * \param r The associated CacheRequest
              * \param t The type of the message
              * \param payload_size The size in bytes of the data to be sent
+             * \param src_port The source port that depends on the type of message
+             * \param dst_port The destination port that depends on the type of message
              * \note NoCMessages must contain fully initialized Requests, including all of the associated destination data. Handle with care.
              */
-            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint64_t payload_size, uint16_t destPort);
+            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint64_t payload_size, uint16_t src_port, uint16_t dst_port);
             
             
 
@@ -53,20 +55,41 @@ namespace spike_model
              */
             uint64_t getSize();
             
-            uint16_t getDestPort(){return destPort;}
-            void setDestPort(uint16_t destPort);
+            /*!
+             * \brief Get the destination port that depends on the type of message
+             * 
+             * @return uint16_t Destination port
+             */
+            uint16_t getDstPort(){return dst_port_;}
+
+            /*!
+             * @brief Set the destination port
+             * 
+             * @param dstPort Destination port
+             */
+            void setDstPort(uint16_t dst_port);
+
+            /*!
+             * @brief Get the source port that depends on the type of message
+             * 
+             * @return uint16_t Source port
+             */
+            uint16_t getSrcPort(){return src_port_;}
 
         private:
 
             std::shared_ptr<Event> request_;
             NoCMessageType message_type_;
             uint64_t size_;
-            uint16_t destPort;
+            uint16_t src_port_;
+            uint16_t dst_port_;
 
             //The size of message headers in bytes. TODO: MAKE IT A PARAMETER
             static const uint8_t header_size_=1;
             
             
     };
-}
-#endif
+
+} // spike_model
+
+#endif // __NOC_MESSAGE_HH__

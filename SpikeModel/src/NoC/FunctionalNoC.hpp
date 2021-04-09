@@ -44,12 +44,12 @@ namespace spike_model
         }
 
         /*! \brief Forwards a message from TILE to the actual destination using a predefined latency
-         *   \param mess The message to handle
+         *  \param mess The message to handle
          */
         void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess) override;
         
-        /*! \brief Forwards a message from a memory controller to the correct destination using a predefined latency
-         *   \param mess The message
+        /*! \brief Forwards a message from a MCPU to the correct destination using a predefined latency
+         *  \param mess The message
          */
         void handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess) override;
 

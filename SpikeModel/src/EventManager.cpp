@@ -1,6 +1,6 @@
 
 #include "EventManager.hpp"
-#include "NoCMessageType.hpp"
+#include "NoC/NoCMessageType.hpp"
 
 namespace spike_model
 {

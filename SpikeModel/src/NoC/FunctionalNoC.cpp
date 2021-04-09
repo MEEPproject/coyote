@@ -18,7 +18,7 @@ namespace spike_model
         switch(mess->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
-                out_ports_tiles_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
@@ -26,16 +26,16 @@ namespace spike_model
                 {
                     logger_.logMemoryControllerRequest(getClock()->currentCycle(), mess->getRequest()->getCoreId(), mess->getRequest()->getPC(), mess->getRequest()->getMemoryController(), mess->getRequest()->getAddress());
                 }*/
-                out_ports_memory_cpus_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             case NoCMessageType::REMOTE_L2_ACK:
-                out_ports_tiles_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
                 //std::cout << "NOC forwarding the message to MCPU" << std::endl;
-                out_ports_memory_cpus_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             default:
@@ -54,12 +54,12 @@ namespace spike_model
                 {
                     logger_.logMemoryControllerAck(getClock()->currentCycle(), mess->getRequest()->getCoreId(), mess->getRequest()->getPC(), mess->getRequest()->getHomeTile(), mess->getRequest()->getAddress());
                 }*/
-                out_ports_tiles_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
                 //std::cout << "NOC forwarding the message to Tile" << std::endl;
-                out_ports_tiles_[mess->getDestPort()]->send(mess, packet_latency_);
+                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             default:

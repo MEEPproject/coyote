@@ -1,7 +1,7 @@
 
 #include "AccessDirector.hpp"
 #include "Tile.hpp"
-#include "NoCMessage.hpp"
+#include "NoC/NoCMessage.hpp"
 #include "ScratchpadRequest.hpp"
 
 namespace spike_model
@@ -274,7 +274,7 @@ namespace spike_model
 
     std::shared_ptr<NoCMessage> AccessDirector::getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size, req->getHomeTile());
+        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_REQUEST, address_size, req->getSourceTile(), req->getHomeTile());
     }
             
     std::shared_ptr<NoCMessage> AccessDirector::getMemoryRequestMessage(std::shared_ptr<CacheRequest> req)
@@ -325,17 +325,17 @@ namespace spike_model
             size=line_size;
         }         
         
-        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size, req->getMemoryController());
+        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size, req->getHomeTile(), req->getMemoryController());
     }
      
     std::shared_ptr<NoCMessage> AccessDirector::getDataForwardMessage(std::shared_ptr<CacheRequest> req)     
     {         
-        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size, req->getSourceTile());
+        return std::make_shared<NoCMessage>(req, NoCMessageType::REMOTE_L2_ACK, line_size, req->getHomeTile(), req->getSourceTile());
     }
     
     std::shared_ptr<NoCMessage> AccessDirector::getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, 0);
+        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, 0);
     }
 
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)

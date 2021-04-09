@@ -21,7 +21,7 @@
 #include <memory>
 
 #include "EventManager.hpp"
-#include "NoCMessage.hpp"
+#include "NoC/NoCMessage.hpp"
 #include "LogCapable.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "AccessDirector.hpp"

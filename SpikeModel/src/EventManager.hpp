@@ -5,7 +5,7 @@
 #include <memory>
 #include "ServicedRequests.hpp"
 #include "Tile.hpp"
-#include "NoCMessage.hpp"
+#include "NoC/NoCMessage.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "Event.hpp"
 #include "MCPURequest.hpp"

@@ -51,6 +51,7 @@ namespace spike_model
             case NoCMessageType::MEMORY_REQUEST:
             case NoCMessageType::REMOTE_L2_ACK:
             case NoCMessageType::MCPU_REQUEST:
+            case NoCMessageType::SCRATCHPAD_ACK:
                 count_tx_packets_++;
                 break;
 

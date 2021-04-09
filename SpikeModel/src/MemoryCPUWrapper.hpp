@@ -18,7 +18,7 @@
 #include "sparta/utils/SpartaSharedPointer.hpp"
 
 #include "LogCapable.hpp"
-#include "NoCMessage.hpp"
+#include "NoC/NoCMessage.hpp"
 #include "Event.hpp"
 #include "EventManager.hpp"
 #include "MCPURequest.hpp"

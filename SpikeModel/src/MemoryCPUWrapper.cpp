@@ -54,7 +54,7 @@ namespace spike_model {
 		mes->setReturnedVecLen(mes->getRequestedVecLen());
 		std::cout << "Returning vec len from MCPU from core " << mes->getCoreId() << " and vector len " << mes->getReturnedVecLen() << std::endl;
 		mes->setServiced();
-		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getSourceTile()), 0);
+		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
 
 		mcpu_req.pop_front();
 		if(mcpu_req.size() > 0) {
@@ -78,7 +78,7 @@ namespace spike_model {
 		count_requests_mc_++;
 		//std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		mes->setServiced();
-		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getHomeTile()), 0);
+		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 	}
 
 
