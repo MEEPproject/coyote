@@ -169,7 +169,7 @@ namespace spike_model
                     //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
                     /*if(trace_)
                     {
-                        logger_.logSurrogateBankRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getHomeTile(), mes->getAddress());
+                        logger_.logSurrogateBankRequest(getclock()->currentcycle(), mes->getCoreId(), mes->getPC(), mes->getHomeTile(), mes->getAddress());
                     }*/
                     break;
 
@@ -255,9 +255,22 @@ namespace spike_model
         out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0), 0);
     }
 
-    void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-                              uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
+    void Tile::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
+    {
+        insn_latency_event_.preparePayload(r)->schedule(r->getAvailCycle() - r->getTimestamp());
+    }
+
+    void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
+               uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
+               uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank,
+               uint64_t num_cols_per_bank)
     {
         access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile,  num_tiles, num_mcs, num_banks_per_mc, num_rows_per_bank, num_cols_per_bank);
+    }
+
+    void Tile::insnLatencyCallback(const std::shared_ptr<spike_model::InsnLatencyEvent>& r)
+    {
+        r->setServiced();
+        request_manager_->notifyAck(r);
     }
 }

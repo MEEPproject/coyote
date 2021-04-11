@@ -9,6 +9,7 @@
 #include "Finish.hpp"   
 #include "MCPURequest.hpp"
 #include "MCPUInstruction.hpp"
+#include "InsnLatencyEvent.hpp"
 
 namespace spike_model
 {
@@ -41,7 +42,12 @@ namespace spike_model
     {
         handle(std::dynamic_pointer_cast<spike_model::Request>(e));
     }
-            
+
+    void EventVisitor::handle(std::shared_ptr<spike_model::InsnLatencyEvent> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Request>(e));
+    }
+
     void EventVisitor::handle(std::shared_ptr<spike_model::ScratchpadRequest> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::Request>(e));

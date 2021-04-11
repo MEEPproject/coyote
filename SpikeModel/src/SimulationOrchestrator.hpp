@@ -83,6 +83,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          */
         void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
         
+        void handle(std::shared_ptr<spike_model::InsnLatencyEvent> r) override;
+
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
@@ -102,6 +104,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
         std::vector<std::shared_ptr<spike_model::MCPURequest>> pending_get_vec_len; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
+        std::vector<std::shared_ptr<spike_model::InsnLatencyEvent>> pending_insn_latency_event; //(num_cores);
 
         uint64_t thread_barrier_cnt;
         uint64_t current_cycle;
@@ -114,6 +117,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         bool core_finished;
 
         bool trace;
+
+        bool is_fetch;
 
         /*!
          * \brief Simulate an instruction in each of the active cores
@@ -148,5 +153,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param core The id of the core that will resume simulation
          */
         void resumeCore(uint64_t core);
+
 };
 #endif

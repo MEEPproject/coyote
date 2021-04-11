@@ -39,6 +39,12 @@ namespace spike_model
             Event(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
 
             /*!
+             * \brief Constructor for Event
+             * \param c The producinging core
+             */
+            Event(uint16_t c): coreId(c){}
+
+            /*!
              * \brief Set the source tile of the request
              * \param source The source tile
              */

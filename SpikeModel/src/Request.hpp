@@ -50,6 +50,19 @@ namespace spike_model
             Request(uint64_t a, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c), address(a) {}
 
             /*!
+             * \brief Constructor for Request
+             * \param coreId The requested address
+             * \param regId The id of the destination register for the request
+             * \param regType The type of the destination register for the request
+             */
+            Request(uint16_t coreId, uint64_t regId, spike_model::Request::RegType regType):
+                             Event(coreId), regId(regId), regType(regType) {}
+
+            Request(uint16_t coreId): Event(coreId) {}
+
+            Request(uint16_t coreId, uint64_t regId): Event(coreId), regId(regId) {}
+
+            /*!
              * \brief Get the address of the request
              * \return The address of the request
              */
@@ -59,7 +72,7 @@ namespace spike_model
              * \brief Get the id of the destination register for the request
              * \return The id for the destination register
              */
-            uint8_t getDestinationRegId() const {return regId;}
+            size_t getDestinationRegId() const {return regId;}
 
             /*!
              * \brief Set the size of the store
@@ -93,7 +106,13 @@ namespace spike_model
              * \param r The id of the register
              * \param t The type of the register
              */
-            void setDestinationReg(uint8_t r, RegType t) {regId=r; regType=t;}
+            void setDestinationReg(size_t r, RegType t) {regId=r; regType=t;}
+
+            /*!
+             * \brief Get the destination register id for the request
+             * \return The id of the register
+             */
+            size_t getDestinationRegId() { return regId;}
 
             /*!
              * \brief Get the type of the destination register for the request
@@ -112,7 +131,7 @@ namespace spike_model
             uint64_t address;
             uint16_t cache_bank;
 
-            uint8_t regId;
+            size_t regId;
             RegType regType;
 
             uint16_t size;

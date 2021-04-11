@@ -16,6 +16,7 @@ namespace spike_model
     class Finish;
     class MCPURequest;
     class MCPUInstruction;
+    class InsnLatencyEvent;
 
     class EventVisitor
     {
@@ -74,8 +75,18 @@ namespace spike_model
              */
             virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r);
             
+            /*!
+             * \brief Handles a MCPU request
+             * \param r The event to handle
+             */
             virtual void handle(std::shared_ptr<spike_model::MCPURequest> e);
             
+            /*!
+             * \brief Handles a Instruction latency event request
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::InsnLatencyEvent> e);
+
             /*!
              * \brief Handles an MCPUInstruction
              * \param i The instruction to handle

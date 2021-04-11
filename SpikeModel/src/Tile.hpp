@@ -28,6 +28,7 @@
 #include "MCPURequest.hpp"
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
+#include "InsnLatencyEvent.hpp"
 
 namespace spike_model
 {
@@ -96,6 +97,8 @@ namespace spike_model
              */
             void setL2BankInfo(uint64_t size, uint64_t assoc, uint64_t line_size);
 
+            void insnLatencyCallback(const std::shared_ptr<InsnLatencyEvent>& r);
+
             /*!
              * \brief Set the request manager for the tile
              * \param r The request manager
@@ -126,9 +129,19 @@ namespace spike_model
              * \param r The event to handle
              */
             virtual void handle(std::shared_ptr<spike_model::Request> r) override;
+            
+            /*!
+             * \brief Handles a MCPU request
+             * \param r The event to handle
+             */
             virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
             
-            
+            /*!
+             * \brief Handles a InstLatency event
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::InsnLatencyEvent> r) override;
+
             /*!
              * \brief Handles an instruction forwarded to the MCPU
              * \param r The instruction to handle
@@ -172,6 +185,8 @@ namespace spike_model
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
             sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
             {&unit_port_set_, "out_noc"};
+
+            sparta::PayloadEvent<std::shared_ptr<InsnLatencyEvent>, sparta::SchedulingPhase::PostTick> insn_latency_event_ {&unit_event_set_, "insn_latency_event_", CREATE_SPARTA_HANDLER_WITH_DATA(Tile, insnLatencyCallback, std::shared_ptr<InsnLatencyEvent>)};
 
             uint64_t l2_bank_size_kbs;
             uint64_t l2_assoc;
