@@ -54,7 +54,10 @@ namespace spike_model
         {
             if(r->getType()==CacheRequest::AccessType::STORE || r->getType()==CacheRequest::AccessType::WRITEBACK)
             {
-                tile->logger_.logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
+                if(tile->trace_)
+                {
+                    tile->logger_.logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
+                }
                 tile->request_manager_->notifyAck(r);
             }
             else

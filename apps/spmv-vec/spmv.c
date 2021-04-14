@@ -8,13 +8,15 @@
 
 #include "dataset.h"
 
-//#define CHECK_RESULTS
 
+#define _BSCAST_f64             __builtin_epi_vfmv_v_f_1xf64
+#define _BSCAST_f32             __builtin_epi_vfmv_v_f_2xf32
+#define _BSCAST_i64             __builtin_epi_vmv_v_x_1xi64
 
 // 0 -> EPI
 // 1 -> MANUAL
 // 2 -> PACKED
-#define ALGORITHM 2
+#define ALGORITHM 0
 
 void SpMV_ref(double *a, long *ia, long *ja, double *x, double *y, int nrows) {
   int row, idx;
@@ -33,29 +35,26 @@ void SpMV_vector(int coreid, int ncores, double *a, long *ia, long *ja, double *
   int chunk=nrows/ncores;
   int start=coreid*(chunk);
   int end = (coreid==ncores-1) ?  nrows : start+chunk;
-  for (int row = start; row < end; row++) {
-    // requested vector length (rvl)
-    int rvl = ia[row + 1] - ia[row];
-    // granted vector length (gvl)
-    int gvl = __builtin_epi_vsetvl(rvl, __epi_e64, __epi_m1);
-    // This algorithm assumes gvl == rvl
-    //assert(rvl == gvl);
-
-    int idx = ia[row];
-    __epi_1xf64 va = __builtin_epi_vload_1xf64(&a[idx], gvl);
-
-    // We need to scale it by the size of the double
-    __epi_1xi64 v_idx_row = __builtin_epi_vload_1xi64(&ja[idx], gvl);
-    __epi_1xi64 vthree = __builtin_epi_vmv_v_x_1xi64(3, gvl);
-    v_idx_row = __builtin_epi_vsll_1xi64(v_idx_row, vthree, gvl);
-
-    __epi_1xf64 vx = __builtin_epi_vload_indexed_1xf64(x, v_idx_row, gvl);
-    __epi_1xf64 vprod = __builtin_epi_vfmul_1xf64(va, vx, gvl);
-    __epi_1xf64 vzero = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl);
-    __epi_1xf64 vsum = __builtin_epi_vfredsum_1xf64(vprod, vzero, gvl);
-    //y[row] = __builtin_epi_vgetfirst_1xf64(vsum, gvl);
-    y[row] = __builtin_epi_vfmv_f_s_1xf64(vsum);
-  }
+  for (int row = start; row < end; row++) {     
+      int nnz_row = ia[row + 1] - ia[row];    
+      int rvl, gvl;        // requested & granted vector lengths
+      int idx = ia[row];    
+      y[row]=0.0;    
+      for(int colid=0; colid<nnz_row; colid +=gvl ) 
+      {    //blocking on MAXVL
+          rvl = nnz_row - colid;
+          gvl = __builtin_epi_vsetvl(rvl, __epi_e64, __epi_m1); 
+          __epi_1xf64 va = __builtin_epi_vload_1xf64(&a[idx+colid], gvl); 
+          __epi_1xi64 v_idx_row = __builtin_epi_vload_1xi64(&ja[idx+colid], gvl);
+          __epi_1xi64 vthree = _BSCAST_i64(3, gvl);
+          v_idx_row = __builtin_epi_vsll_1xi64(v_idx_row, vthree, gvl);
+          __epi_1xf64 vx = __builtin_epi_vload_indexed_1xf64(x, v_idx_row, gvl);
+          __epi_1xf64 vprod = __builtin_epi_vfmul_1xf64(va, vx, gvl);
+          __epi_1xf64 partial_res = _BSCAST_f64(0.0, gvl);
+          partial_res = __builtin_epi_vfredsum_1xf64(vprod, partial_res, gvl);
+          y[row] += __builtin_epi_vfmv_f_s_1xf64(partial_res);   
+      }
+    }
 }
 
 void SpMV_vector_manual(
