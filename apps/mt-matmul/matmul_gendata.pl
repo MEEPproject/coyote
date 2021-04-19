@@ -61,7 +61,7 @@ sub printArray
   my $numCols = 20;
   my $arrayLen = scalar(@{$arrayRef});
 
-  print "static data_t ".$arrayName."[ARRAY_SIZE] = \n";
+  print "static data_t ".$arrayName."[ARRAY_SIZE] __attribute__((aligned (1024))) = \n";
   print "{\n";
 
   if ( $arrayLen <= $numCols ) {

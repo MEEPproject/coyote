@@ -25,10 +25,10 @@ print("#define B "+str(B))
 print("#define N "+N+"\n")
 
 print("typedef double data_t;")
-print("static data_t dx[N] = ")
+print("static data_t dx[N] __attribute__((aligned (1024))) = ")
 init_vector(int(N),A)
 
-print("static data_t dy[N] = ")
+print("static data_t dy[N] __attribute__((aligned (1024))) = ")
 init_vector(int(N),B)
 
 print("#endif //__DATASET_H")
