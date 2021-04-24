@@ -257,7 +257,7 @@ namespace spike_model
 
     void Tile::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
     {
-        insn_latency_event_.preparePayload(r)->schedule(r->getAvailCycle() - r->getTimestamp());
+        insn_latency_event_.preparePayload(r)->schedule(r->getAvailCycle() - getClock()->currentCycle());
     }
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,

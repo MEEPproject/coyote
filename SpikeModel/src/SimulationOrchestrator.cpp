@@ -168,7 +168,7 @@ void SimulationOrchestrator::run()
     while(!spike_model->getScheduler()->isFinished() || !spike_finished)
     {
         //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
-        
+
         simulateInstInActiveCores();
         handleSpartaEvents();
         bool booksim_at_next_cycle = false;
@@ -316,10 +316,20 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
               is set, there is no need to generate any event as the register value is
               already available.
             */
-            if(current_cycle < pending_insn_latency_event[core]->getAvailCycle())
+
+            std::shared_ptr<spike_model::InsnLatencyEvent> r =
+                                              pending_insn_latency_event[core];
+            if(current_cycle < r->getAvailCycle())
             {
-                pending_insn_latency_event[core]->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the request actually happens
-                submitToSparta(pending_insn_latency_event[core]);
+                r->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the request actually happens
+                submitToSparta(r);
+            }
+            else
+            {
+                //simply clear the pending register
+                spike->canResume(r->getCoreId(), r->getSrcRegId(), r->getSrcRegType(),
+                            r->getDestinationRegId(), r->getDestinationRegType(),
+                            r->getInsnLatency(), current_cycle);
             }
             pending_insn_latency_event[core] = NULL;
           }

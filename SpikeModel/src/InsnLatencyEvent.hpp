@@ -72,14 +72,5 @@ namespace spike_model
             uint64_t srcRegId;
             spike_model::Request::RegType srcRegType;
     };
-
-    struct CustomCompare
-    {
-        bool operator()(const std::shared_ptr<InsnLatencyEvent>& lhs,
-                        const std::shared_ptr<InsnLatencyEvent>& rhs) const
-        {
-            return (lhs->getDestinationRegId() < rhs->getDestinationRegId());
-        }
-    };
 }
 #endif
