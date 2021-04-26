@@ -7,6 +7,7 @@
 #include "L2SharingPolicy.hpp"
 #include "CacheDataMappingPolicy.hpp"
 #include "SimulationOrchestrator.hpp"
+#include "NoC/DetailedNoC.hpp"
 
 #include "sparta/parsers/ConfigEmitterYAML.hpp"
 #include "sparta/app/CommandLineSimulator.hpp"
@@ -133,8 +134,14 @@ int main(int argc, char **argv)
             fast_cache,                             // Use a fast L1 cache model instead of the default spike cache
             enable_smart_mcpu);                     // Enable smart mcpu
 
+        
+        // Get a NoC pointer or NULL to represent non detailed NoC models
+        spike_model::DetailedNoC* detailed_noc = NULL;
+        if (noc_model == "detailed")
+            detailed_noc = sim->getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::DetailedNoC>();
+
         SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores,
-                               num_threads_per_core, thread_switch_latency, trace);
+                               num_threads_per_core, thread_switch_latency, trace, detailed_noc);
 
         if(trace)
         {

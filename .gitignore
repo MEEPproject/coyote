@@ -10,3 +10,5 @@ apps/**/dataset.h
 apps/**/matmul
 apps/**/somier
 apps/**/spmv
+# Output files
+trace

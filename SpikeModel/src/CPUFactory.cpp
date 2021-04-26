@@ -204,6 +204,8 @@ auto spike_model::CPUFactory::buildTreeShared_(sparta::RootTreeNode* root_node,
                 noc_rf = &topology_->factories->functional_noc_rf;
             else if(noc_model == "simple")
                 noc_rf = &topology_->factories->simple_noc_rf;
+            else if(noc_model == "detailed")
+                noc_rf = &topology_->factories->detailed_noc_rf;
             else
                 sparta_assert(false, "top.cpu.noc.params.noc_model must be: functional, simple or detailed. Not: " << noc_model);
             og_name=unit.name;

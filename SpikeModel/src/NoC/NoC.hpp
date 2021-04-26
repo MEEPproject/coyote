@@ -58,6 +58,8 @@ namespace spike_model
         //! name of this resource.
         static const char name[];
 
+    protected:
+
         /*! \brief Forward a message sent from a tile to the correct destination
         *   \param mes The meesage to handle
         */
@@ -67,8 +69,6 @@ namespace spike_model
         * \param mes The message
         */
         virtual void handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mes);
- 
-    protected:
 
         /*!
          * \brief Constructor for NoC
@@ -116,7 +116,7 @@ namespace spike_model
             "NoC load (pkt/node/cycle)",    // description
             getStatisticSet(),              // context
             "received_packets/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
-        );                                  //! Basic NoC load as packets/cycles
+        );                                  //! Basic NoC load as packets/nodes/cycles
         sparta::Counter count_remote_l2_requests_ = sparta::Counter
         (
             getStatisticSet(),              // parent

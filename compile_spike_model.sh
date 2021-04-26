@@ -13,6 +13,12 @@ cd build
 make -j $threads
 cd ../../
 
+# BookSim
+
+cd booksim/booksim2
+make lib_static -j $threads
+cd ../../
+
 #SpikeModel
 
 cd SpikeModel

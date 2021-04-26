@@ -8,6 +8,7 @@
 #include "CacheBank.hpp"
 #include "NoC/FunctionalNoC.hpp"
 #include "NoC/SimpleNoC.hpp"
+#include "NoC/DetailedNoC.hpp"
 #include "MemoryCPUWrapper.hpp"
 #include "MemoryController.hpp"
 #include "MemoryBank.hpp"
@@ -31,6 +32,10 @@ struct CPUFactories{
     //! \brief Resouce Factory to build a simple NoC Unit
     sparta::ResourceFactory<spike_model::SimpleNoC,
                             spike_model::SimpleNoC::SimpleNoCParameterSet> simple_noc_rf;
+
+    //! \brief Resouce Factory to build a detailed NoC Unit
+    sparta::ResourceFactory<spike_model::DetailedNoC,
+                            spike_model::DetailedNoC::DetailedNoCParameterSet> detailed_noc_rf;
 
     //! \brief Resource Factory to build a Tile Unit
     sparta::ResourceFactory<spike_model::Tile,

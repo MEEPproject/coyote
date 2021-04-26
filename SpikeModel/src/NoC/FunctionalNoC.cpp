@@ -22,10 +22,6 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
-                /*if(trace_)
-                {
-                    logger_.logMemoryControllerRequest(getClock()->currentCycle(), mess->getRequest()->getCoreId(), mess->getRequest()->getPC(), mess->getRequest()->getMemoryController(), mess->getRequest()->getAddress());
-                }*/
                 out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
@@ -34,7 +30,10 @@ namespace spike_model
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
-                //std::cout << "NOC forwarding the message to MCPU" << std::endl;
+                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
+                break;
+
+            case NoCMessageType::SCRATCHPAD_ACK:
                 out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
@@ -50,15 +49,10 @@ namespace spike_model
         switch(mess->getType())
         {
             case NoCMessageType::MEMORY_ACK:
-                /*if(trace_)
-                {
-                    logger_.logMemoryControllerAck(getClock()->currentCycle(), mess->getRequest()->getCoreId(), mess->getRequest()->getPC(), mess->getRequest()->getHomeTile(), mess->getRequest()->getAddress());
-                }*/
                 out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             case NoCMessageType::MCPU_REQUEST:
-                //std::cout << "NOC forwarding the message to Tile" << std::endl;
                 out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 

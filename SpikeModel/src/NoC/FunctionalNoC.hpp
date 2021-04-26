@@ -16,7 +16,7 @@ namespace spike_model
          */
     public:
         /*!
-         * \class NoCParameterSet
+         * \class FunctionalNoCParameterSet
          * \brief Parameters for functional NoC
          */
         class FunctionalNoCParameterSet : public NoCParameterSet
@@ -43,6 +43,8 @@ namespace spike_model
                           << std::endl;
         }
 
+    private:
+
         /*! \brief Forwards a message from TILE to the actual destination using a predefined latency
          *  \param mess The message to handle
          */
@@ -52,8 +54,6 @@ namespace spike_model
          *  \param mess The message
          */
         void handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess) override;
-
-    private:
 
         uint16_t    packet_latency_;   //! The latency imposed to each packet
 

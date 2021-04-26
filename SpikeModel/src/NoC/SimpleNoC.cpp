@@ -2,10 +2,13 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <fstream>
 #include "SimpleNoC.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
+
+#define DESTINATION_ROUTER 1
+#define INJECTION 1
+#define LINK_TRAVERSAL 1
 
 using std::abs;
 
@@ -66,54 +69,33 @@ namespace spike_model
         switch(mess->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
+            case NoCMessageType::REMOTE_L2_ACK:
                 hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
-                            abs(tiles_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second);
+                            abs(tiles_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second) +
+                            DESTINATION_ROUTER;
                 hop_count_ += hop_count;
                 dst_count_[tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getDstPort()].second]++;
                 src_count_[tiles_coordinates_[mess->getSrcPort()].first][tiles_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_tiles_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
+                // Latency: Injection + Link traversal + hops * latency_per_hop (RC - VA - SA - ST + output_link)
+                out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
             case NoCMessageType::MEMORY_REQUEST:
-                hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
-                            abs(mcpus_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second);
-                hop_count_ += hop_count;
-                dst_count_[mcpus_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getDstPort()].second]++;
-                src_count_[tiles_coordinates_[mess->getSrcPort()].first][tiles_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
-                break;
-
-            case NoCMessageType::REMOTE_L2_ACK:
-                hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
-                            abs(tiles_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second);
-                hop_count_ += hop_count;
-                dst_count_[tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getDstPort()].second]++;
-                src_count_[tiles_coordinates_[mess->getSrcPort()].first][tiles_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_tiles_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
-                break;
-
             case NoCMessageType::MCPU_REQUEST:
-                hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
-                            abs(mcpus_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second);
-                hop_count_ += hop_count;
-                dst_count_[mcpus_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getDstPort()].second]++;
-                src_count_[tiles_coordinates_[mess->getSrcPort()].first][tiles_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
-                break;
-
             case NoCMessageType::SCRATCHPAD_ACK:
                 hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
-                            abs(mcpus_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second);
+                            abs(mcpus_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second) + 
+                            DESTINATION_ROUTER;
                 hop_count_ += hop_count;
                 dst_count_[mcpus_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getDstPort()].second]++;
                 src_count_[tiles_coordinates_[mess->getSrcPort()].first][tiles_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
+                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
             default:
                 sparta_assert(false);
         }
-        sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 2);
+        sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
     }
 
     void SimpleNoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
@@ -125,27 +107,20 @@ namespace spike_model
         switch(mess->getType())
         {
             case NoCMessageType::MEMORY_ACK:
-                hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - mcpus_coordinates_[mess->getSrcPort()].first) + 
-                            abs(tiles_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second);
-                hop_count_ += hop_count;
-                dst_count_[tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getDstPort()].second]++;
-                src_count_[mcpus_coordinates_[mess->getSrcPort()].first][mcpus_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_tiles_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
-                break;
-
             case NoCMessageType::MCPU_REQUEST:
                 hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - mcpus_coordinates_[mess->getSrcPort()].first) + 
-                            abs(tiles_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second);
+                            abs(tiles_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second) +
+                            DESTINATION_ROUTER;;
                 hop_count_ += hop_count;
                 dst_count_[tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getDstPort()].second]++;
                 src_count_[mcpus_coordinates_[mess->getSrcPort()].first][mcpus_coordinates_[mess->getSrcPort()].second]++;
-                out_ports_tiles_[mess->getDstPort()]->send(mess, hop_count*latency_per_hop_);
+                out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
             default:
                 sparta_assert(false);
         }
-        sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 2);
+        sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
     }
 
     void SimpleNoC::writePacketCountMatrix_()

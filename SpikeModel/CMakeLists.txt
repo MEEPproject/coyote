@@ -6,8 +6,9 @@ project(SPIKE_MODEL)
 
 set (GEN_DEBUG_INFO ON CACHE BOOL "Genearate debug info in compile & link -g")
 
-
 set (SPARTA_BASE ${CMAKE_CURRENT_SOURCE_DIR}/../map/sparta)
+
+set (BOOKSIM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../booksim/booksim2)
 
 if(DEFINED $ENV{SPARTA_PATH})
 	set(SPARTA_BASE $ENV{SPARTA_PATH})
@@ -28,6 +29,8 @@ include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
 include_directories (SYSTEM ${HDF5_C_INCLUDE_DIRS})
 include_directories (SYSTEM ${HDF5_INCLUDE_DIRS})
 
+# Add booksim includes
+include_directories (SYSTEM ${BOOKSIM_PATH})
 
 #
 # Debug and Release are cmake internal build types.  Release will add
@@ -130,6 +133,9 @@ set_target_properties(sparta PROPERTIES IMPORTED_LOCATION ${SPARTA_LIB}/libspart
 add_library(simdb SHARED IMPORTED)
 set_target_properties(simdb PROPERTIES IMPORTED_LOCATION ${SPARTA_LIB}/simdb/libsimdb.a)
 
+add_library(booksim SHARED IMPORTED)
+set_target_properties(booksim PROPERTIES IMPORTED_LOCATION ${BOOKSIM_PATH}/libbooksim.a)
+
 include (${SPARTA_BASE}/example/ExamplesMacros.cmake)
 
 
@@ -139,6 +145,7 @@ if(DEFINED $ENV{SPIKE_PATH})
 ENDIF()
 
 message("The sparta lib is "${SPARTA_LIB})
+message("The booksim lib is "${BOOKSIM_PATH})
 
 add_executable(spike_model
   src/main.cpp
@@ -152,6 +159,7 @@ add_executable(spike_model
   src/NoC/NoC.cpp
   src/NoC/FunctionalNoC.cpp
   src/NoC/SimpleNoC.cpp
+  src/NoC/DetailedNoC.cpp
   src/Logger.cpp
   src/Tile.cpp
   src/AccessDirector.cpp
@@ -170,5 +178,5 @@ add_executable(spike_model
 
 sparta_application(spike_model)
 
-target_link_libraries(spike_model ${SPIKE_PATH}/build/libspike_main.a  ${SPIKE_PATH}/build/libriscv.a  ${SPIKE_PATH}/build/libsoftfloat.a  ${SPIKE_PATH}/build/libfesvr.a -ldl)
+target_link_libraries(spike_model ${SPIKE_PATH}/build/libspike_main.a  ${SPIKE_PATH}/build/libriscv.a  ${SPIKE_PATH}/build/libsoftfloat.a  ${SPIKE_PATH}/build/libfesvr.a ${BOOKSIM_PATH}/libbooksim.a -ldl)
 include_directories(SYSTEM ${SPIKE_PATH}/riscv/ ${SPIKE_PATH}/build ${SPIKE_PATH}/softfloat ${SPIKE_PATH}/ ${SPIKE_PATH}/spike_main/ ./src/ ${SPARTA_BASE} ${SPARTA_BASE}/simdb/include)

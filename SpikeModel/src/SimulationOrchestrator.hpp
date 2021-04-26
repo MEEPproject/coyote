@@ -14,6 +14,7 @@
 #include "MCPUInstruction.hpp"
 #include "Finish.hpp"
 #include "LogCapable.hpp"
+#include "NoC/DetailedNoC.hpp"
 
 class SimulationOrchestrator : public spike_model::LogCapable, public spike_model::EventVisitor
 {
@@ -40,8 +41,9 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param request_manager The request manager to communicate requests to the modelled architecture
          * \param num_cores The number of simukated cores
          * \param trace Whether tracing is enabled or not
+         * \param detailed_noc A pointer to the simulated DetailedNoC or NULL if a detailed model is not used
          */
-        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace);
+        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace, spike_model::DetailedNoC* detailed_noc);
 
         /*!
          * \brief Triggers the simulation
@@ -119,6 +121,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         bool trace;
 
         bool is_fetch;
+        spike_model::DetailedNoC* detailed_noc_; //! Pointer to the NoC
 
         /*!
          * \brief Simulate an instruction in each of the active cores

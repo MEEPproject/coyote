@@ -1,6 +1,6 @@
 #include "SimulationOrchestrator.hpp"
 
-SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace):
+SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace, spike_model::DetailedNoC* detailed_noc):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
@@ -14,7 +14,8 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     timer(0),
     spike_finished(false),
     trace(trace),
-    is_fetch(false)
+    is_fetch(false),
+    detailed_noc_(detailed_noc)
 {
     for(uint16_t i=0;i<num_cores;i++)
     {
@@ -150,7 +151,6 @@ void SimulationOrchestrator::handleSpartaEvents()
 
 
         //Now the Sparta Scheduler and the Orchestrator are in sync
-
         next_event_tick=spike_model->getScheduler()->nextEventTick();
 
         //Check serviced requests
@@ -171,11 +171,22 @@ void SimulationOrchestrator::run()
         
         simulateInstInActiveCores();
         handleSpartaEvents();
+        bool booksim_at_next_cycle = false;
+        // Execute one cycle of BookSim
+        if(detailed_noc_ != NULL)
+        {
+            booksim_at_next_cycle = detailed_noc_->runBookSimCycles(1, current_cycle);
+            // BookSim can retire a packet and introduce an event that must be executed before the cycle saved in next_event_tick
+            next_event_tick=spike_model->getScheduler()->nextEventTick();
+        }
         selectRunnableThreads();
     
-        //If there are no active cores and there is a pending event
-        if(active_cores.size()==0 && next_event_tick!=sparta::Scheduler::INDEFINITE)
+        //If there are no active cores, booksim must not be executed at next cycle and there is a pending event
+        if(active_cores.size()==0 && !booksim_at_next_cycle && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1)
         {
+            // Advance BookSim clock
+            if(detailed_noc_ != NULL)
+                detailed_noc_->runBookSimCycles(next_event_tick-current_cycle-1, current_cycle); // -1 is because current cycle was executed above
             //Advance the clock to the cycle for the event
             current_cycle=next_event_tick;
         }
