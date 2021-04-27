@@ -16,6 +16,7 @@ meta:
     architecture: core_topology_4           # (std::string)     Topology to simulate (core_topology_4)
     show_factories: false                   # (bool)            Print generated factories
     trace: false                            # (bool)            Generate a trace into paraver format
+    events_to_trace: [any]                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
     cmd: apps/mt-matmul/matmul              # (std::string)     App to execute in the RISC-V simulator

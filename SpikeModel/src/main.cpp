@@ -77,6 +77,7 @@ int main(int argc, char **argv)
         const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
         // simulation parameters
         auto trace                  = upt.get("meta.params.trace").getAs<bool>();
+        auto events_of_interest     = upt.get("meta.params.events_to_trace").getAs<std::string>();
         auto fast_cache             = upt.get("meta.params.fast_cache").getAs<bool>();
         auto cmd                    = upt.get("meta.params.cmd").getAs<std::string>();
         auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
@@ -145,7 +146,31 @@ int main(int argc, char **argv)
 
         if(trace)
         {
-            orchestrator.setLogger(sim->getLogger());
+            spike_model::Logger l=sim->getLogger();
+            orchestrator.setLogger(l);
+
+            //Remove "[" and "]" from the string
+            events_of_interest.erase(0,1);
+            events_of_interest.erase(events_of_interest.size()-1);
+
+            std::string delimiter = ",";
+
+            size_t pos = 0;
+            std::string token;
+            while ((pos = events_of_interest.find(delimiter)) != std::string::npos)
+            {
+                token = events_of_interest.substr(0, pos);
+                if(token!="any")
+                {
+                    l.addEventOfInterest(token);
+                }
+                std::cout << token << "\n";
+                events_of_interest.erase(0, pos + delimiter.length());
+            }
+            if(events_of_interest!="any")
+            {
+                l.addEventOfInterest(events_of_interest); //Last event
+            }
         }
         orchestrator.run();
 

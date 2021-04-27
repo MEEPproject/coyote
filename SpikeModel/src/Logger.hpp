@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <fstream>
+#include <list>
 
 namespace spike_model
 {
@@ -205,8 +206,17 @@ namespace spike_model
              */
             void close();
 
+            /*!
+             * \brief Add an event that should be traced
+             * \param ev An event that should be traced
+             * \note If no event is added, every event is traced
+             */
+            void addEventOfInterest(std::string ev);
+
         private:
             std::shared_ptr<std::ofstream> trace_file_;
+
+            std::shared_ptr<std::list<std::string>> events_of_interest_;
 
             /*!
              * \brief Implementation: Add a generic event.
@@ -216,6 +226,12 @@ namespace spike_model
              * \param ev Event type dependant information
              */
             void log(uint64_t timestamp, uint64_t id,  uint64_t pc, std::string ev);
+
+            /*!
+             * \brief Checks if a particular event has to be traced.
+             * \return True if the event is in the list of events of interest. If the list is empty, all the events are traced
+             */
+            bool checkIfEventOfInterest(std::string ev);
     };
 }
 #endif
