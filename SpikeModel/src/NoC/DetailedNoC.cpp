@@ -1,8 +1,10 @@
 #include <fstream>
+#include <cmath>
 #include "DetailedNoC.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
 
-#define CLASS 0
+#include "booksim_config.hpp"
+
 #define INJECTION_TIME 0
 #define INVALID_PKT_ID -1
 
@@ -16,10 +18,50 @@ namespace spike_model
         stats_file_(params->stats_file)
     {
         sparta_assert(noc_model_ == "detailed");
-        sparta_assert((size_ & (size_ - 1)) == 0, "The size of the matrix must be power of two");
         sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.noc.params.mcpus_indices must be a vector");
         sparta_assert(params->mcpus_indices.getNumValues() == num_memory_cpus_, 
             "The number of elements in mcpus_indices must be equal to the number of MCPUs");
+        sparta_assert(params->network_width.isVector(), "The top.cpu.noc.params.network_width must be a vector");
+        sparta_assert(params->network_width.getNumValues() == static_cast<int>(Networks::count),
+            "The number of elements in top.cpu.noc.params.network_width must be: " << static_cast<int>(Networks::count));
+
+        // Parse BookSim configuration to extract information and checks
+        Booksim::BookSimConfig booksim_config;
+        booksim_config.ParseFile(booksim_configuration_);
+        const string topology = booksim_config.GetStr("topology");
+        if(topology == "mesh") // Implemented as kncube network in BookSim
+        {
+            int n = booksim_config.GetInt("n");
+            int k = booksim_config.GetInt("k");
+            sparta_assert(size_ == pow(k, n), "The network size must be the same in BookSim and Coyote");
+        } 
+        else if(topology == "cmesh") // Implemented as ckncube network in BookSim
+        {
+            int n = booksim_config.GetInt("n");
+            vector<int> k = booksim_config.GetIntArray("k");
+            vector<int> c = booksim_config.GetIntArray("c");
+            int booksim_size = 1;
+            for(int dim=0; dim < n; ++dim){
+                sparta_assert(c[dim] == 1, "The concentration must be equal to 1");
+                booksim_size *= k[dim];
+            }
+            sparta_assert(size_ == booksim_size, "The network size must be the same in BookSim and Coyote");
+        }
+        else
+            sparta_assert(false, "The supported networks are: mesh and cmesh");
+        // Classes checks
+        const int classes = booksim_config.GetInt("classes");
+        sparta_assert(classes == static_cast<int>(Networks::count), 
+            "The number of classes in BookSim config must be: " << static_cast<int>(Networks::count));
+        const int num_vcs = booksim_config.GetInt("num_vcs");
+        sparta_assert(num_vcs == static_cast<int>(Networks::count), 
+            "The number of num_vcs in BookSim config must be: " << static_cast<int>(Networks::count));
+        const vector<int> start_vc = booksim_config.GetIntArray("start_vc");
+        const vector<int> end_vc = booksim_config.GetIntArray("end_vc");
+        sparta_assert(start_vc.size() == static_cast<int>(Networks::count) &&
+                      end_vc.size() == static_cast<int>(Networks::count),
+                      "The number of elements in start_vc and end_vc must be: " << static_cast<int>(Networks::count));
+
         // Fill the mcpu_ and tile_to_network and network_is_mcpu vectors
         uint16_t mcpu = 0;
         uint16_t tile = 0;
@@ -61,7 +103,7 @@ namespace spike_model
     {
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromTile_(mess);
-        int size = (int) ceil(mess->getSize()*8.0/network_width_); // message size is in Bytes
+        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -72,7 +114,7 @@ namespace spike_model
                         tile_to_network_[mess->getSrcPort()],   // Source
                         tile_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        CLASS,                                  // Class of traffic
+                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
@@ -85,7 +127,7 @@ namespace spike_model
                         tile_to_network_[mess->getSrcPort()],   // Source
                         mcpu_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        CLASS,                                  // Class of traffic
+                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
@@ -94,14 +136,28 @@ namespace spike_model
                 sparta_assert(false);
         }
         pkts_map_[packet_id] = mess;
-        count_tx_flits_ += size;
+        // Update sent flits for each network
+        switch(static_cast<Networks>(mess->getTransactionType()))
+        {
+            case Networks::DATA_TRANSFER_NOC:
+                count_tx_flits_data_transfer_ += size;
+                break;
+            case Networks::ADDRESS_ONLY_NOC:
+                count_tx_flits_address_only_ += size;
+                break;
+            case Networks::CONTROL_NOC:
+                count_tx_flits_control_ += size;
+                break;
+            default:
+                sparta_assert(false);
+        }
     }
 
     void DetailedNoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromMemoryCPU_(mess);
-        int size = (int) ceil(mess->getSize()*8.0/network_width_); // message size is in Bytes
+        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -112,7 +168,7 @@ namespace spike_model
                         mcpu_to_network_[mess->getSrcPort()],   // Source
                         tile_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        CLASS,                                  // Class of traffic
+                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
@@ -121,7 +177,21 @@ namespace spike_model
                 sparta_assert(false);
         }
         pkts_map_[packet_id] = mess;
-        count_tx_flits_ += size;
+        // Update sent flits for each network
+        switch(static_cast<Networks>(mess->getTransactionType()))
+        {
+            case Networks::DATA_TRANSFER_NOC:
+                count_tx_flits_data_transfer_ += size;
+                break;
+            case Networks::ADDRESS_ONLY_NOC:
+                count_tx_flits_address_only_ += size;
+                break;
+            case Networks::CONTROL_NOC:
+                count_tx_flits_control_ += size;
+                break;
+            default:
+                sparta_assert(false);
+        }
     }
 
     bool DetailedNoC::runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle)
@@ -140,11 +210,30 @@ namespace spike_model
                 // Get the message
                 std::shared_ptr<NoCMessage> mess = pkts_map_[pkt.pid];
                 pkts_map_.erase(pkt.pid);
-                // Update statistics
-                hop_count_ += pkt.hops;
-                count_rx_flits_ += pkt.ps;
-                packet_latency_ += pkt.plat;
-                network_latency_ += pkt.nlat;
+                // Update statistics for each network
+                switch(static_cast<Networks>(mess->getTransactionType()))
+                {
+                    case Networks::DATA_TRANSFER_NOC:
+                        hop_count_data_transfer_ += pkt.hops;
+                        count_rx_flits_data_transfer_ += pkt.ps;
+                        packet_latency_data_transfer_ += pkt.plat;
+                        network_latency_data_transfer_ += pkt.nlat;
+                        break;
+                    case Networks::ADDRESS_ONLY_NOC:
+                        hop_count_address_only_ += pkt.hops;
+                        count_rx_flits_address_only_ += pkt.ps;
+                        packet_latency_address_only_ += pkt.plat;
+                        network_latency_address_only_ += pkt.nlat;
+                        break;
+                    case Networks::CONTROL_NOC:
+                        hop_count_control_ += pkt.hops;
+                        count_rx_flits_control_ += pkt.ps;
+                        packet_latency_control_ += pkt.plat;
+                        network_latency_control_ += pkt.nlat;
+                        break;
+                    default:
+                        sparta_assert(false);
+                }
                 // Send to the actual destination at NEXT_CYCLE
                 int rel_time = current_cycle + 1 - getClock()->currentCycle(); // rel_time to NEXT_CYCLE = current+1
                 sparta_assert(rel_time >= 0); // rel_time must be a cycle that sparta can run after current booksim iteration

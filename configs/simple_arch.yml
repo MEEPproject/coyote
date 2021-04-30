@@ -74,6 +74,7 @@ top:
     noc:
       params:
         noc_model: functional               # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        header_size: 27                     # (uint8_t)         The size of messages' header including ECC (in bits)
         packet_latency: 30                  # (uint16_t)        The average latency for each packet
 
 ...

@@ -25,7 +25,6 @@
 
 namespace spike_model
 {
-    //class Core; //Forward declaration
 
     class NoC : public sparta::Unit, public LogCapable
     {
@@ -53,6 +52,19 @@ namespace spike_model
             PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
             PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
             PARAMETER(std::string, noc_model, "functional", "The noc model to use (functional, simple, detailed)")
+            PARAMETER(uint8_t, header_size, 8, "The header size of the messages (in bits)")
+        };
+
+        /*!
+         * \brief The NoC networks
+         * \note The numbers defined by this enum are used in the transaction_type field of message's header and in the statistics
+         */
+        enum class Networks
+        {
+            DATA_TRANSFER_NOC   = 0,
+            ADDRESS_ONLY_NOC    = 1,
+            CONTROL_NOC         = 2,
+            count               = 3 // Number of modelled NoCs
         };
 
         //! name of this resource.
@@ -92,31 +104,75 @@ namespace spike_model
         uint16_t    num_tiles_;         //! The number of tiles connected
         uint16_t    num_memory_cpus_;   //! The number of memory cpus connected
         /* Statistics */
-        sparta::Counter count_rx_packets_ = sparta::Counter
+        sparta::Counter count_rx_packets_data_transfer_ = sparta::Counter
         (
-            getStatisticSet(),              // parent
-            "received_packets",             // name
-            "Number of packets received",   // description
-            sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of packets received by the NoC
-        sparta::Counter count_tx_packets_ = sparta::Counter
+            getStatisticSet(),                                  // parent
+            "received_packets_datatransfer",                    // name
+            "Number of packets received in Data-transfer NoC",  // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets received in data-transfer NoC
+        sparta::Counter count_tx_packets_data_transfer_ = sparta::Counter
         (
-            getStatisticSet(),              // parent
-            "sent_packets",                 // name
-            "Number of packets sent",       // description
-            sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of packets sent by the NoC
+            getStatisticSet(),                                  // parent
+            "sent_packets_datatransfer",                        // name
+            "Number of packets sent in Data-transfer NoC",      // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets sent in data-transfer NoC
+        sparta::Counter count_rx_packets_address_only_ = sparta::Counter
+        (
+            getStatisticSet(),                                  // parent
+            "received_packets_addressonly",                     // name
+            "Number of packets received in Address-only NoC",   // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets received in address-only NoC
+        sparta::Counter count_tx_packets_address_only_ = sparta::Counter
+        (
+            getStatisticSet(),                                  // parent
+            "sent_packets_addressonly",                         // name
+            "Number of packets sent in Address-only NoC",       // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets sent in address-only NoC
+        sparta::Counter count_rx_packets_control_ = sparta::Counter
+        (
+            getStatisticSet(),                                  // parent
+            "received_packets_control",                         // name
+            "Number of packets received in Control NoC",        // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets received in control NoC
+        sparta::Counter count_tx_packets_control_ = sparta::Counter
+        (
+            getStatisticSet(),                                  // parent
+            "sent_packets_control",                             // name
+            "Number of packets sent in Control NoC",            // description
+            sparta::Counter::COUNT_NORMAL                       // behavior
+        );                                                      //! The number of packets sent in control NoC
 
     private:
 
-        sparta::StatisticDef load_pkt_ = sparta::StatisticDef
+        sparta::StatisticDef load_pkt_data_transfer_ = sparta::StatisticDef
         (
-            getStatisticSet(),              // parent
-            "load_pkt",                     // name
-            "NoC load (pkt/node/cycle)",    // description
-            getStatisticSet(),              // context
-            "received_packets/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
-        );                                  //! Basic NoC load as packets/nodes/cycles
+            getStatisticSet(),                                  // parent
+            "load_pkt_datatransfer",                            // name
+            "Load in Data-transfer NoC (pkt/node/cycle)",       // description
+            getStatisticSet(),                                  // context
+            "received_packets_datatransfer/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
+        );                                                      //! Basic Data-transfer NoC load as packets/nodes/cycles
+        sparta::StatisticDef load_pkt_address_only_ = sparta::StatisticDef
+        (
+            getStatisticSet(),                                  // parent
+            "load_pkt_addressonly",                             // name
+            "Load in Address-only NoC (pkt/node/cycle)",        // description
+            getStatisticSet(),                                  // context
+            "received_packets_addressonly/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
+        );                                                      //! Basic Address-only NoC load as packets/nodes/cycles
+        sparta::StatisticDef load_pkt_control_ = sparta::StatisticDef
+        (
+            getStatisticSet(),                                  // parent
+            "load_pkt_control",                                 // name
+            "Load in Control NoC (pkt/node/cycle)",             // description
+            getStatisticSet(),                                  // context
+            "received_packets_control/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
+        );                                                      //! Basic Control NoC load as packets/nodes/cycles
         sparta::Counter count_remote_l2_requests_ = sparta::Counter
         (
             getStatisticSet(),              // parent

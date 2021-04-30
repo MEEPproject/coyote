@@ -40,12 +40,32 @@ namespace spike_model
             in_ports_memory_cpus_[i]=std::move(in);
             in_ports_memory_cpus_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, handleMessageFromMemoryCPU_, std::shared_ptr<NoCMessage>));
         }
+
+        // Set the messages' header size
+        NoCMessage::header_size = params->header_size;
     }
 
     void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
-        count_rx_packets_++;
-        count_tx_packets_++;
+        // Packet counter for each network
+        switch(static_cast<Networks>(mess->getTransactionType()))
+        {
+            case Networks::DATA_TRANSFER_NOC:
+                count_rx_packets_data_transfer_++;
+                count_tx_packets_data_transfer_++;
+                break;
+            case Networks::ADDRESS_ONLY_NOC:
+                count_rx_packets_address_only_++;
+                count_tx_packets_address_only_++;
+                break;
+            case Networks::CONTROL_NOC:
+                count_rx_packets_control_++;
+                count_tx_packets_control_++;
+                break;
+            default:
+                sparta_assert(false, "Unsupported network in NoC");
+        }
+        // Packet counter by each type
         switch(mess->getType())
         {
             case NoCMessageType::REMOTE_L2_REQUEST:
@@ -70,8 +90,25 @@ namespace spike_model
 
     void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
     {
-        count_rx_packets_++;
-        count_tx_packets_++;
+        // Packet counter for each network
+        switch(static_cast<Networks>(mess->getTransactionType()))
+        {
+            case Networks::DATA_TRANSFER_NOC:
+                count_rx_packets_data_transfer_++;
+                count_tx_packets_data_transfer_++;
+                break;
+            case Networks::ADDRESS_ONLY_NOC:
+                count_rx_packets_address_only_++;
+                count_tx_packets_address_only_++;
+                break;
+            case Networks::CONTROL_NOC:
+                count_rx_packets_control_++;
+                count_tx_packets_control_++;
+                break;
+            default:
+                sparta_assert(false, "Unsupported network in NoC");
+        }
+        // Packet counter by each type
         switch(mess->getType())
         {
             case NoCMessageType::MEMORY_ACK:

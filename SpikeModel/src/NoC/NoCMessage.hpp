@@ -32,9 +32,7 @@ namespace spike_model
              * \param dst_port The destination port that depends on the type of message
              * \note NoCMessages must contain fully initialized Requests, including all of the associated destination data. Handle with care.
              */
-            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint64_t payload_size, uint16_t src_port, uint16_t dst_port);
-            
-            
+            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint16_t payload_size, uint16_t src_port, uint16_t dst_port);
 
             /*!
              * \brief Get the type of the message
@@ -50,10 +48,10 @@ namespace spike_model
 
             
             /*!
-             * \brief Get the size of the message (including its header)
-             * \return The size
+             * \brief Get the size of the message (including its header and ECC size)
+             * \return The size in bits
              */
-            uint64_t getSize();
+            uint16_t getSize();
             
             /*!
              * \brief Get the destination port that depends on the type of message
@@ -76,18 +74,25 @@ namespace spike_model
              */
             uint16_t getSrcPort(){return src_port_;}
 
+            /*!
+             * \brief Get the transaction type that currently its the NoC network to employ
+             * \see NoC::Networks
+             * \return Transaction type (NoC Network)
+             */
+            uint8_t getTransactionType(){return transaction_type_;}
+
+            static uint8_t header_size; //! The size of the header in bits
+
         private:
 
-            std::shared_ptr<Event> request_;
-            NoCMessageType message_type_;
-            uint64_t size_;
-            uint16_t src_port_;
-            uint16_t dst_port_;
+            std::shared_ptr<Event>  request_;
+            NoCMessageType          message_type_;
+            uint16_t                size_;              //! The message size in bits
+            uint16_t                src_port_;          //! The source
+            uint16_t                dst_port_;          //! The destination
+            uint8_t                 transaction_type_;  //! The transaction type (network, payload size, ...) but currently only represents the destination network
+            uint8_t                 priority_;          //! The priority field
 
-            //The size of message headers in bytes. TODO: MAKE IT A PARAMETER
-            static const uint8_t header_size_=1;
-            
-            
     };
 
 } // spike_model
