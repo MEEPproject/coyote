@@ -100,7 +100,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<uint16_t> stalled_cores;
         std::vector<uint16_t> runnable_cores;
         std::vector<bool> waiting_on_fetch;
-        std::vector<bool> waiting_on_raw;
         std::vector<uint64_t> runnable_after;
         std::vector<uint16_t> cur_cycle_suspended_threads;
         std::vector<bool> threads_in_barrier;
@@ -165,8 +164,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param core The id of the core that will submit the operations
          */
         void submitPendingOps(uint64_t core);
-
-        /*
+        
+         /*
          * \brief run the pending simfence operation
          * \param core The id of the core that will run the simfence
          */

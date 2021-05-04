@@ -34,7 +34,6 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     pending_get_vec_len.resize(num_cores,NULL);
     pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
-    waiting_on_raw.resize(num_cores,false);
 }
         
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -64,7 +63,6 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
-        waiting_on_raw[current_core] = !success;
         core_active=success;
 
         for(std::shared_ptr<spike_model::Event> e:new_spike_events)
@@ -268,7 +266,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
     {
         if(r->getType()==spike_model::CacheRequest::AccessType::FETCH)
         {
-            //Fetch misses are serviced whether there is a raw or not. Subsequent, misses will be submitted later.
+            //Fetch misses are serviced. Subsequent, misses will be submitted later.
             submitToSparta(r);
             core_active=false;
             is_fetch = true;
@@ -278,32 +276,13 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         {
             submitToSparta(r);
         }
-        else //A core will be stalled if a RAW or fetch miss is detected
+        else //A core will be stalled if fetch miss is detected
         {
-            pending_misses_per_core[current_core].push_back(r); //Instructions are not replayed, so we have to store the misses of a raw or under a fetch, so they are serviced later
+            pending_misses_per_core[current_core].push_back(r); //Instructions are not replayed, so we have to store the misses under a fetch, so they are serviced later
         }
     }
     else
     {
-//load
-//load -> raw -> pending misses
-
-//current issue -> fetch miss and a raw on previous load ( 2 events)
-//first event is serviced, everything is correct
-//Then fetch is serviced, it does not know if anything is pending, and resume
-//so we have a RAW when we execute Load and also load data miss.
-//We put data misses in pending, as returned value is false.
-
-        //Cases -> fetch and load miss
-        //         fetch and load raw miss (could be load or compute)
-        //         fetch and raw miss
-        //         fetch and raw miss one load one latency
-        //cycle 9 load
-        //10 - fetch raw
-        //11 fetch serviced => cannot activate until raw is satisfied
-        //When the core should be made active
-        //Fetch and miss happens
-        //Fetch and raw happens
         uint16_t core=r->getCoreId();
 
         bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
@@ -333,12 +312,12 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 else
                 {
                     //clear the pending register
-                    if(spike->canResume(latency_evt->getCoreId(), latency_evt->getSrcRegId(), latency_evt->getSrcRegType(),
-                        latency_evt->getDestinationRegId(), latency_evt->getDestinationRegType(),
-                        latency_evt->getInsnLatency(), current_cycle))
-                    {
-                        waiting_on_raw[core] = false;
-                    }
+                    spike->canResume(latency_evt->getCoreId(),
+                                     latency_evt->getSrcRegId(),
+                                     latency_evt->getSrcRegType(),
+                                     latency_evt->getDestinationRegId(),
+                                     latency_evt->getDestinationRegType(),
+                                     latency_evt->getInsnLatency(), current_cycle);
                 }
             }
         }
@@ -347,16 +326,9 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         if(is_load)
         {
             can_run=spike->ackRegister(r, current_cycle);
-            if(can_run)
-              waiting_on_raw[core] = false;
         }
 
-        if(can_run)
-        {
-            if(waiting_on_fetch[core] || waiting_on_raw[core])
-                can_run = false;
-        }
-
+        can_run = can_run && !waiting_on_fetch[core];
         if(can_run)
         {
             submitPendingOps(core);
@@ -462,7 +434,7 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
 {
-    if(core_active == false) //RAW miss and a Fetch miss
+    if(is_fetch == true) //RAW miss and a Fetch miss
     {
         //Fetch miss could be handled by this. RAW miss cannot
         pending_get_vec_len[current_core] = r;
@@ -523,7 +495,6 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
             {
                 logger_.logResume(current_cycle, r->getCoreId());
             }
-            waiting_on_raw[core] = false;
         }
     }
 }
