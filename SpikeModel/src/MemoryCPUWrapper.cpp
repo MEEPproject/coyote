@@ -24,8 +24,9 @@ namespace spike_model {
 		mes->getRequest()->handle(this);
 	}
 
-	//-- A request to the MC
+	//-- A transaction for the Cache
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
+		std::cout << "MCPU: Instruction for the MC received" << std::endl;
 		switch(mes->getType()) {
 			case CacheRequest::AccessType::FETCH:
 			case CacheRequest::AccessType::LOAD:
@@ -42,33 +43,52 @@ namespace spike_model {
 		out_port_mc_.send(mes, 0);
 	}
 
-	//-- a request for the MCPU
+	//-- A memory transaction to be handled by the MCPU
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPURequest> mes) {
-			std::cout << "Requesting vec len from MCPU from core " << mes->getCoreId()  << " and vector len " << mes->getRequestedVecLen() << std::endl;
+			std::cout << "MCPU: Core " << mes->getCoreId() << " requests VVL " << mes->getRequestedVecLen() << std::endl;
 			mcpu_req.push_back(mes);
 			issue_mcpu_event_.schedule(1);
 	}
 
+	//-- An instruction for the MCPU
+    void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
+        std::cout << "MCPU: Memory instruction received. Core: " << r->getCoreId() << ", baseAddress: " << r->getBaseAddress() << std::endl;
+        switch(r->getOperation()) {
+        	case MCPUInstruction::Operation::LOAD:
+        		std::cout << "It is a load" << std::endl;
+        		break;
+        	case MCPUInstruction::Operation::STORE:
+        		std::cout << "It is a store" << std::endl;
+        		break;
+        	default:
+        		std::cout << "MCPU: I do not know, what the core wants from me!" << std::endl;
+        }
+        //TODO: Something interesting :)
+        //Generate memory accesses/ scratchpad requests
+    }
+
+
+
+
+	/////////////////////////////////////
+	//-- Command Execution
+	/////////////////////////////////////
 	void MemoryCPUWrapper::issueMCPU_() {
 		std::shared_ptr<MCPURequest> mes = mcpu_req.front();
 		mes->setReturnedVecLen(mes->getRequestedVecLen());
-		std::cout << "Returning vec len from MCPU from core " << mes->getCoreId() << " and vector len " << mes->getReturnedVecLen() << std::endl;
+		std::cout << "MCPU: Returning VVL " << mes->getReturnedVecLen() << " to core " << mes->getCoreId() << std::endl;
 		mes->setServiced();
 		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
 
+		//-- Are there any messages left in the queue?
 		mcpu_req.pop_front();
 		if(mcpu_req.size() > 0) {
 			issue_mcpu_event_.schedule(1);
 		}
 	}
-            
 
-    void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
-    {
-        printf("Memory instruction received in the MCPU\n");
-        //TODO: Something interesting :)
-        //Generate memory accesses/ scratchpad requests
-    }
+
+
 
 
 	/////////////////////////////////////
