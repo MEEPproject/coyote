@@ -25,8 +25,8 @@
 #include "LogCapable.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "AccessDirector.hpp"
-#include "MCPURequest.hpp"
-#include "MCPUInstruction.hpp"
+#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 #include "InsnLatencyEvent.hpp"
 

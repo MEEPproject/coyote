@@ -167,11 +167,11 @@ add_executable(spike_model
   src/SharedL2Director.cpp
   src/CacheRequest.cpp
   src/EventManager.cpp
-  src/MemoryCPUWrapper.cpp
-  src/MemoryController.cpp
-  src/FifoRrMemoryAccessScheduler.cpp
-  src/FifoCommandScheduler.cpp
-  src/MemoryBank.cpp
+  src/MemoryTile/MemoryCPUWrapper.cpp
+  src/MemoryTile/MemoryController.cpp
+  src/MemoryTile/FifoRrMemoryAccessScheduler.cpp
+  src/MemoryTile/FifoCommandScheduler.cpp
+  src/MemoryTile/MemoryBank.cpp
   src/EventVisitor.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc
   )

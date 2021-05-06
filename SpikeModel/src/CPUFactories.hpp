@@ -9,9 +9,9 @@
 #include "NoC/FunctionalNoC.hpp"
 #include "NoC/SimpleNoC.hpp"
 #include "NoC/DetailedNoC.hpp"
-#include "MemoryCPUWrapper.hpp"
-#include "MemoryController.hpp"
-#include "MemoryBank.hpp"
+#include "MemoryTile/MemoryCPUWrapper.hpp"
+#include "MemoryTile/MemoryController.hpp"
+#include "MemoryTile/MemoryBank.hpp"
 
 namespace spike_model{
 
@@ -25,15 +25,15 @@ struct CPUFactories{
     sparta::ResourceFactory<spike_model::CacheBank,
                           spike_model::CacheBank::CacheBankParameterSet> cache_bank_rf;
 
-    //! \brief Resouce Factory to build a functional NoC Unit
+    //! \brief Resource Factory to build a functional NoC Unit
     sparta::ResourceFactory<spike_model::FunctionalNoC,
                             spike_model::FunctionalNoC::FunctionalNoCParameterSet> functional_noc_rf;
 
-    //! \brief Resouce Factory to build a simple NoC Unit
+    //! \brief Resource Factory to build a simple NoC Unit
     sparta::ResourceFactory<spike_model::SimpleNoC,
                             spike_model::SimpleNoC::SimpleNoCParameterSet> simple_noc_rf;
 
-    //! \brief Resouce Factory to build a detailed NoC Unit
+    //! \brief Resource Factory to build a detailed NoC Unit
     sparta::ResourceFactory<spike_model::DetailedNoC,
                             spike_model::DetailedNoC::DetailedNoCParameterSet> detailed_noc_rf;
 
