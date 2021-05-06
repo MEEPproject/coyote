@@ -99,6 +99,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<uint16_t> active_cores;
         std::vector<uint16_t> stalled_cores;
         std::vector<uint16_t> runnable_cores;
+        std::vector<bool> waiting_on_fetch;
+        std::vector<bool> waiting_on_raw;
         std::vector<uint64_t> runnable_after;
         std::vector<uint16_t> cur_cycle_suspended_threads;
         std::vector<bool> threads_in_barrier;
@@ -106,7 +108,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
         std::vector<std::shared_ptr<spike_model::MCPURequest>> pending_get_vec_len; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
-        std::vector<std::shared_ptr<spike_model::InsnLatencyEvent>> pending_insn_latency_event; //(num_cores);
+        std::vector<std::list<std::shared_ptr<spike_model::InsnLatencyEvent>>> pending_insn_latency_event; //(num_cores);
 
         uint64_t thread_barrier_cnt;
         uint64_t current_cycle;
@@ -156,6 +158,12 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param core The id of the core that will resume simulation
          */
         void resumeCore(uint64_t core);
+
+        /*
+         * \brief Submit the pending operations to sparta
+         * \param core The id of the core that will submit the operations
+         */
+        void submitPendingOps(uint64_t core);
 
 };
 #endif

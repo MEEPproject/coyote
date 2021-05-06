@@ -9,6 +9,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     thread_switch_latency(thread_switch_latency),
     pending_misses_per_core(num_cores),
     simulated_instructions_per_core(num_cores),
+    pending_insn_latency_event(num_cores),
     current_cycle(1),
     next_event_tick(sparta::Scheduler::INDEFINITE),
     timer(0),
@@ -31,7 +32,8 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     thread_barrier_cnt = 0;
     threads_in_barrier.resize(num_cores,false);
     pending_get_vec_len.resize(num_cores,NULL);
-    pending_insn_latency_event.resize(num_cores,NULL);
+    waiting_on_fetch.resize(num_cores,false);
+    waiting_on_raw.resize(num_cores,false);
 }
         
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -61,6 +63,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
+        waiting_on_raw[current_core] = !success;
         core_active=success;
 
         for(std::shared_ptr<spike_model::Event> e:new_spike_events)
@@ -272,6 +275,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             submitToSparta(r);
             core_active=false;
             is_fetch = true;
+            waiting_on_fetch[current_core] = true;
         }
         else if(core_active)
         {
@@ -284,70 +288,88 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
     }
     else
     {
+//load
+//load -> raw -> pending misses
+
+//current issue -> fetch miss and a raw on previous load ( 2 events)
+//first event is serviced, everything is correct
+//Then fetch is serviced, it does not know if anything is pending, and resume
+//so we have a RAW when we execute Load and also load data miss.
+//We put data misses in pending, as returned value is false.
+
+        //Cases -> fetch and load miss
+        //         fetch and load raw miss (could be load or compute)
+        //         fetch and raw miss
+        //         fetch and raw miss one load one latency
+        //cycle 9 load
+        //10 - fetch raw
+        //11 fetch serviced => cannot activate until raw is satisfied
+        //When the core should be made active
+        //Fetch and miss happens
+        //Fetch and raw happens
         uint16_t core=r->getCoreId();
 
-        if(pending_misses_per_core[core].size()>0) //If this core has pending misses (previous fetch or raw), handle them
-        {
-            while(pending_misses_per_core[core].size()>0)
-            {
-                std::shared_ptr<spike_model::CacheRequest> miss=pending_misses_per_core[core].front();
-                pending_misses_per_core[core].pop_front();
-                miss->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the miss actually happens
-                submitToSparta(miss);
-            }
-        }
-
         bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
-
         bool can_run=false;
         if(is_fetch)
         {
-          can_run = true;
-          if(pending_get_vec_len[core] != NULL)
-          {
-            pending_get_vec_len[core]->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the request actually happens
-            submitToSparta(pending_get_vec_len[core]);
-            pending_get_vec_len[core] = NULL;
-          }
+            can_run = true;
+            waiting_on_fetch[core] = false;
 
-          if(pending_insn_latency_event[core] != NULL)
-          {
             /*If current cycle is greater than the timestamp when the requested regid
               is set, there is no need to generate any event as the register value is
               already available.
             */
-
-            std::shared_ptr<spike_model::InsnLatencyEvent> r =
-                                              pending_insn_latency_event[core];
-            if(current_cycle < r->getAvailCycle())
+            while(pending_insn_latency_event[core].size()>0)
             {
-                r->setTimestamp(current_cycle); //Update the timestamp to the current cycle, which is when the request actually happens
-                submitToSparta(r);
+                std::shared_ptr<spike_model::InsnLatencyEvent> latency_evt =
+                               pending_insn_latency_event[core].front();
+                pending_insn_latency_event[core].pop_front();
+                if(current_cycle < latency_evt->getAvailCycle())
+                {
+                    //Update the timestamp to the current cycle, which is when the
+                    //request actually happens
+                    latency_evt->setTimestamp(current_cycle);
+                    submitToSparta(latency_evt);
+                    can_run = false;
+                }
+                else
+                {
+                    //clear the pending register
+                    if(spike->canResume(latency_evt->getCoreId(), latency_evt->getSrcRegId(), latency_evt->getSrcRegType(),
+                        latency_evt->getDestinationRegId(), latency_evt->getDestinationRegType(),
+                        latency_evt->getInsnLatency(), current_cycle))
+                    {
+                        waiting_on_raw[core] = false;
+                    }
+                }
             }
-            else
-            {
-                //simply clear the pending register
-                spike->canResume(r->getCoreId(), r->getSrcRegId(), r->getSrcRegType(),
-                            r->getDestinationRegId(), r->getDestinationRegType(),
-                            r->getInsnLatency(), current_cycle);
-            }
-            pending_insn_latency_event[core] = NULL;
-          }
         }
 
         bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
+        if(is_load)
+        {
+            can_run=spike->ackRegister(r, current_cycle);
+            if(can_run)
+              waiting_on_raw[core] = false;
+        }
+
+        if(can_run)
+        {
+            if(waiting_on_fetch[core] || waiting_on_raw[core])
+                can_run = false;
+        }
+
+        if(can_run)
+        {
+            submitPendingOps(core);
+        }
 
         //Notify Spike that a request has been serviced and generate the writeback
         std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
         if(wb!=nullptr)
         {
             submitToSparta(wb);
-        }
-
-        //Ack the registers if this is a load
-        if(is_load)
-        {
-            can_run=spike->ackRegister(r, current_cycle);
         }
 
         if(can_run && !threads_in_barrier[core] && spike->isVecAvailable(core))
@@ -468,13 +490,14 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction
     submitToSparta(i);
 }
 
+//latency and fetch
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
 {
     if(!r->isServiced())
     {
         if(is_fetch)
         {
-            pending_insn_latency_event[current_core] = r;
+            pending_insn_latency_event[current_core].push_back(r);
         }
         else
         {
@@ -488,7 +511,31 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
                             r->getDestinationRegId(), r->getDestinationRegType(),
                             r->getInsnLatency(), current_cycle))
         {
-            resumeCore(r->getCoreId());
+            uint16_t core = r->getCoreId();
+            submitPendingOps(core);
+            resumeCore(core);
+            waiting_on_raw[core] = false;
         }
+    }
+}
+
+void SimulationOrchestrator::submitPendingOps(uint64_t core)
+{
+    while(pending_misses_per_core[core].size()>0)
+    {
+        std::shared_ptr<spike_model::CacheRequest> miss=pending_misses_per_core[core].front();
+        pending_misses_per_core[core].pop_front();
+
+        //Update the timestamp to the current cycle, which is when the miss actually happens
+        miss->setTimestamp(current_cycle);
+        submitToSparta(miss);
+    }
+
+    if(pending_get_vec_len[core] != NULL)
+    {
+        //Update the timestamp to the current cycle, which is when the request actually happens
+        pending_get_vec_len[core]->setTimestamp(current_cycle);
+        submitToSparta(pending_get_vec_len[core]);
+        pending_get_vec_len[core] = NULL;
     }
 }
