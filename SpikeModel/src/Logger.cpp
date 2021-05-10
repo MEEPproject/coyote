@@ -20,13 +20,20 @@ namespace spike_model
         *trace_file_ << std::dec << timestamp << "," << id << "," << std::hex << pc << "," << ev << std::endl;
     }
 
-    void Logger::logResume(uint64_t timestamp, uint64_t id, uint64_t pc)
+    void Logger::logResumeWithAddress(uint64_t timestamp, uint64_t id, uint64_t address)
     {
         std::string ev="resume";
         if(checkIfEventOfInterest(ev))
         {
-            log(timestamp, id, pc, "resume,0,0");
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
         }
+    }
+    
+    void Logger::logResume(uint64_t timestamp, uint64_t id)
+    {
+        logResumeWithAddress(timestamp, id, 0);
     }
 
     void Logger::logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
@@ -34,7 +41,9 @@ namespace spike_model
         std::string ev="l2_read";
         if(checkIfEventOfInterest(ev))
         {
-            log(timestamp, id, pc, "l2_read,"+std::to_string(address));
+            std::stringstream sstream;
+            sstream << ev  << std::hex << address;
+            log(timestamp, id, pc, "l2_read,"+sstream.str());
         }
     }
 
@@ -157,13 +166,13 @@ namespace spike_model
         }
     }
 
-    void Logger::logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    void Logger::logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address)
     {
         std::string ev="memory_operation";
         if(checkIfEventOfInterest(ev))
         {
             std::stringstream sstream;
-            sstream << ev << "," << 0 << "," << std::hex << address;
+            sstream << ev << "," << unsigned(mc) << "," << std::hex << address;
             log(timestamp, id, pc, sstream.str());
         }
     }

@@ -113,7 +113,7 @@ def intToPRV(string, event, paraver_line, last_state):
     new_value=False
     if string != "":
         base=0
-        if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced":
+        if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume":
             base=16
 
         value=int(string, base)
@@ -268,7 +268,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 else:
                     last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
-        if row[3]!="resume" and row[3]!="stall" and row[3]!="KI": #Add memory obj info
+        if (row[3]!="resume" and row[3]!="stall" and row[3]!="KI") or (row[3]=="resume" and int(row[5], 16)!=0): #Add memory obj info. stalls, KIs and resumes with value 0 have no mem info
             found=False
             for i in range(len(mem_objs)):
                 start, end=mem_objs[i]
@@ -276,6 +276,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                     paraver_line.addEvent(PrvEvents[mem_obj_name_pos], i)
                     found=True
                     break
+
 
             if not found:
                 paraver_line.addEvent(PrvEvents[mem_obj_name_pos],len(mem_objs))
@@ -366,7 +367,7 @@ def main():
     start = time.time()
 
     spikeSpartaTraceToPrv(csvfile, prvfile, prvEvents, thread_ids, args)
-    createRow(args.output_name, args.output_dir, "spike_sparta", nthreads)
+    createRow(args.output_name, args.output_dir, "core", nthreads)
     createPcf(args.output_name, args.output_dir, prvEvents)
     end = time.time()
 
