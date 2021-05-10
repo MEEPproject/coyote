@@ -7,6 +7,9 @@
 #include "../Event.hpp"
 #include "../EventManager.hpp"
 
+// Set to the biggest priority value used in all NoC networks
+#define MAX_PRIORITY_USED 3
+
 namespace spike_model
 {
     class NoCMessage
@@ -51,7 +54,7 @@ namespace spike_model
              * \brief Get the size of the message (including its header and ECC size)
              * \return The size in bits
              */
-            uint16_t getSize();
+            uint16_t getSize(){return size_;};
             
             /*!
              * \brief Get the destination port that depends on the type of message
@@ -75,11 +78,18 @@ namespace spike_model
             uint16_t getSrcPort(){return src_port_;}
 
             /*!
-             * \brief Get the transaction type that currently its the NoC network to employ
+             * \brief Get the transaction type that defines the NoC network to employ
              * \see NoC::Networks
              * \return Transaction type (NoC Network)
              */
             uint8_t getTransactionType(){return transaction_type_;}
+
+            /*!
+             * \brief Get the Priority of the message
+             * 
+             * @return Priority
+             */
+            uint8_t getPriority(){return priority_;}
 
             static uint8_t header_size; //! The size of the header in bits
 

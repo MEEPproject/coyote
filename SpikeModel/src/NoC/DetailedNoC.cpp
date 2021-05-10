@@ -1,6 +1,7 @@
 #include <fstream>
 #include <cmath>
 #include "DetailedNoC.hpp"
+#include "NoCMessage.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
 
 #include "booksim_config.hpp"
@@ -15,7 +16,8 @@ namespace spike_model
         booksim_configuration_(params->booksim_configuration),
         size_(num_tiles_ + num_memory_cpus_),
         network_width_(params->network_width),
-        stats_file_(params->stats_file)
+        stats_files_prefix_(params->stats_files_prefix),
+        pkts_map_(vector(static_cast<int>(Networks::count), map<int,shared_ptr<NoCMessage>>()))
     {
         sparta_assert(noc_model_ == "detailed");
         sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.noc.params.mcpus_indices must be a vector");
@@ -33,7 +35,7 @@ namespace spike_model
         {
             int n = booksim_config.GetInt("n");
             int k = booksim_config.GetInt("k");
-            sparta_assert(size_ == pow(k, n), "The network size must be the same in BookSim and Coyote");
+            sparta_assert(size_ == pow(k, n), "The network size must be the same in BookSim and in Coyote");
         } 
         else if(topology == "cmesh") // Implemented as ckncube network in BookSim
         {
@@ -45,22 +47,35 @@ namespace spike_model
                 sparta_assert(c[dim] == 1, "The concentration must be equal to 1");
                 booksim_size *= k[dim];
             }
-            sparta_assert(size_ == booksim_size, "The network size must be the same in BookSim and Coyote");
+            sparta_assert(size_ == booksim_size, "The network size must be the same in BookSim and in Coyote");
         }
         else
             sparta_assert(false, "The supported networks are: mesh and cmesh");
         // Classes checks
-        const int classes = booksim_config.GetInt("classes");
-        sparta_assert(classes == static_cast<int>(Networks::count), 
-            "The number of classes in BookSim config must be: " << static_cast<int>(Networks::count));
-        const int num_vcs = booksim_config.GetInt("num_vcs");
-        sparta_assert(num_vcs == static_cast<int>(Networks::count), 
-            "The number of num_vcs in BookSim config must be: " << static_cast<int>(Networks::count));
-        const vector<int> start_vc = booksim_config.GetIntArray("start_vc");
-        const vector<int> end_vc = booksim_config.GetIntArray("end_vc");
-        sparta_assert(start_vc.size() == static_cast<int>(Networks::count) &&
-                      end_vc.size() == static_cast<int>(Networks::count),
-                      "The number of elements in start_vc and end_vc must be: " << static_cast<int>(Networks::count));
+        const uint8_t classes = booksim_config.GetInt("classes");
+        uint8_t priorities = MAX_PRIORITY_USED + 1; // The number of priorities are: 0 .. MAX_PRIORITY_USED
+        sparta_assert(classes == priorities, 
+            "The number of classes in BookSim config must be: " << std::to_string(priorities));
+        // VCs checks
+        const uint8_t num_vcs = booksim_config.GetInt("num_vcs");
+        sparta_assert(num_vcs == 1 || num_vcs % priorities == 0, 
+            "The num_vcs in BookSim config must be 1 or a multiple of: " << priorities);
+        if(num_vcs > 1)
+        {
+            const vector<int> start_vc = booksim_config.GetIntArray("start_vc");
+            const vector<int> end_vc = booksim_config.GetIntArray("end_vc");
+            sparta_assert(start_vc.size() == priorities &&
+                          end_vc.size() == priorities,
+                          "The number of elements in start_vc and end_vc must be: " << priorities);
+            sparta_assert(start_vc[0] == 0, "The first VC in start_vc must be 0");
+            for(int i=1; i < priorities; ++i)
+                sparta_assert(start_vc[i] == end_vc[i-1]+1, "The position i in start_vc must be equal to end_vc[i-1]+1");
+            sparta_assert(end_vc[priorities-1] >= start_vc[priorities-1], "The latest value in end_vc must be >= than the latest value in start_vc");
+            int count = priorities;
+            for(int i=0; i < priorities; ++i)
+                count += end_vc[i] - start_vc[i];
+            sparta_assert(count == num_vcs, "The number of VCs calculated as end_vc-start_vc for the same class must be the same as the num_vcs");
+        }
 
         // Fill the mcpu_ and tile_to_network and network_is_mcpu vectors
         uint16_t mcpu = 0;
@@ -83,20 +98,46 @@ namespace spike_model
         }
         sparta_assert(mcpu_to_network_.size() == num_memory_cpus_);
         sparta_assert(tile_to_network_.size() == num_tiles_);
-        booksim_wrapper_ = new Booksim::BooksimWrapper(booksim_configuration_);
+
+        // Create the wrappers for the NoC networks
+        for(int n=0; n < static_cast<int>(Networks::count); ++n)
+            booksim_wrappers_.push_back(new Booksim::BooksimWrapper(booksim_configuration_));
+        sparta_assert(booksim_wrappers_.size() == static_cast<int>(Networks::count));
     }
 
     DetailedNoC::~DetailedNoC()
     {
         // Print booksim statistics at the end of the execution
         std::ofstream booksim_stats;
-        booksim_stats.open(stats_file_);
-        booksim_wrapper_->PrintStats(booksim_stats);
-        booksim_stats.close();
+        for(int n=0; n < static_cast<int>(Networks::count); ++n)
+        {
+            string filename = stats_files_prefix_;
+            switch(static_cast<Networks>(n))
+            {
+                case Networks::DATA_TRANSFER_NOC:
+                    filename += "_datatransfer";
+                    break;
+                case Networks::ADDRESS_ONLY_NOC:
+                    filename += "_addressonly";
+                    break;
+                case Networks::CONTROL_NOC:
+                    filename += "_control";
+                    break;
+                default:
+                    sparta_assert(false);
+            }
+            filename += ".txt";
+            booksim_stats.open(filename);
+            booksim_wrappers_[n]->PrintStats(booksim_stats);
+            booksim_stats.close();
+            // Check a missed in-flight packet
+            sparta_assert(pkts_map_[n].size() == 0);
+        }
 
-        delete booksim_wrapper_;
+        // Delete BookSim wrappers
+        for(int i=static_cast<int>(Networks::count)-1; i >= 0; --i)
+            delete booksim_wrappers_[i];
         debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
-        sparta_assert(pkts_map_.size() == 0); // Check a missed in-flight packet
     }
 
     void DetailedNoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
@@ -107,27 +148,32 @@ namespace spike_model
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
+            // VAS -> VAS messages
             case NoCMessageType::REMOTE_L2_REQUEST:
             case NoCMessageType::REMOTE_L2_ACK:
                 while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrapper_->GeneratePacket(
+                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
                         tile_to_network_[mess->getSrcPort()],   // Source
                         tile_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
+                        mess->getPriority(),                    // Class of traffic -> Priority
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
 
+            // VAS -> MCPU messages
             case NoCMessageType::MEMORY_REQUEST:
+            case NoCMessageType::MEMORY_REQUEST_LOAD:
+            case NoCMessageType::MEMORY_REQUEST_STORE:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
+            case NoCMessageType::SCRATCHPAD_DATA_REPLY:
                 while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrapper_->GeneratePacket(
+                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
                         tile_to_network_[mess->getSrcPort()],   // Source
                         mcpu_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
+                        mess->getPriority(),                    // Class of traffic -> Priority
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
@@ -135,7 +181,7 @@ namespace spike_model
             default:
                 sparta_assert(false);
         }
-        pkts_map_[packet_id] = mess;
+        pkts_map_[mess->getTransactionType()][packet_id] = mess;
         // Update sent flits for each network
         switch(static_cast<Networks>(mess->getTransactionType()))
         {
@@ -161,14 +207,16 @@ namespace spike_model
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
+            // MCPU -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
+            case NoCMessageType::SCRATCHPAD_COMMAND:
                 while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrapper_->GeneratePacket(
+                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
                         mcpu_to_network_[mess->getSrcPort()],   // Source
                         tile_to_network_[mess->getDstPort()],   // Destination
                         size,                                   // Number of flits
-                        mess->getTransactionType(),             // Class of traffic -> Network -> Represented as VC
+                        mess->getPriority(),                    // Class of traffic -> Priority
                         INJECTION_TIME                          // Injection time to add
                     );
                 break;
@@ -176,7 +224,7 @@ namespace spike_model
             default:
                 sparta_assert(false);
         }
-        pkts_map_[packet_id] = mess;
+        pkts_map_[mess->getTransactionType()][packet_id] = mess;
         // Update sent flits for each network
         switch(static_cast<Networks>(mess->getTransactionType()))
         {
@@ -196,63 +244,75 @@ namespace spike_model
 
     bool DetailedNoC::runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle)
     {
-        bool run_booksim_at_next_cycle = true; // Just after a retired packet or after be called with multiple cycles
+        vector<bool> run_booksim_at_next_cycle = vector(static_cast<int>(Networks::count), true); // Just after a retired packet or after be called with multiple cycles
         
         if(SPARTA_EXPECT_TRUE(cycles == 1)) // Run one cycle
         {
-            Booksim::BooksimWrapper::RetiredPacket pkt;
-            // Run BookSim
-            booksim_wrapper_->RunCycles(cycles);
-            // Retire packet (if there)
-            pkt = booksim_wrapper_->RetirePacket();
-            if(pkt.pid != INVALID_PKT_ID)
+            for(int n=0; n < static_cast<int>(Networks::count); ++n)
             {
-                // Get the message
-                std::shared_ptr<NoCMessage> mess = pkts_map_[pkt.pid];
-                pkts_map_.erase(pkt.pid);
-                // Update statistics for each network
-                switch(static_cast<Networks>(mess->getTransactionType()))
+                Booksim::BooksimWrapper::RetiredPacket pkt;
+                // Run BookSim
+                booksim_wrappers_[n]->RunCycles(cycles);
+                // Retire packet (if there)
+                pkt = booksim_wrappers_[n]->RetirePacket();
+                if(pkt.pid != INVALID_PKT_ID)
                 {
-                    case Networks::DATA_TRANSFER_NOC:
-                        hop_count_data_transfer_ += pkt.hops;
-                        count_rx_flits_data_transfer_ += pkt.ps;
-                        packet_latency_data_transfer_ += pkt.plat;
-                        network_latency_data_transfer_ += pkt.nlat;
-                        break;
-                    case Networks::ADDRESS_ONLY_NOC:
-                        hop_count_address_only_ += pkt.hops;
-                        count_rx_flits_address_only_ += pkt.ps;
-                        packet_latency_address_only_ += pkt.plat;
-                        network_latency_address_only_ += pkt.nlat;
-                        break;
-                    case Networks::CONTROL_NOC:
-                        hop_count_control_ += pkt.hops;
-                        count_rx_flits_control_ += pkt.ps;
-                        packet_latency_control_ += pkt.plat;
-                        network_latency_control_ += pkt.nlat;
-                        break;
-                    default:
-                        sparta_assert(false);
-                }
-                // Send to the actual destination at NEXT_CYCLE
-                int rel_time = current_cycle + 1 - getClock()->currentCycle(); // rel_time to NEXT_CYCLE = current+1
-                sparta_assert(rel_time >= 0); // rel_time must be a cycle that sparta can run after current booksim iteration
-                if(network_is_mcpu_[pkt.dst])
-                    out_ports_memory_cpus_[mess->getDstPort()]->send(mess, rel_time); // to MCPU
-                else
-                    out_ports_tiles_[mess->getDstPort()]->send(mess, rel_time);       // to TILE
-            } 
-            else // If there is no retired packet, BookSim may not have an event on the next cycle
-                run_booksim_at_next_cycle = booksim_wrapper_->CheckInFlightPackets();
+                    // Get the message
+                    std::shared_ptr<NoCMessage> mess = pkts_map_[n][pkt.pid];
+                    sparta_assert(mess->getTransactionType() == n);
+                    sparta_assert(mess->getPriority() == pkt.c);
+                    pkts_map_[n].erase(pkt.pid);
+                    // Update statistics for each network
+                    switch(static_cast<Networks>(n))
+                    {
+                        case Networks::DATA_TRANSFER_NOC:
+                            hop_count_data_transfer_ += pkt.hops;
+                            count_rx_flits_data_transfer_ += pkt.ps;
+                            packet_latency_data_transfer_ += pkt.plat;
+                            network_latency_data_transfer_ += pkt.nlat;
+                            break;
+                        case Networks::ADDRESS_ONLY_NOC:
+                            hop_count_address_only_ += pkt.hops;
+                            count_rx_flits_address_only_ += pkt.ps;
+                            packet_latency_address_only_ += pkt.plat;
+                            network_latency_address_only_ += pkt.nlat;
+                            break;
+                        case Networks::CONTROL_NOC:
+                            hop_count_control_ += pkt.hops;
+                            count_rx_flits_control_ += pkt.ps;
+                            packet_latency_control_ += pkt.plat;
+                            network_latency_control_ += pkt.nlat;
+                            break;
+                        default:
+                            sparta_assert(false);
+                    }
+                    // Send to the actual destination at NEXT_CYCLE
+                    int rel_time = current_cycle + 1 - getClock()->currentCycle(); // rel_time to NEXT_CYCLE = current+1
+                    sparta_assert(rel_time >= 0); // rel_time must be a cycle that sparta can run after current booksim iteration
+                    if(network_is_mcpu_[pkt.dst])
+                        out_ports_memory_cpus_[mess->getDstPort()]->send(mess, rel_time); // to MCPU
+                    else
+                        out_ports_tiles_[mess->getDstPort()]->send(mess, rel_time);       // to TILE
+                } 
+                else // If there is no retired packet, BookSim may not have an event on the next cycle
+                    run_booksim_at_next_cycle[n] = booksim_wrappers_[n]->CheckInFlightPackets();
+            }
         }
         else // Advance BookSim simulation time
         {
-            sparta_assert(!booksim_wrapper_->CheckInFlightPackets());
-            sparta_assert(cycles);
-            booksim_wrapper_->UpdateSimTime(cycles);
+            for(int n=0; n < static_cast<int>(Networks::count); ++n)
+            {
+                sparta_assert(!booksim_wrappers_[n]->CheckInFlightPackets());
+                sparta_assert(cycles);
+                booksim_wrappers_[n]->UpdateSimTime(cycles);
+            }
         }
-
-        return run_booksim_at_next_cycle;
+        
+        // Return if any NoC network needs to run BookSim at the next cycle
+        bool any_network_needs_to_run_at_next_cycle = false;
+        for(int n=0; n < static_cast<int>(Networks::count) && !any_network_needs_to_run_at_next_cycle; ++n)
+            any_network_needs_to_run_at_next_cycle |= run_booksim_at_next_cycle[n];
+        return any_network_needs_to_run_at_next_cycle;
     }
 
 } // spike_model

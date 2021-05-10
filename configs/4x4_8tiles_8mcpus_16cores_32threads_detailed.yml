@@ -78,6 +78,6 @@ top:
         booksim_configuration: configs/booksim/4x4_mesh_iq.cfg  # (std::string)   The average latency for each packet
         mcpus_indices: [0,3,4,7,8,11,12,15] # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
         network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
-        stats_file: booksim_stats.txt       # (std::string)
+        stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
 
 ...

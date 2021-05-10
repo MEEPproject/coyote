@@ -26,7 +26,7 @@ namespace spike_model {
 
 	//-- A transaction for the Cache
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
-		std::cout << "MCPU: Instruction for the MC received" << std::endl;
+		//std::cout << "MCPU: Instruction for the MC received" << std::endl;
 		switch(mes->getType()) {
 			case CacheRequest::AccessType::FETCH:
 			case CacheRequest::AccessType::LOAD:
