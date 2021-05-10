@@ -192,8 +192,8 @@ __attribute__((noinline)) void emit_event()
 
 void compute_forces_prevec(int coreid, int ncores, int n, double (*X)[n][n][n], double (*F)[n][n][n])
 {
-   int chunk=(n-2/ncores);
-   int start=coreid*(chunk)+1;
+   int chunk=((n-1)/ncores);
+   int start=coreid*(chunk);
    int end = (coreid==ncores-1) ?  n-1 : start+chunk;
    for (int i=start; i<end; i++) {
       for (int j=1; j<n-1; j++) {

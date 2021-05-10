@@ -22,13 +22,13 @@ int err;
 int thread_entry(int cid, int nc)
 {
    int ntsteps;
-ntsteps = 10;
+ntsteps = 2;
 
-   printf ("Problem size = %d, steps = %d\n", N, ntsteps);
+  // printf ("Problem size = %d, steps = %d\n", N, ntsteps);
 
    double (*F_ref)[N][N][N];
 
-   printf("Set initial speed\n");
+   //printf("Set initial speed\n");
 //   V[2][N/2][N/2][N/2] = 0.1;  
 //   V[1][N/2][N/2][N/2] = 0.1;  
 //   V[0][N/2][N/2][N/2] = 0.1;  V[1][N/2][N/2][N/2] = 0.1;  V[2][N/2][N/2][N/2] = 0.1;  
@@ -38,14 +38,15 @@ ntsteps = 10;
 
    int nt;
    for (nt=0; nt <ntsteps-1; nt++) {
-      if(nt%10 == 0) {
-        print_state (N, X, Xcenter, nt);
-      }
+      //if(nt%10 == 0) {
+        //print_state (N, X, Xcenter, nt);
+      //}
 
 //      boundary(N, X, V);
 //      printf ("\nCorrected Positions\n"); print_4D(N, "X", X); printf ("\n");
       Xcenter[0]=0, Xcenter[1]=0; Xcenter[2]=0;   //reset aggregate stats
-      clear_4D(N, F);
+      
+      clear_4D(cid, nc, N, F);
 
 #ifdef SEQ
       compute_forces(N, X, F);
@@ -53,21 +54,35 @@ ntsteps = 10;
       velocities(N, V, A, dt);
       positions(N, X, V, dt);
 #else
+      
+      simfence();
+      
       compute_forces_prevec(cid, nc, N, X, F); // printf ("Computed forces\n"); print_4D(N, "F", F); printf ("\n");
       simfence();
+      
       accel_intr  (cid, nc, N, A, F, M);       // printf ("Computed Accelerations\n"); print_4D(N, "A", A); printf ("\n");
       simfence();
+      
       vel_intr  (cid, nc, N, V, A, dt);        // printf ("Computed Velocities\n"); print_4D(N, "V", V); printf ("\n");
       simfence();
-//      vel_intr  (N, X, V, dt);        // printf ("Computed Positions\n"); print_4D(N, "X", X); printf ("\n");
+
+      //      vel_intr  (N, X, V, dt);        // printf ("Computed Positions\n"); print_4D(N, "X", X); printf ("\n");
       pos_intr  (cid, nc, N, X, V, dt);        // printf ("Computed Positions\n"); print_4D(N, "X", X); printf ("\n");
       simfence();
 
 #endif
-      compute_stats(N, X, Xcenter);
+      if(cid==0)
+      {
+	      printf("Computing stats\n");
+      	compute_stats(N, X, Xcenter);//This performs a reduction, so hard to parallelize in baremetal
+      }
 //      print_prv_record();
    }
 	//printf ("\tV= %f, %f, %f\t\t X= %f, %f, %f\n",
 		//V[0][N/2][N/2][N/2], V[1][N/2][N/2][N/2], V[2][N/2][N/2][N/2], 
 	        //X[0][N/2][N/2][N/2], X[1][N/2][N/2][N/2], X[2][N/2][N/2][N/2]);
+   if(cid==0)
+   {
+      exit(X[0]);
+   }
 }

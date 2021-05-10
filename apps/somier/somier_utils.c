@@ -74,10 +74,15 @@ void test_4D_result(int n, double (*y)[n][n][n], double (*y_ref)[n][n][n])
    if (nerrs == 0) printf ("Result ok !!!\n");
 }
 
-void clear_4D(int n, double (*X)[n][n][n])
+void clear_4D(int coreid, int ncores, int n, double (*X)[n][n][n])
 {
    int i, j, k;
-   for (i = 0; i<n; i++) 
+  
+   int chunk=n/ncores;
+   int start=coreid*(chunk);
+   int end = (coreid==ncores-1) ?  n : start+chunk;
+
+   for (i = start; i<end; i++) 
       for (j = 0; j<n; j++)
          for (k = 0; k<n; k++) { 
             X[0][i][j][k] = 0.0; X[1][i][j][k] = 0.0; X[2][i][j][k] = 0.0;
@@ -104,12 +109,12 @@ void print_prv_record() {
 
 
 void  print_state(int n, double (*X)[n][n][n], double Xcenter[3], int nt){
-   printf ("t=%d\t", nt);
-   printf ("XC= %f,%f,%f X[n/2-1] = %f,%f,%f  X[n/2] = %f,%f,%f V[n/2+1] = %f,%f,%f \n",
-            Xcenter[0], Xcenter[1], Xcenter[2],
-            X[0][n/2-1][n/2][n/2], X[1][n/2-1][n/2][n/2], X[2][n/2-1][n/2][n/2],
-            X[0][n/2][n/2][n/2], X[1][n/2][n/2][n/2], X[2][n/2][n/2][n/2],
-            X[0][n/2+1][n/2][n/2], X[1][n/2+1][n/2][n/2], X[2][n/2+1][n/2][n/2]);
+   //printf ("t=%d\t", nt);
+   //printf ("XC= %f,%f,%f X[n/2-1] = %f,%f,%f  X[n/2] = %f,%f,%f V[n/2+1] = %f,%f,%f \n",
+   //         Xcenter[0], Xcenter[1], Xcenter[2],
+    //        X[0][n/2-1][n/2][n/2], X[1][n/2-1][n/2][n/2], X[2][n/2-1][n/2][n/2],
+    //        X[0][n/2][n/2][n/2], X[1][n/2][n/2][n/2], X[2][n/2][n/2][n/2],
+   //         X[0][n/2+1][n/2][n/2], X[1][n/2+1][n/2][n/2], X[2][n/2+1][n/2][n/2]);
 //            F[0][n/2][n/2][n/2], F[1][n/2][n/2][n/2], F[2][n/2][n/2][n/2],
 //            V[0][n/2][n/2][n/2], V[1][n/2][n/2][n/2], V[2][n/2][n/2][n/2]);
 //        printf ("\n ");
