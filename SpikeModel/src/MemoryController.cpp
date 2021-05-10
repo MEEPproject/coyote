@@ -28,6 +28,11 @@ namespace spike_model
         count_requests_++;
         uint64_t bank=mes->getMemoryBank();
         sched->putRequest(mes, bank);
+        if(trace_)
+        {
+            logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
+        }
+
         if(idle_ & sched->hasIdleBanks())
         {
             controller_cycle_event_.schedule();
@@ -76,6 +81,11 @@ namespace spike_model
         {
             uint64_t bank_to_schedule=sched->getNextBank();
             std::shared_ptr<CacheRequest> request_to_schedule=sched->getRequest(bank_to_schedule);
+            if(trace_)
+            {
+                logger_.logMemoryControllerOperation(getClock()->currentCycle(), request_to_schedule->getCoreId(), request_to_schedule->getPC(), request_to_schedule->getMemoryController(), request_to_schedule->getAddress());
+
+            }
             uint64_t row_to_schedule=request_to_schedule->getRow();
 
             std::shared_ptr<BankCommand> com;

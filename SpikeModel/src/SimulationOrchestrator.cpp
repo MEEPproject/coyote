@@ -255,10 +255,6 @@ void SimulationOrchestrator::resumeCore(uint64_t core)
     {
         stalled_cores.erase(it);
         active_cores.push_back(core);
-        if(trace_)
-        {
-            logger_.logResume(current_cycle, core, 0);
-        }
     }
 }
 
@@ -353,6 +349,10 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         if(can_run && !threads_in_barrier[core] && spike->isVecAvailable(core))
         {
             resumeCore(core);
+            if(trace_)
+            {
+                logger_.logResumeWithAddress(current_cycle, core, r->getAddress());
+            }
         }
     }
 }
@@ -387,6 +387,10 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
             if(i != current_core)
             {
                 resumeCore(i);
+                if(trace_)
+                {
+                    logger_.logResume(current_cycle, i);
+                }
             }
             threads_in_barrier[i] = false;
         }
@@ -459,12 +463,15 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadReque
     if(can_run && !threads_in_barrier[core])
     {
         resumeCore(core);
+        if(trace_)
+        {
+            logger_.logResume(current_cycle, core);
+        }
     }
 }
         
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
 {
-    //printf("Hey! I got it!\n");
     submitToSparta(i);
 }
 
@@ -489,6 +496,10 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
                             r->getInsnLatency(), current_cycle))
         {
             resumeCore(r->getCoreId());
+            if(trace_)
+            {
+                logger_.logResume(current_cycle, r->getCoreId());
+            }
         }
     }
 }

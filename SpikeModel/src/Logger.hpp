@@ -20,9 +20,16 @@ namespace spike_model
              * \brief Add a resume event to the trace. This means that a core is no longer stalled
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
              */
-            void logResume(uint64_t timestamp, uint64_t id, uint64_t pc);
+            void logResume(uint64_t timestamp, uint64_t id);
+
+            /*!
+             * \brief Add a resume event to the trace. This means that a core is no longer stalled
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param address The address that has been serviced and is resuming execution
+             */
+            void logResumeWithAddress(uint64_t timestamp, uint64_t id, uint64_t address);
 
             /*!
              * \brief Add an L2 Read event to the trace
@@ -142,9 +149,10 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
              * \param pc The PC of the instruction related to the event the event
+             * \param mc The destination memory controller
              * \param address The address in the request
              */
-            void logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            void logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address);
 
             /*!
              * \brief Add an event representing an acknowledgement to memory controller request
