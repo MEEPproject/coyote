@@ -7,8 +7,8 @@
 #include "ScratchpadRequest.hpp" 
 #include "Fence.hpp"   
 #include "Finish.hpp"   
-#include "MCPURequest.hpp"
-#include "MCPUInstruction.hpp"
+#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUInstruction.hpp"
 #include "InsnLatencyEvent.hpp"
 
 namespace spike_model

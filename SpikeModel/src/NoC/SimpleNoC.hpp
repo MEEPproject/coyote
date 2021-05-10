@@ -31,7 +31,7 @@ namespace spike_model
                 NoCParameterSet(node)
             {
             }
-            PARAMETER(uint16_t, latency_per_hop, 5, "The latency for each hop (router + output_link)")
+            PARAMETER(uint16_t, latency_per_hop, 4, "The latency for each hop (router + output_link)")
             PARAMETER(uint16_t, x_size, 2, "The size of X dimension")
             PARAMETER(uint16_t, y_size, 1, "The size of Y dimension")
             PARAMETER(vector<string>, mcpus_location, {"0.0"}, "The coordinates of MCPUs in the NoC mesh like [X.Y,3.0] ordered by MCPU")

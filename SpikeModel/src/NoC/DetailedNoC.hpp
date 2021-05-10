@@ -8,6 +8,7 @@
 using std::string;
 using std::vector;
 using std::map;
+using std::shared_ptr;
 
 namespace spike_model
 {
@@ -37,7 +38,7 @@ namespace spike_model
             PARAMETER(string, booksim_configuration, "4x4_mesh_iq.cfg", "The configuration file to load by BookSim")
             PARAMETER(vector<uint16_t>, mcpus_indices, {0}, "The indices of MCPUs in the network ordered by MCPU")
             PARAMETER(vector<uint16_t>, network_width, vector<uint16_t>({584,80,80}), "Physical channel width for the networks (bits)")
-            PARAMETER(string, stats_file, "booksim_stats.txt", "The prefix of the booksim output stats file")
+            PARAMETER(string, stats_files_prefix, "booksimstats", "The prefix of the booksim output statistics file")
         };
 
         /*!
@@ -70,23 +71,23 @@ namespace spike_model
          * \brief Forwards a message from TILE to the actual destination using BookSim
          * \param mess The message to handle
          */
-        void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess) override;
+        void handleMessageFromTile_(const shared_ptr<NoCMessage> & mess) override;
         
         /*! 
          * \brief Forwards a message from a MCPU to the correct destination using BookSim
          * \param mess The message to handle
          */
-        void handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess) override;
+        void handleMessageFromMemoryCPU_(const shared_ptr<NoCMessage> & mess) override;
 
         string                                  booksim_configuration_;     //! The configuration file to load in BookSim
-        Booksim::BooksimWrapper*                booksim_wrapper_;           //! BookSim library pointer
+        vector<Booksim::BooksimWrapper*>        booksim_wrappers_;          //! BookSim library pointer for each NoC network
         uint16_t                                size_;                      //! The network size
         vector<uint16_t>                        mcpu_to_network_;           //! The network ids of mcpus
         vector<uint16_t>                        tile_to_network_;           //! The network ids of tiles
         vector<bool>                            network_is_mcpu_;           //! A network id is a MCPU or a TILE
         vector<uint16_t>                        network_width_;             //! Physical channel width (bits)
-        string                                  stats_file_;                //! The prefix of the output statistics file
-        map<int,std::shared_ptr<NoCMessage>>    pkts_map_;                  //! Map that contains in-flight packets and their messages
+        string                                  stats_files_prefix_;        //! The prefix of the output statistics files
+        vector<map<int,shared_ptr<NoCMessage>>> pkts_map_;                  //! Map that contains in-flight packets and their messages
         sparta::Counter                         hop_count_data_transfer_ = sparta::Counter
         (
             getStatisticSet(),                                  // parent

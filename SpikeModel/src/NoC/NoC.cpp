@@ -74,6 +74,12 @@ namespace spike_model
             case NoCMessageType::MEMORY_REQUEST:
                 count_memory_requests_++;
                 break;
+            case NoCMessageType::MEMORY_REQUEST_LOAD:
+                count_memory_requests_load_++;
+                break;
+            case NoCMessageType::MEMORY_REQUEST_STORE:
+                count_memory_requests_store_++;
+                break;
             case NoCMessageType::REMOTE_L2_ACK:
                 count_remote_l2_acks_++;
                 break;
@@ -82,6 +88,9 @@ namespace spike_model
                 break;
             case NoCMessageType::SCRATCHPAD_ACK:
                 count_scratchpad_acks_++;
+                break;
+            case NoCMessageType::SCRATCHPAD_DATA_REPLY:
+                count_scratchpad_data_replies_++;
                 break;
             default:
                 sparta_assert(false, "Unsupported message received from a Tile!!!");
@@ -117,8 +126,11 @@ namespace spike_model
             case NoCMessageType::MCPU_REQUEST:
                 count_mcpu_requests_++;
                 break;
+            case NoCMessageType::SCRATCHPAD_COMMAND:
+                count_scratchpad_commands_++;
+                break;
             default:
-                sparta_assert(false, "Unsupported message received from a Memory Controller!!!");
+                sparta_assert(false, "Unsupported message received from a MCPU!!!");
         }
     }
 

@@ -175,46 +175,74 @@ namespace spike_model
         );                                                      //! Basic Control NoC load as packets/nodes/cycles
         sparta::Counter count_remote_l2_requests_ = sparta::Counter
         (
-            getStatisticSet(),              // parent
-            "remote_l2_requests",           // name
-            "Number of Remote_L2_Request",  // description
-            sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of Remote_L2_Requests forwarded by NoC
+            getStatisticSet(),                  // parent
+            "remote_l2_requests",               // name
+            "Number of Remote_L2_Request",      // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Remote_L2_Requests forwarded by NoC
+        sparta::Counter count_memory_requests_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "memory_requests",                  // name
+            "Number of Memory_Request",         // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory_Requests forwarded by NoC
+        sparta::Counter count_memory_requests_load_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "memory_requests_load",             // name
+            "Number of Memory_Request_Load",    // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory_Requests_Load forwarded by NoC
+        sparta::Counter count_memory_requests_store_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "memory_requests_store",            // name
+            "Number of Memory_Request_Store",   // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory_Requests_Store forwarded by NoC
         sparta::Counter count_remote_l2_acks_ = sparta::Counter
         (
             getStatisticSet(),              // parent
             "remote_l2_acks",               // name
             "Number of Remote_L2_Acks",     // description
             sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of Remote_L2_Acks forwarded by NoC
-        sparta::Counter count_memory_requests_ = sparta::Counter
-        (
-            getStatisticSet(),              // parent
-            "memory_requests",              // name
-            "Number of Memory_Request",     // description
-            sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of Memory_Requests forwarded by NoC
+        );                                                      //! The number of Remote_L2_Acks forwarded by NoC
         sparta::Counter count_memory_acks_ = sparta::Counter
         (
             getStatisticSet(),              // parent
             "memory_acks",                  // name
             "Number of Memory_Acks",        // description
             sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of Memory_Acks forwarded by NoC
+        );                                                      //! The number of Memory_Acks forwarded by NoC
         sparta::Counter count_mcpu_requests_ = sparta::Counter
         (
             getStatisticSet(),              // parent
             "mcpu_requests",                // name
             "Number of MCPU_Requests",      // description
             sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of MCPU_Requests forwarded by NoC
+        );                                                      //! The number of MCPU_Requests forwarded by NoC
         sparta::Counter count_scratchpad_acks_ = sparta::Counter
         (
             getStatisticSet(),              // parent
             "scratchpad_acks",              // name
             "Number of Scratchpad_Acks",    // description
             sparta::Counter::COUNT_NORMAL   // behavior
-        );                                  //! The number of Scratchpad_Acks forwarded by NoC
+        );                                                      //! The number of Scratchpad_Acks forwarded by NoC
+        sparta::Counter count_scratchpad_data_replies_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "scratchpad_data_replies",          // name
+            "Number of Scratchpad_Data_Reply",  // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Scratchpad_Data_Reply forwarded by NoC
+        sparta::Counter count_scratchpad_commands_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "scratchpad_commands",              // name
+            "Number of Scratchpad_Command",     // description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Scratchpad_Commands forwarded by NoC
 
     };
 
