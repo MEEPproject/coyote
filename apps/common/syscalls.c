@@ -61,11 +61,13 @@ void __attribute__((noreturn)) tohost_exit(uintptr_t code)
 
 uintptr_t __attribute__((weak)) handle_trap(uintptr_t cause, uintptr_t epc, uintptr_t regs[32])
 {
+  printf("\e[31mExiting through trap with cause %lu and epc %#lx\e[0m\n", cause, epc);
   tohost_exit(1337);
 }
 
 void exit(int code)
 {
+  printf("\e[32mNormal exit with code %d\e[0m\n", code);
   tohost_exit(code);
 }
 
