@@ -32,6 +32,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     thread_barrier_cnt = 0;
     threads_in_barrier.resize(num_cores,false);
     pending_get_vec_len.resize(num_cores,NULL);
+    pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
     waiting_on_raw.resize(num_cores,false);
 }
@@ -387,6 +388,18 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
 {
+    if(is_fetch)
+    {
+        pending_simfence[current_core] = f;
+    }
+    else
+    {
+        runPendingSimfence(current_core);
+    }
+}
+
+void SimulationOrchestrator::runPendingSimfence(uint64_t core)
+{
     //set the thread_barrier_cnt to number of threads, if not already set
     if(thread_barrier_cnt == 0)
     {
@@ -404,21 +417,27 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
     {
         //last thread arrived
         thread_barrier_cnt = 0;
+        uint64_t my_core_gp = core/num_threads_per_core;
         for(uint32_t i = 0; i < num_cores;i++)
         {
-            if(i != current_core)
+            std::vector<uint16_t>::iterator it;
+            it=std::find(stalled_cores.begin(), stalled_cores.end(), i);
+            if(it != stalled_cores.end())  //Check if i is not already in active core
             {
                 resumeCore(i);
                 if(trace_)
                 {
                     logger_.logResume(current_cycle, i);
                 }
+                //The below condition makes sure that the thread from the core-group
+                //in which 'core' belongs, is also made active
+                if(i == core)
+                  my_core_gp = std::numeric_limits<uint64_t>::max();
             }
             threads_in_barrier[i] = false;
         }
 
         stalled_cores.clear();
-        uint16_t my_core_gp = current_core/num_threads_per_core;
 
         //Mark the core for which the threads need to be make runnable
         for(uint32_t i = 0; i < num_cores;i+=num_threads_per_core)
@@ -532,6 +551,12 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
 
 void SimulationOrchestrator::submitPendingOps(uint64_t core)
 {
+    if(pending_simfence[core] != NULL)
+    {
+        runPendingSimfence(core);
+        pending_simfence[core] = NULL;
+    }
+
     while(pending_misses_per_core[core].size()>0)
     {
         std::shared_ptr<spike_model::CacheRequest> miss=pending_misses_per_core[core].front();

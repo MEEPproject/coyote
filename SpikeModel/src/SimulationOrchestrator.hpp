@@ -107,6 +107,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
         std::vector<std::shared_ptr<spike_model::MCPURequest>> pending_get_vec_len; //(num_cores);
+        std::vector<std::shared_ptr<spike_model::Fence>> pending_simfence; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
         std::vector<std::list<std::shared_ptr<spike_model::InsnLatencyEvent>>> pending_insn_latency_event; //(num_cores);
 
@@ -164,6 +165,12 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param core The id of the core that will submit the operations
          */
         void submitPendingOps(uint64_t core);
+
+        /*
+         * \brief run the pending simfence operation
+         * \param core The id of the core that will run the simfence
+         */
+        void runPendingSimfence(uint64_t core);
 
 };
 #endif
