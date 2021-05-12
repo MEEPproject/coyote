@@ -18,7 +18,7 @@ namespace spike_model {
         public:
 
             enum class Width {
-                BIT8, BIT16, BIT32, BIT64
+                BIT8, BIT16, BIT32, BIT64 //The change of this enums should not be changed. The correct assignation of the width in riscv-isa-sim depends on it
             };
 
             enum class Stride {
@@ -39,8 +39,10 @@ namespace spike_model {
              * \brief Constructor for memory instruction that will be handled by the MCPU
              * \param pc The program counter of the instruction that finished the simulation
              * \param addr The base address for the memory instruction
+             * \param o The type of operation
+             * \param w The width of the vector element
              */
-            MCPUInstruction(uint64_t pc, uint64_t addr):Event(pc), base_address(addr), indices(){}
+            MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Event(pc), base_address(addr), operation(o), width(w){}
 
             /*!
              * \brief Constructor for memory instruction that will be handled by the MCPU
@@ -48,8 +50,10 @@ namespace spike_model {
              * \param time The timestamp for the finish
              * \param c The core generating the instruction
              * \param addr The base address for the memory instruction
+             * \param o The type of operation
+             * \param w The width of the vector element
              */
-            MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr): Event(pc, time, c), base_address(addr), indices() {}
+            MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Event(pc, time, c), base_address(addr), operation(o), width(w){}
 
             /*!
              * \brief Handle the event
@@ -65,13 +69,9 @@ namespace spike_model {
                 return indices;
             }
 
-            void addIndex(uint64_t index) {
-                indices.push_back(index);
-            }
-
             //-- setters and getters
             bool getIndexed() {return indexed;}
-            void setIndexed(bool indexed_) {indexed = indexed_;}
+            void setIndexed(std::vector<uint64_t> i) {indices=i; stride = Stride::INDEXED; indexed=true;}
 
             bool getSegmented() {return segmented;}
             void setSegmented(bool segmented_) {segmented = segmented_;}
@@ -80,7 +80,7 @@ namespace spike_model {
             void setOrdered(bool ordered_) {ordered = ordered_;}
 
             Stride getStride() {return stride;}
-            void setStride(Stride stride_) {stride = stride_;}
+            void setStride(std::vector<uint64_t> i) {indices=i; stride = Stride::NON_UNIT;}
 
             Width getWidth() {return width;}
             void setWidth(Width width_) {width = width_;}
@@ -91,12 +91,12 @@ namespace spike_model {
         private:
             uint64_t base_address;
             std::vector<uint64_t> indices;
-            bool indexed;           // indexed load/store
-            bool ordered;           // are the indices in a particular order (or can they be in any order?)
-            bool segmented;         // segmented load/store
-            Stride stride;          // stride
-            Width width;            // 8, 16, 32, or 64 bit memory operation
             Operation operation;    // load = true, store = false
+            Width width;            // 8, 16, 32, or 64 bit memory operation
+            bool ordered=false;           // are the indices in a particular order (or can they be in any order?)
+            bool segmented=false;         // segmented load/store
+            bool indexed=false;           // indexed load/store
+            Stride stride=Stride::UNIT;   // stride
     };
 }
 #endif
