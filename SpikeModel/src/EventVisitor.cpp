@@ -7,7 +7,7 @@
 #include "ScratchpadRequest.hpp" 
 #include "Fence.hpp"   
 #include "Finish.hpp"   
-#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "InsnLatencyEvent.hpp"
 
@@ -53,7 +53,7 @@ namespace spike_model
         handle(std::dynamic_pointer_cast<spike_model::Request>(e));
     }
 
-    void EventVisitor::handle(std::shared_ptr<spike_model::MCPURequest> e)
+    void EventVisitor::handle(std::shared_ptr<spike_model::MCPUSetVVL> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::Event>(e));
     }

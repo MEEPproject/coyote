@@ -7,3 +7,9 @@ build/
 .vscode/
 # Output files
 trace
+# Apps files
+apps/**/dataset.h
+apps/**/matmul
+apps/**/spmv
+apps/**/somier
+apps/**/axpy

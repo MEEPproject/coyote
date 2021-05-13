@@ -44,10 +44,14 @@ namespace spike_model {
 	}
 
 	//-- A memory transaction to be handled by the MCPU
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPURequest> mes) {
-			std::cout << "MCPU: Core " << mes->getCoreId() << " requests VVL " << mes->getRequestedVecLen() << std::endl;
-			mcpu_req.push_back(mes);
-			issue_mcpu_event_.schedule(1);
+        //Note that VVL of 0 is received when the simulation is setting up
+        //and the processor objects are created.
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
+		std::cout <<  "  VVL " << mes->getVVL() << " received from MCPU: Core "
+                          << mes->getCoreId() <<std::endl;
+
+			//mcpu_req.push_back(mes);
+			//issue_mcpu_event_.schedule(1);
 	}
 
 	//-- An instruction for the MCPU
@@ -74,8 +78,8 @@ namespace spike_model {
 	/////////////////////////////////////
 	//-- Command Execution
 	/////////////////////////////////////
-	void MemoryCPUWrapper::issueMCPU_() {
-		std::shared_ptr<MCPURequest> mes = mcpu_req.front();
+	/*void MemoryCPUWrapper::issueMCPU_() {
+		std::shared_ptr<MCPUSetVVL> mes = mcpu_req.front();
 		mes->setReturnedVecLen(mes->getRequestedVecLen());
 		std::cout << "MCPU: Returning VVL " << mes->getReturnedVecLen() << " to core " << mes->getCoreId() << std::endl;
 		mes->setServiced();
@@ -86,7 +90,7 @@ namespace spike_model {
 		if(mcpu_req.size() > 0) {
 			issue_mcpu_event_.schedule(1);
 		}
-	}
+	}*/
 
 
 

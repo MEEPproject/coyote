@@ -25,7 +25,7 @@
 #include "LogCapable.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "AccessDirector.hpp"
-#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 #include "InsnLatencyEvent.hpp"
@@ -134,7 +134,7 @@ namespace spike_model
              * \brief Handles a MCPU request
              * \param r The event to handle
              */
-            virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+            virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
             
             /*!
              * \brief Handles a InstLatency event

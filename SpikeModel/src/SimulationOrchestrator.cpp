@@ -369,7 +369,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             submitToSparta(wb);
         }
 
-        if(can_run && !threads_in_barrier[core] && spike->isVecAvailable(core))
+        if(can_run && !threads_in_barrier[core])
         {
             resumeCore(core);
             if(trace_)
@@ -407,9 +407,9 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
         if(thread_barrier_cnt != 0) //ensure that more than one cores are getting simulated
         {
             std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
-            threads_in_barrier[current_core] = true;
+            threads_in_barrier[core] = true;
             core_active=false;
-            std::cout << "first core " << current_core
+            std::cout << "first core " << core
                   << " waiting for barrier " << current_cycle << std::endl;
         }
     }
@@ -449,48 +449,27 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
             }
         }
         cur_cycle_suspended_threads.clear();
-        std::cout << "Last Core " << current_core << " reached barrier " << current_cycle << std::endl;
+        std::cout << "Last Core " << core << " reached barrier " << current_cycle << std::endl;
     }
     else
     {
         thread_barrier_cnt--;
-        threads_in_barrier[current_core] = true;
+        threads_in_barrier[core] = true;
         core_active=false;
-        std::cout << "Core " << current_core << " waiting for barrier " << current_cycle << std::endl;
+        std::cout << "Core " << core << " waiting for barrier " << current_cycle << std::endl;
     }
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPURequest> r)
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
 {
-    if(!r->isServiced())
+    if(core_active == false) //RAW miss and a Fetch miss
     {
-        if(core_active == false) //RAW miss and a Fetch miss
-        {
-            //Fetch miss could be handled by this. RAW miss cannot
-            pending_get_vec_len[current_core] = r;
-        }
-        else
-        {
-            submitToSparta(r);
-        }
+        //Fetch miss could be handled by this. RAW miss cannot
+        pending_get_vec_len[current_core] = r;
     }
     else
     {
-        uint16_t core = r->getCoreId();
-        core_active = spike->ackRegisterAndSetvl(core, r->getReturnedVecLen(), current_cycle);
-        if(core_active && !threads_in_barrier[core])
-        {
-            std::vector<uint16_t>::iterator it;
-
-            it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
-
-            //If the core was stalled, make it active again
-            if (it != stalled_cores.end())
-            {
-                stalled_cores.erase(it);
-                active_cores.push_back(core);
-            }
-        }
+        submitToSparta(r);
     }
 }
 

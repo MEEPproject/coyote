@@ -14,7 +14,7 @@ namespace spike_model
     class ScratchpadRequest;
     class Fence;
     class Finish;
-    class MCPURequest;
+    class MCPUSetVVL;
     class MCPUInstruction;
     class InsnLatencyEvent;
 
@@ -79,7 +79,7 @@ namespace spike_model
              * \brief Handles a MCPU request
              * \param r The event to handle
              */
-            virtual void handle(std::shared_ptr<spike_model::MCPURequest> e);
+            virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> e);
             
             /*!
              * \brief Handles a Instruction latency event request

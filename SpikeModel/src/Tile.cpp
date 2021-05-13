@@ -233,20 +233,12 @@ namespace spike_model
         access_director->putAccess(r);
     }
 
-    void Tile::handle(std::shared_ptr<spike_model::MCPURequest> r)
+    void Tile::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
     {
-        if(!r->isServiced())
-        {
-            std::cout << "Issuing MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+        std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
 
-            //TODO: The actual MCPU that will handle the request needs to be defined
-            out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0), 0);
-        }
-        else
-        {
-            //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
-            request_manager_->notifyAck(r);
-        }
+        //TODO: The actual MCPU that will handle the request needs to be defined
+        out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0), 0);
     }
             
     void Tile::handle(std::shared_ptr<spike_model::MCPUInstruction> r)

@@ -21,7 +21,7 @@
 #include "NoC/NoCMessage.hpp"
 #include "Event.hpp"
 #include "EventManager.hpp"
-#include "MCPURequest.hpp"
+#include "MCPUSetVVL.hpp"
 #include "MCPUInstruction.hpp"
 
 namespace spike_model {
@@ -73,11 +73,11 @@ namespace spike_model {
 
 
 			//-- commands coming from the tile
-			sparta::UniqueEvent<> issue_mcpu_event_ {
-				&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)
-			};
-			std::list<std::shared_ptr<MCPURequest>> mcpu_req;
-			void issueMCPU_();
+			//sparta::UniqueEvent<> issue_mcpu_event_ {
+			//	&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)
+			//};
+			//std::list<std::shared_ptr<MCPUSetVVL>> mcpu_req;
+			//void issueMCPU_();
 
 
 			//-- message handling
@@ -103,7 +103,7 @@ namespace spike_model {
 			void receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes);
 			void receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes);
 			virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
-			virtual void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+			virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
             
             /*!
              * \brief Handles an instruction forwarded to the MCPU

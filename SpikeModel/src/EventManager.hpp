@@ -8,7 +8,7 @@
 #include "NoC/NoCMessage.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "Event.hpp"
-#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUSetVVL.hpp"
 
 class SpikeModel; //Forward declaration
 

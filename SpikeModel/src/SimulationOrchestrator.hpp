@@ -10,7 +10,7 @@
 #include "EventVisitor.hpp"
 #include "CacheRequest.hpp"
 #include "ScratchpadRequest.hpp"
-#include "MemoryTile/MCPURequest.hpp"
+#include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "Finish.hpp"
 #include "LogCapable.hpp"
@@ -70,7 +70,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          */
         void handle(std::shared_ptr<spike_model::Fence> f) override;
 
-        void handle(std::shared_ptr<spike_model::MCPURequest> r) override;
+        void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
         
                 
         /*!
@@ -106,7 +106,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<bool> threads_in_barrier;
 
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
-        std::vector<std::shared_ptr<spike_model::MCPURequest>> pending_get_vec_len; //(num_cores);
+        std::vector<std::shared_ptr<spike_model::MCPUSetVVL>> pending_get_vec_len; //(num_cores);
         std::vector<std::shared_ptr<spike_model::Fence>> pending_simfence; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
         std::vector<std::list<std::shared_ptr<spike_model::InsnLatencyEvent>>> pending_insn_latency_event; //(num_cores);
