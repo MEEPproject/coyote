@@ -77,11 +77,14 @@ namespace spike_model
             sparta_assert(count == num_vcs, "The number of VCs calculated as end_vc-start_vc for the same class must be the same as the num_vcs");
         }
 
+        // Get the injection queue size
+        min_space_in_inj_queue_ = booksim_config.GetInt("injection_queue_size");
+
         // Fill the mcpu_ and tile_to_network and network_is_mcpu vectors
         uint16_t mcpu = 0;
         uint16_t tile = 0;
         for(uint16_t idx = 0; idx < size_; idx++)
-        {
+        { // The validity of SRC and DST IDs (saved in mcpu_ and tile_to_network vectors) are enforced here because are >=0 and < size_
             if(mcpu < params->mcpus_indices.getNumValues() && 
                params->mcpus_indices.getValueAsStringAt(mcpu) == std::to_string(idx))
             {
@@ -144,21 +147,29 @@ namespace spike_model
     {
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromTile_(mess);
+        // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
+        sparta_assert(size >= 1);
+        int inj_queue_size = booksim_wrappers_[mess->getTransactionType()]->CheckInjectionQueue(tile_to_network_[mess->getSrcPort()], mess->getPriority());
+        sparta_assert(inj_queue_size >= size,
+               "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
+        // Save the min space available at injection queues
+        if(inj_queue_size < (int) min_space_in_inj_queue_)
+            min_space_in_inj_queue_ = inj_queue_size;
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
             // VAS -> VAS messages
             case NoCMessageType::REMOTE_L2_REQUEST:
             case NoCMessageType::REMOTE_L2_ACK:
-                while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
-                        tile_to_network_[mess->getSrcPort()],   // Source
-                        tile_to_network_[mess->getDstPort()],   // Destination
-                        size,                                   // Number of flits
-                        mess->getPriority(),                    // Class of traffic -> Priority
-                        INJECTION_TIME                          // Injection time to add
-                    );
+                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                    tile_to_network_[mess->getSrcPort()],   // Source
+                    tile_to_network_[mess->getDstPort()],   // Destination
+                    size,                                   // Number of flits
+                    mess->getPriority(),                    // Class of traffic -> Priority
+                    INJECTION_TIME                          // Injection time to add
+                );
+                sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
 
             // VAS -> MCPU messages
@@ -168,14 +179,14 @@ namespace spike_model
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:
-                while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
-                        tile_to_network_[mess->getSrcPort()],   // Source
-                        mcpu_to_network_[mess->getDstPort()],   // Destination
-                        size,                                   // Number of flits
-                        mess->getPriority(),                    // Class of traffic -> Priority
-                        INJECTION_TIME                          // Injection time to add
-                    );
+                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                    tile_to_network_[mess->getSrcPort()],   // Source
+                    mcpu_to_network_[mess->getDstPort()],   // Destination
+                    size,                                   // Number of flits
+                    mess->getPriority(),                    // Class of traffic -> Priority
+                    INJECTION_TIME                          // Injection time to add
+                );
+                sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
 
             default:
@@ -194,6 +205,7 @@ namespace spike_model
             case Networks::CONTROL_NOC:
                 count_tx_flits_control_ += size;
                 break;
+
             default:
                 sparta_assert(false);
         }
@@ -203,7 +215,15 @@ namespace spike_model
     {
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromMemoryCPU_(mess);
+        // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
+        sparta_assert(size >= 1);
+        int inj_queue_size = booksim_wrappers_[mess->getTransactionType()]->CheckInjectionQueue(mcpu_to_network_[mess->getSrcPort()], mess->getPriority());
+        sparta_assert(inj_queue_size >= size,
+               "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
+        // Save the min space available at injection queues
+        if(inj_queue_size < (int) min_space_in_inj_queue_)
+            min_space_in_inj_queue_ = inj_queue_size;
         int packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -211,14 +231,14 @@ namespace spike_model
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
-                while(packet_id == INVALID_PKT_ID)
-                    packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
-                        mcpu_to_network_[mess->getSrcPort()],   // Source
-                        tile_to_network_[mess->getDstPort()],   // Destination
-                        size,                                   // Number of flits
-                        mess->getPriority(),                    // Class of traffic -> Priority
-                        INJECTION_TIME                          // Injection time to add
-                    );
+                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                    mcpu_to_network_[mess->getSrcPort()],   // Source
+                    tile_to_network_[mess->getDstPort()],   // Destination
+                    size,                                   // Number of flits
+                    mess->getPriority(),                    // Class of traffic -> Priority
+                    INJECTION_TIME                          // Injection time to add
+                );
+                sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
 
             default:
@@ -237,6 +257,7 @@ namespace spike_model
             case Networks::CONTROL_NOC:
                 count_tx_flits_control_ += size;
                 break;
+
             default:
                 sparta_assert(false);
         }

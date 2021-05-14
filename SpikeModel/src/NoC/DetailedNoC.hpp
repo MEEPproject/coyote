@@ -289,6 +289,13 @@ namespace spike_model
             getStatisticSet(),                                  // context
             "network_latency_control/received_packets_control"  // Expression
         );                                                                  //! Average network latency in control NoC
+        sparta::Counter                         min_space_in_inj_queue_ = sparta::Counter
+        (
+            getStatisticSet(),                                  // parent
+            "min_space_in_inj_queue",                           // name
+            "Minimum space seen in injection queues",           // description
+            sparta::Counter::COUNT_LATEST                       // behavior
+        );                                                                  //! The minimum space seen in any injection queue
 
     };
 
