@@ -56,6 +56,7 @@ namespace spike_model
                 }
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
+                PARAMETER(std::string, reordering_policy, "none", "Request reordering policy")
             };
 
             /*!
@@ -100,6 +101,8 @@ namespace spike_model
             uint64_t num_banks_;
 
             bool write_allocate_;
+
+            std::string reordering_policy_;
 
             bool idle_=true;
 

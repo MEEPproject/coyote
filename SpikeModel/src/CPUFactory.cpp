@@ -418,6 +418,15 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
 
             mc->setLogger(topology_->logger);
+
+            for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks) {
+                auto bank_node = root_node->getChild(std::string("cpu.memory_controller") +
+                        sparta::utils::uint32_to_str(num_of_memory_controllers) +
+			std::string(".memory_bank") + sparta::utils::uint32_to_str(num_of_memory_banks));
+                sparta_assert(bank_node != nullptr);
+                MemoryBank * b=bank_node->getResourceAs<spike_model::MemoryBank>();
+                b->setLogger(topology_->logger);
+            }
         }
     }
 }

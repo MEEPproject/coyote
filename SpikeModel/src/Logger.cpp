@@ -176,6 +176,17 @@ namespace spike_model
             log(timestamp, id, pc, sstream.str());
         }
     }
+    
+    void Logger::logMemoryBankCommand(uint64_t timestamp, uint64_t mc, uint64_t pc, uint8_t bank, uint64_t address)
+    {
+        std::string ev="bank_operation";
+        if(checkIfEventOfInterest(ev))
+        {
+            std::stringstream sstream;
+            sstream << ev << "," << unsigned(bank) << "," << std::hex << address;
+            log(timestamp, mc, pc, sstream.str());
+        }
+    }
 
     void Logger::logMemoryControllerAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address)
     {

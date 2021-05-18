@@ -32,13 +32,15 @@ namespace spike_model
              * \param t The type of the command
              * \param b The bank that will be accessed
              * \param v The value associated to the command. E.g. The row to open or the column to read
+             * \param r The request associated to this command
              * \note If commands get sufficiently complex an inheritance-based approach would make sense
              */
-            BankCommand(CommandType t, uint64_t b, uint64_t v)
+            BankCommand(CommandType t, uint64_t b, uint64_t v, std::shared_ptr<CacheRequest> r)
             {
                 type=t;
                 destination_bank=b;
                 value=v;
+                request=r;
             }
 
             /*!
@@ -68,10 +70,21 @@ namespace spike_model
                 return destination_bank;
             }
 
+            /*!
+             * \brief Get the request associated to this command
+             * \return The associated request
+             */
+            std::shared_ptr<CacheRequest> getRequest()
+            {
+                return request;
+            }
+
         private:
             CommandType type;
             uint64_t destination_bank;
             uint64_t value;
+
+            std::shared_ptr<CacheRequest> request;
     };
 }
 #endif

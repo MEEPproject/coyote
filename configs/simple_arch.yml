@@ -62,6 +62,7 @@ top:
       params:
         num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
         write_allocate: true                # (bool)            The write allocation policy
+        reordering_policy: access_type      # (std::string)     The reordering policy for memory requests
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows

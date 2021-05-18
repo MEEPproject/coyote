@@ -163,6 +163,18 @@ namespace spike_model
              * \param address The address in the request
              */
             void logMemoryControllerAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address);
+    
+    
+            /*!
+             * \brief Add an event representing the submission of a bank to a command 
+             * \param timestamp The timestamp for the event
+             * \param mc The id of the memory controller for the bank
+             * \param pc The PC of the instruction related to the event the event
+             * \param bank The bank in the command
+             * \param address The address in the request
+             * \note Important: this event is not tied to a particular scalar core
+             */
+            void logMemoryBankCommand(uint64_t timestamp, uint64_t mc, uint64_t pc, uint8_t bank, uint64_t address);
 
             /*!
              * \brief Add an event representing the reception of a memory controller ack at its destination tile.

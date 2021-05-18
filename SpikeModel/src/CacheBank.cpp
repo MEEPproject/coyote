@@ -20,7 +20,9 @@ namespace spike_model
         max_outstanding_misses_(p->max_outstanding_misses),
         busy_(false),
         in_flight_reads_(max_outstanding_misses_, p->line_size),
-        pending_cache_requests_(),
+        pending_fetch_requests_(),
+        pending_load_requests_(),
+        pending_store_requests_(),
         pending_scratchpad_requests_(),
         l2_size_kb_ (p->size_kb),
         l2_associativity_ (p->associativity),
@@ -42,6 +44,7 @@ namespace spike_model
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "CacheBank construct: #" << node->getGroupIdx();
         }
+
     }
 
 
@@ -56,7 +59,7 @@ namespace spike_model
 
         req->setServiced();
 
-        reloadCache_(calculateLineAddress(req) | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+        reloadCache_(calculateLineAddress(req));
         if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
             auto range_misses=in_flight_reads_.equal_range(req);
@@ -73,7 +76,7 @@ namespace spike_model
             in_flight_reads_.erase(req);
         
         }
-        if(pending_cache_requests_.size()>0)
+        if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
         {
             //ISSUE EVENT
             if(was_stalled)
@@ -113,10 +116,24 @@ namespace spike_model
             s->setServiced();
             out_core_ack_.send(s, hit_latency_);
         }
-        else if(pending_cache_requests_.size()>0)
+        else
         {
-            MemoryAccessInfoPtr m = sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_cache_requests_.front());
-            pending_cache_requests_.pop_front();
+            MemoryAccessInfoPtr m;
+            if(pending_fetch_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_fetch_requests_.front());   
+                pending_fetch_requests_.pop_front();
+            }
+            else if(pending_load_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_load_requests_.front());  
+                pending_load_requests_.pop_front();
+            }
+            else if(pending_store_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
+                pending_store_requests_.pop_front();
+            }
             handleCacheLookupReq_(m);
 
             if(in_flight_reads_.is_full())
@@ -126,7 +143,7 @@ namespace spike_model
             }
         }
 
-        if(!stall && (pending_cache_requests_.size()>0 || pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
+        if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
         {
             issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
         }
@@ -194,7 +211,7 @@ namespace spike_model
                 //THE CACHE IS WRITE ALLOCATE, SO MISSES ON WRITEBACKS NEED TO KEEP THE LINE APPART FROM FORWARDING IT
                 if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
-                    reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()) | 0x3000); //THIS IS A WORKAROUND TO GET RID OF MEMACCESSPTRS SHOULD ENCAPSULATE THE CALCULATION OF THE REAL ADDRESS
+                    reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()));
                 }
 
                 if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
@@ -285,10 +302,10 @@ namespace spike_model
         count_cache_requests_+=1;
 
         bool hit_on_store=false;
-        if(r->getType()!=CacheRequest::AccessType::LOAD)
+        if(r->getType()==CacheRequest::AccessType::LOAD)
         {
             //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
-            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_cache_requests_.rbegin(); rit!=pending_cache_requests_.rend() && !hit_on_store; ++rit)
+            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_store_requests_.rbegin(); rit!=pending_store_requests_.rend() && !hit_on_store; ++rit)
             {
                 hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(r));
             }
@@ -303,7 +320,25 @@ namespace spike_model
         }
         else
         {
-            pending_cache_requests_.push_back(r);
+            switch(r->getType())
+            {
+                case CacheRequest::AccessType::FETCH:
+                    pending_fetch_requests_.push_back(r);
+                    break;
+
+                case CacheRequest::AccessType::LOAD:
+                    pending_load_requests_.push_back(r);
+                    break;
+
+                case CacheRequest::AccessType::STORE:
+                    pending_store_requests_.push_back(r);
+                    break;
+
+                case CacheRequest::AccessType::WRITEBACK:
+                    pending_store_requests_.push_back(r);
+                    break;
+            }
+
             if(!busy_ && !in_flight_reads_.is_full())
             {
                 busy_=true;

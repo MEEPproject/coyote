@@ -20,7 +20,8 @@
           {"eventName": "L2Miss",               "eventID": "13"  },
           {"eventName": "Stall",               "eventID": "14"  },
           {"eventName": "Resume",               "eventID": "15"  },
-          {"eventName": "KI",               "eventID": "16"  }
+          {"eventName": "KI",               "eventID": "16"  },
+          {"eventName": "BankOperation",               "eventID": "17"  }
         ]
       },
       { "eventName": "destination",          "eventID": "516"},

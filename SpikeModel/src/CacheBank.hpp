@@ -130,7 +130,7 @@ namespace spike_model
 
             uint64_t getRAdr() const 
             {
-                return address | 0x3000; 
+                return address;// | 0x3000; 
             }
 
         private:
@@ -362,7 +362,9 @@ namespace spike_model
 
         InFlightMissList in_flight_reads_;
 
-        std::list<std::shared_ptr<CacheRequest>> pending_cache_requests_;
+        std::list<std::shared_ptr<CacheRequest>> pending_fetch_requests_;
+        std::list<std::shared_ptr<CacheRequest>> pending_load_requests_;
+        std::list<std::shared_ptr<CacheRequest>> pending_store_requests_;
         std::list<std::shared_ptr<ScratchpadRequest>> pending_scratchpad_requests_;
     
         uint64_t l2_size_kb_;

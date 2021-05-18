@@ -32,7 +32,6 @@ int thread_entry(int cid, int nc)
     axpy_intrinsics(cid, nc, a, dx, dy, n);
     //test_result(dy, dy_ref, n);
 
-    asm("csrrw t0, 0xc00, t0");
     simfence();
 
     if(cid==0)

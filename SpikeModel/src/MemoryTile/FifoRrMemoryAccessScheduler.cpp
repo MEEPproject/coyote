@@ -31,8 +31,9 @@ namespace spike_model
         return banks_to_schedule.size()>0;
     }
     
-    void FifoRrMemoryAccessScheduler::notifyRequestCompletion(uint64_t bank)
+    void FifoRrMemoryAccessScheduler::notifyRequestCompletion(std::shared_ptr<CacheRequest> req)
     {
+        uint64_t bank=req->getMemoryBank();
         request_queues[bank].pop();
         if(request_queues[bank].size()>0)
         {

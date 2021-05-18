@@ -27,7 +27,8 @@ derived_event_dict= {
                         "l2_miss" : 13,
                         "stall" : 14,
                         "resume" : 15,
-                        "KI" : 16
+                        "KI" : 16,
+                        "bank_operation" : 17
                     }
 
 base_event_dict= {
@@ -113,7 +114,7 @@ def intToPRV(string, event, paraver_line, last_state):
     new_value=False
     if string != "":
         base=0
-        if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume":
+        if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
             base=16
 
         value=int(string, base)
@@ -249,7 +250,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
             if (i==2 or i==4 or i==5) and (row[3]=="resume" or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
                 continue
 
-            if i==4 and row[3]=="l2_miss": #L2 misses have no destination
+            if i==4 and (row[3]=="l2_miss" or row[3]=="bank_operation"): #L2 misses have no destination
                 continue
 
             if i==5 and (row[3] in ['local_request', 'remote_request', 'surrogate_request', 'memory_request', 'memory_operation', 'memory_ack', 'ack_received', 'ack_forward_received', "ack_forwarded", "miss_serviced"]): #These events already have their address as the semantic value
@@ -261,6 +262,9 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 value=row[-1]
                 if col=="l2_miss" or col=="KI":
                     value="1"
+                if col=="bank_operation":
+                    value=row[4]
+                    
                 last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2], paraver_line, last_state[i])
             else:
                 if i==1: #Core id

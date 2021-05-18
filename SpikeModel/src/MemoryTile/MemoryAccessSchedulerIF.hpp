@@ -44,7 +44,7 @@ namespace spike_model
             * \brief Notify that a request has been completed
             * \param bank The bank which completed the request
             */
-            virtual void notifyRequestCompletion(uint64_t bank)=0;
+            virtual void notifyRequestCompletion(std::shared_ptr<CacheRequest> req)=0;
     };
 }
 #endif

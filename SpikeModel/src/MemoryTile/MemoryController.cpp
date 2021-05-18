@@ -1,6 +1,7 @@
 #include "sparta/utils/SpartaAssert.hpp"
 #include "MemoryController.hpp"
 #include "FifoRrMemoryAccessScheduler.hpp"
+#include "FifoRrMemoryAccessSchedulerAccessTypePriority.hpp"
 #include "FifoCommandScheduler.hpp"
 
 namespace spike_model
@@ -15,11 +16,25 @@ namespace spike_model
     sparta::Unit(node),
     num_banks_(p->num_banks),
     write_allocate_(p->write_allocate),
+    reordering_policy_(p->reordering_policy),
     banks()
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
-        sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
         ready_commands=std::make_unique<FifoCommandScheduler>();
+        
+        if(reordering_policy_=="none")
+        {
+            sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
+        }
+        else if(reordering_policy_=="access_type")
+        {
+            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
+        }
+        else
+        {
+            std::cout << "Unsupported reordering policy. Falling back to the default policy.\n";
+            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
+        }
     }
 
 
@@ -56,11 +71,11 @@ namespace spike_model
         uint64_t column_to_schedule=req->getCol();
         if(req->getType()==CacheRequest::AccessType::STORE || req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
-            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule);
+            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule, req);
         }
         else
         {
-            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
+            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
         }
         return res_command;
     }
@@ -71,7 +86,7 @@ namespace spike_model
         std::shared_ptr<BankCommand> res_command;
 
         uint64_t column_to_schedule=req->getCol();
-        res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule);
+        res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
         return res_command;
     }
 
@@ -93,10 +108,10 @@ namespace spike_model
 				if(banks[bank_to_schedule]->getOpenRow()==row_to_schedule) {
                 	com=getAccessCommand_(request_to_schedule, bank_to_schedule);
 				} else {
-                    com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0);
+                    com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0, request_to_schedule);
 				}
 			} else {
-				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule);
+				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule, request_to_schedule);
 			}
 
             ready_commands->addCommand(com);
@@ -130,23 +145,23 @@ namespace spike_model
         {
             case BankCommand::CommandType::OPEN:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
                 com=getAccessCommand_(pending_request_for_bank, command_bank);
                 break;
             }
 
             case BankCommand::CommandType::CLOSE:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
                 uint64_t row_to_schedule=pending_request_for_bank->getRow();
-                com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, command_bank, row_to_schedule);
+                com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, command_bank, row_to_schedule, pending_request_for_bank);
                 break;
             }
 
             case BankCommand::CommandType::READ:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
-                sched->notifyRequestCompletion(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
+                sched->notifyRequestCompletion(pending_request_for_bank);
                 if(pending_request_for_bank->getType()==CacheRequest::AccessType::LOAD || pending_request_for_bank->getType()==CacheRequest::AccessType::FETCH || (pending_request_for_bank->getType()==CacheRequest::AccessType::STORE && write_allocate_))
                 {
                     issueAck_(pending_request_for_bank);
@@ -156,11 +171,11 @@ namespace spike_model
 
             case BankCommand::CommandType::WRITE:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=sched->getRequest(command_bank);
+                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
 
-                if(!write_allocate_ || sched->getRequest(command_bank)->getType()==CacheRequest::AccessType::WRITEBACK)
+                if(!write_allocate_ || c->getRequest()->getType()==CacheRequest::AccessType::WRITEBACK)
                 {
-                    sched->notifyRequestCompletion(command_bank);
+                    sched->notifyRequestCompletion(pending_request_for_bank);
                 }
                 else
                 {

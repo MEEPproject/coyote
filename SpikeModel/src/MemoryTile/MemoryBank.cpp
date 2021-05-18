@@ -1,5 +1,6 @@
 #include "sparta/utils/SpartaAssert.hpp"
 #include "MemoryBank.hpp"
+#include "CacheRequest.hpp"
 
 namespace spike_model
 {
@@ -52,6 +53,11 @@ namespace spike_model
                 break;
         }
         command_completed_event.preparePayload(c)->schedule(delay);
+
+        if(trace_)
+        {
+            logger_.logMemoryBankCommand(getClock()->currentCycle(), c->getRequest()->getMemoryController(), c->getRequest()->getPC(), c->getDestinationBank(), c->getRequest()->getAddress());
+        }
     }
 
     uint64_t MemoryBank::getOpenRow()
