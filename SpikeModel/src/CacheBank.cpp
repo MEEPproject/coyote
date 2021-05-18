@@ -79,7 +79,7 @@ namespace spike_model
         if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
         {
             //ISSUE EVENT
-            if(was_stalled)
+            if(was_stalled && !busy_)
             {
                 busy_=true;
                 issue_access_event_.schedule(sparta::Clock::Cycle(0));
@@ -134,13 +134,17 @@ namespace spike_model
                 m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
                 pending_store_requests_.pop_front();
             }
-            handleCacheLookupReq_(m);
+            
+            //if(m!=NULL) // m might be null if two events get scheduled for the same cycle, due to an event with hit_latency delay and a miss response mathing
+            //{
+                handleCacheLookupReq_(m);
 
-            if(in_flight_reads_.is_full())
-            {
-                stall=true;
-                count_stall_++;
-            }
+                if(in_flight_reads_.is_full())
+                {
+                    stall=true;
+                    count_stall_++;
+                }
+            //}
         }
 
         if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
