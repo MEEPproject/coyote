@@ -325,9 +325,13 @@ namespace spike_model
         }
         else if(req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
+            //Adds missing info to WRITEBACKS that was not available in the CacheBank 
             size=line_size;
-        }         
-        
+            req->setSourceTile(tile->id_);
+            uint16_t home=calculateHome(req);
+            req->setHomeTile(home);
+        }
+
         return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size, req->getHomeTile(), req->getMemoryController());
     }
      
