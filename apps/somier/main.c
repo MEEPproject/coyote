@@ -22,7 +22,7 @@ int err;
 int thread_entry(int cid, int nc)
 {
    int ntsteps;
-ntsteps = 2;
+ntsteps = 3;
 
   // printf ("Problem size = %d, steps = %d\n", N, ntsteps);
 

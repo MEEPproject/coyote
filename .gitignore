@@ -7,6 +7,8 @@ build/
 .vscode/
 # Output files
 trace
+err_*
+out_*
 # Apps files
 apps/**/dataset.h
 apps/**/matmul
