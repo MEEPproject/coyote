@@ -66,7 +66,7 @@ namespace spike_model
         NoC::handleMessageFromTile_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getTransactionType() < static_cast<int>(Networks::count));
+        sparta_assert(mess->getNoCNetwork() < static_cast<int>(Networks::count));
         switch(mess->getType())
         {
             // VAS -> VAS messages
@@ -75,8 +75,8 @@ namespace spike_model
                 hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
                             abs(tiles_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second) +
                             DESTINATION_ROUTER;
-                dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getTransactionType()]++; // [y][x][NoC]
-                src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getTransactionType()]++;
+                dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
+                src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 // Latency: Injection + Link traversal + hops * latency_per_hop (RC - VA - SA - ST + output_link)
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
@@ -91,8 +91,8 @@ namespace spike_model
                 hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - tiles_coordinates_[mess->getSrcPort()].first) + 
                             abs(mcpus_coordinates_[mess->getDstPort()].second - tiles_coordinates_[mess->getSrcPort()].second) + 
                             DESTINATION_ROUTER;
-                dst_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mess->getTransactionType()]++; // [y][x][NoC]
-                src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getTransactionType()]++;
+                dst_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
+                src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 out_ports_memory_cpus_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
@@ -101,7 +101,7 @@ namespace spike_model
         }
         sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
         // Hop count for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 hop_count_data_transfer_ += hop_count;
@@ -123,7 +123,7 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getTransactionType() < static_cast<int>(Networks::count));
+        sparta_assert(mess->getNoCNetwork() < static_cast<int>(Networks::count));
         switch(mess->getType())
         {
             // MCPU -> VAS messages
@@ -133,8 +133,8 @@ namespace spike_model
                 hop_count = abs(tiles_coordinates_[mess->getDstPort()].first - mcpus_coordinates_[mess->getSrcPort()].first) + 
                             abs(tiles_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second) +
                             DESTINATION_ROUTER;;
-                dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getTransactionType()]++; // [y][x][NoC]
-                src_count_[mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getTransactionType()]++;
+                dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
+                src_count_[mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
@@ -143,7 +143,7 @@ namespace spike_model
         }
         sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
         // Hop count for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 hop_count_data_transfer_ += hop_count;

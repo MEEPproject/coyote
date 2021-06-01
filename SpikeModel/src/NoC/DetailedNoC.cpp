@@ -53,7 +53,7 @@ namespace spike_model
             sparta_assert(false, "The supported networks are: mesh and cmesh");
         // Classes checks
         const uint8_t classes = booksim_config.GetInt("classes");
-        uint8_t priorities = MAX_PRIORITY_USED + 1; // The number of priorities are: 0 .. MAX_PRIORITY_USED
+        uint8_t priorities = max_class_used_ + 1; // The number of priorities are: 0 .. max_class_used_
         sparta_assert(classes == priorities, 
             "The number of classes in BookSim config must be: " << std::to_string(priorities));
         // VCs checks
@@ -148,9 +148,9 @@ namespace spike_model
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromTile_(mess);
         // Calculate and check size
-        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
+        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
         sparta_assert(size >= 1);
-        int inj_queue_size = booksim_wrappers_[mess->getTransactionType()]->CheckInjectionQueue(tile_to_network_[mess->getSrcPort()], mess->getPriority());
+        int inj_queue_size = booksim_wrappers_[mess->getNoCNetwork()]->CheckInjectionQueue(tile_to_network_[mess->getSrcPort()], mess->getClass());
         sparta_assert(inj_queue_size >= size,
                "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
         // Save the min space available at injection queues
@@ -162,11 +162,11 @@ namespace spike_model
             // VAS -> VAS messages
             case NoCMessageType::REMOTE_L2_REQUEST:
             case NoCMessageType::REMOTE_L2_ACK:
-                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
                     tile_to_network_[mess->getSrcPort()],   // Source
                     tile_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getPriority(),                    // Class of traffic -> Priority
+                    mess->getClass(),                    // Class of traffic -> Priority
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
@@ -179,11 +179,11 @@ namespace spike_model
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:
-                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
                     tile_to_network_[mess->getSrcPort()],   // Source
                     mcpu_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getPriority(),                    // Class of traffic -> Priority
+                    mess->getClass(),                    // Class of traffic -> Priority
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
@@ -192,9 +192,9 @@ namespace spike_model
             default:
                 sparta_assert(false);
         }
-        pkts_map_[mess->getTransactionType()][packet_id] = mess;
+        pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 count_tx_flits_data_transfer_ += size;
@@ -216,9 +216,9 @@ namespace spike_model
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromMemoryCPU_(mess);
         // Calculate and check size
-        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getTransactionType()]); // message size and network_width are in bits
+        int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
         sparta_assert(size >= 1);
-        int inj_queue_size = booksim_wrappers_[mess->getTransactionType()]->CheckInjectionQueue(mcpu_to_network_[mess->getSrcPort()], mess->getPriority());
+        int inj_queue_size = booksim_wrappers_[mess->getNoCNetwork()]->CheckInjectionQueue(mcpu_to_network_[mess->getSrcPort()], mess->getClass());
         sparta_assert(inj_queue_size >= size,
                "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
         // Save the min space available at injection queues
@@ -231,11 +231,11 @@ namespace spike_model
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
-                packet_id = booksim_wrappers_[mess->getTransactionType()]->GeneratePacket(
+                packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
                     mcpu_to_network_[mess->getSrcPort()],   // Source
                     tile_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getPriority(),                    // Class of traffic -> Priority
+                    mess->getClass(),                    // Class of traffic -> Priority
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
@@ -244,9 +244,9 @@ namespace spike_model
             default:
                 sparta_assert(false);
         }
-        pkts_map_[mess->getTransactionType()][packet_id] = mess;
+        pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 count_tx_flits_data_transfer_ += size;
@@ -280,8 +280,8 @@ namespace spike_model
                 {
                     // Get the message
                     std::shared_ptr<NoCMessage> mess = pkts_map_[n][pkt.pid];
-                    sparta_assert(mess->getTransactionType() == n);
-                    sparta_assert(mess->getPriority() == pkt.c);
+                    sparta_assert(mess->getNoCNetwork() == n);
+                    sparta_assert(mess->getClass() == pkt.c);
                     pkts_map_[n].erase(pkt.pid);
                     // Update statistics for each network
                     switch(static_cast<Networks>(n))

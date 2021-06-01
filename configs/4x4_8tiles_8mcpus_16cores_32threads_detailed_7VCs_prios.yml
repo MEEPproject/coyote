@@ -1,0 +1,94 @@
+# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_7VCs_prios.yml
+# Description: Describes an architecture composed by:
+#  - 8 tiles with: 
+#     - 2 cores (2 threads)
+#     - 16 l2 slices
+#  - 8 MCPUs with: 
+#     - 1 MC
+#     - 8 memory banks 
+#  - a detailed NoC using 1 physical networks without priorities and using 7 VCs
+
+---
+
+# Simulation configuration
+meta:
+  params:
+    architecture: core_topology_4           # (std::string)     Topology to simulate (core_topology_4)
+    show_factories: false                   # (bool)            Print generated factories
+    trace: false                            # (bool)            Generate a trace into paraver format
+    events_to_trace: []                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
+    fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
+    cmd: apps/mt-matmul-vec/matmul          # (std::string)     App to execute in the RISC-V simulator
+
+# Architecture configuration
+top:
+  cpu:
+    params:
+      frequency_ghz: 1                      # (double)          CPU Operating frequency
+      num_cores: 32                         # (uint16_t)        The number of cores to simulate
+      num_threads_per_core: 2               # (uint16_t)	      The number of threads per core
+      thread_switch_latency: 0              # (uint16_t)	      The number of cycles required to make the thread runnable
+      num_tiles: 8                          # (uint16_t)	      The number of tiles to simulate
+      num_memory_cpus: 8                    # (uint16_t)        The number of MCPUs to simulate
+      # num_memory_controllers: 1             # (uint16_t)	      The number of MCs to simulate
+      isa: RV64IMAFDCV                      # (std::string)	    The RISC-V isa version to use 
+      icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
+      dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
+      varch: v512:e64:s512                  # (std::string)     The RISC-V Vector uArch string
+    tile*:
+      params:
+        num_l2_banks: 16                    # (uint16_t)        The number of l2 cache banks in the tile
+        latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
+        l2_sharing_mode: tile_private       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
+        bank_policy: set_interleaving       # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
+        tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
+        address_policy: close_page          # (std::string)     The data mapping policy in main memory (open_page, close_page)
+      l2_bank*:
+        params:
+          line_size: 64                     # (uint64_t)        Cache line size (power of 2)
+          size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
+          associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          always_hit: false                 # (bool)            L2 cache will always hit
+          miss_latency: 15                  # (uint16_t)        Cache miss latency
+          hit_latency: 15                   # (uint16_t)        Cache hit latency
+          max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+    memory_cpu*:
+      params:
+        line_size: 64                       # (uint64_t)        Cache line size (power of 2)
+        latency: 0                          # (uint64_t)        The latency of the MCPU
+    memory_controller*:
+      params:
+        num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
+        write_allocate: true                # (bool)            The write allocation policy
+      memory_bank*:
+        params:
+          num_rows: 16384                   # (uint64_t)        The number of rows
+          num_columns: 64                   # (uint64_t)        The number of columns
+          column_element_size: 32           # (uint64_t)        The size of column elements
+          delay_open: 16                    # (uint64_t)        The delay to open a row
+          delay_close: 16                   # (uint64_t)        The delay to close a row
+          delay_read: 200                   # (uint64_t)        The delay to read
+          delay_write: 200                  # (uint64_t)        The delay to write
+    noc:
+      params:
+        noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        header_size: 27                     # (uint8_t)         The size of messages' header including ECC
+        message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
+          - "REMOTE_L2_REQUEST:DATA_TRANSFER.5"
+          - "MEMORY_REQUEST:DATA_TRANSFER.5"
+          - "MEMORY_REQUEST_LOAD:DATA_TRANSFER.5"
+          - "MEMORY_REQUEST_STORE:DATA_TRANSFER.0"
+          - "REMOTE_L2_ACK:DATA_TRANSFER.1"
+          - "MEMORY_ACK:DATA_TRANSFER.1"
+          - "MCPU_REQUEST:DATA_TRANSFER.4"
+          - "SCRATCHPAD_ACK:DATA_TRANSFER.6"
+          - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2"
+          - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
+        booksim_configuration: configs/booksim/4x4_mesh_iq_7vcs_prios.cfg  # (std::string)   BookSim configuration file
+        mcpus_indices: [0,3,4,7,8,11,12,15] # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
+        network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
+        stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
+
+...

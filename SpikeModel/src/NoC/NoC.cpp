@@ -6,6 +6,7 @@
 namespace spike_model
 {
     const char NoC::name[] = "noc";
+    std::map<NoCMessageType,std::pair<NoC::Networks,uint8_t>> NoC::message_to_network_and_class_ = std::map<NoCMessageType,std::pair<NoC::Networks,uint8_t>>();
 
     NoC::NoC(sparta::TreeNode *node, const NoCParameterSet *params) :
         sparta::Unit(node),
@@ -15,7 +16,8 @@ namespace spike_model
         out_ports_memory_cpus_(params->num_memory_cpus),
         noc_model_(params->noc_model),
         num_tiles_(params->num_tiles),
-        num_memory_cpus_(params->num_memory_cpus)
+        num_memory_cpus_(params->num_memory_cpus),
+        max_class_used_(0)
     {
         for(uint16_t i=0; i<num_tiles_; i++)
         {
@@ -43,12 +45,34 @@ namespace spike_model
 
         // Set the messages' header size
         NoCMessage::header_size = params->header_size;
+
+        // Define the mapping of NoC Messages to Networks and classes
+        sparta_assert(params->message_to_network_and_class.getNumValues() == static_cast<int>(NoCMessageType::count),
+                        "The number of messages defined in message_to_network_and_class param is not correct.");
+        int mess_length;
+        int network_length;
+        int dot_pos;
+        uint8_t class_value;
+        for(auto mess_net_class : params->message_to_network_and_class){
+            mess_length = mess_net_class.find(":");
+            dot_pos = mess_net_class.find(".");
+            network_length = dot_pos - (mess_length+1);
+            class_value = stoi(mess_net_class.substr(dot_pos+1));
+            if(class_value > max_class_used_)
+                max_class_used_ = class_value;
+            NoC::message_to_network_and_class_[getMessageTypeFromString_(mess_net_class.substr(0,mess_length))] = 
+                std::make_pair(getNetworkFromString_(mess_net_class.substr(mess_length+1,network_length)), class_value);
+        }
+        sparta_assert(NoC::message_to_network_and_class_.size() == static_cast<int>(NoCMessageType::count));
     }
+
+    NoC::Networks NoC::getNetworkForMessage(const NoCMessageType mess) {return message_to_network_and_class_[mess].first;}
+    uint8_t NoC::getClassForMessage(const NoCMessageType mess) {return message_to_network_and_class_[mess].second;}
 
     void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Packet counter for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 count_rx_packets_data_transfer_++;
@@ -100,7 +124,7 @@ namespace spike_model
     void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Packet counter for each network
-        switch(static_cast<Networks>(mess->getTransactionType()))
+        switch(static_cast<Networks>(mess->getNoCNetwork()))
         {
             case Networks::DATA_TRANSFER_NOC:
                 count_rx_packets_data_transfer_++;

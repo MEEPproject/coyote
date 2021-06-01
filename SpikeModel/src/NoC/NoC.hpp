@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "NoCMessage.hpp"
+#include "NoCMessageType.hpp"
 #include "../LogCapable.hpp"
 
 namespace spike_model
@@ -53,6 +54,17 @@ namespace spike_model
             PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
             PARAMETER(std::string, noc_model, "functional", "The noc model to use (functional, simple, detailed)")
             PARAMETER(uint8_t, header_size, 8, "The header size of the messages (in bits)")
+            PARAMETER(std::vector<std::string>, message_to_network_and_class, std::vector<std::string>(
+                {"REMOTE_L2_REQUEST:ADDRESS_ONLY.1",
+                 "MEMORY_REQUEST:ADDRESS_ONLY.1",
+                 "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1",
+                 "MEMORY_REQUEST_STORE:DATA_TRANSFER.0",
+                 "REMOTE_L2_ACK:DATA_TRANSFER.1",
+                 "MEMORY_ACK:DATA_TRANSFER.1",
+                 "MCPU_REQUEST:ADDRESS_ONLY.0",
+                 "SCRATCHPAD_ACK:CONTROL.0",
+                 "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2",
+                 "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"}), "Mapping of messages to networks and classes")
         };
 
         /*!
@@ -69,6 +81,9 @@ namespace spike_model
 
         //! name of this resource.
         static const char name[];
+
+        static Networks getNetworkForMessage(const NoCMessageType mess);
+        static uint8_t getClassForMessage(const NoCMessageType mess);
 
     protected:
 
@@ -100,9 +115,10 @@ namespace spike_model
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
         std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
-        std::string noc_model_;         //! The model of NoC to simulate
-        uint16_t    num_tiles_;         //! The number of tiles connected
-        uint16_t    num_memory_cpus_;   //! The number of memory cpus connected
+        std::string                                     noc_model_;                     //! The model of NoC to simulate
+        uint16_t                                        num_tiles_;                     //! The number of tiles connected
+        uint16_t                                        num_memory_cpus_;               //! The number of memory cpus connected
+        uint8_t                                         max_class_used_;                //! The maximum class value used in messages
         /* Statistics */
         sparta::Counter count_rx_packets_data_transfer_ = sparta::Counter
         (
@@ -148,6 +164,43 @@ namespace spike_model
         );                                                      //! The number of packets sent in control NoC
 
     private:
+
+        /*!
+         * \brief Get the Network From String object
+         * 
+         * \param net String representation of the network
+         * \return Networks 
+         */
+        Networks getNetworkFromString_(const std::string& net)
+        {
+            if (net == "DATA_TRANSFER" || net == "DATA_TRANSFER_NOC" || net == "data_transfer") return Networks::DATA_TRANSFER_NOC;
+            else if (net == "ADDRESS_ONLY" || net == "ADDRESS_ONLY_NOC" || net == "address_only") return Networks::ADDRESS_ONLY_NOC;
+            else if (net == "CONTROL" || net == "CONTROL_NOC" || net == "control") return Networks::CONTROL_NOC;
+            else sparta_assert(false, "Network " + net + " not valid, see NoC::Networks.");
+        }
+
+        /*!
+         * \brief Get the NoC Message Type From String object
+         * 
+         * \param mess representation of message
+         * \return NoCMessageType 
+         */
+        NoCMessageType getMessageTypeFromString_(const std::string& mess)
+        {
+            if (mess == "REMOTE_L2_REQUEST") return NoCMessageType::REMOTE_L2_REQUEST;
+            else if (mess == "MEMORY_REQUEST") return NoCMessageType::MEMORY_REQUEST;
+            else if (mess == "MEMORY_REQUEST_LOAD") return NoCMessageType::MEMORY_REQUEST_LOAD;
+            else if (mess == "MEMORY_REQUEST_STORE") return NoCMessageType::MEMORY_REQUEST_STORE;
+            else if (mess == "REMOTE_L2_ACK") return NoCMessageType::REMOTE_L2_ACK;
+            else if (mess == "MEMORY_ACK") return NoCMessageType::MEMORY_ACK;
+            else if (mess == "MCPU_REQUEST") return NoCMessageType::MCPU_REQUEST;
+            else if (mess == "SCRATCHPAD_ACK") return NoCMessageType::SCRATCHPAD_ACK;
+            else if (mess == "SCRATCHPAD_DATA_REPLY") return NoCMessageType::SCRATCHPAD_DATA_REPLY;
+            else if (mess == "SCRATCHPAD_COMMAND") return NoCMessageType::SCRATCHPAD_COMMAND;
+            else sparta_assert(false, "Message " + mess + " not defined. See NoCMessageType.");
+        }
+
+        static std::map<NoCMessageType, std::pair<Networks,uint8_t>> message_to_network_and_class_;  //! The mapping of messages to networks and classes
 
         sparta::StatisticDef load_pkt_data_transfer_ = sparta::StatisticDef
         (

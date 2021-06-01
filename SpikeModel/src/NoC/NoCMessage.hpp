@@ -7,9 +7,6 @@
 #include "../Event.hpp"
 #include "../EventManager.hpp"
 
-// Set to the biggest priority value used in all NoC networks
-#define MAX_PRIORITY_USED 3
-
 namespace spike_model
 {
     class NoCMessage
@@ -78,18 +75,18 @@ namespace spike_model
             uint16_t getSrcPort(){return src_port_;}
 
             /*!
-             * \brief Get the transaction type that defines the NoC network to employ
+             * \brief Get the noc network to use
              * \see NoC::Networks
-             * \return Transaction type (NoC Network)
+             * \return NoC Network
              */
-            uint8_t getTransactionType(){return transaction_type_;}
+            uint8_t getNoCNetwork(){return noc_network_;}
 
             /*!
-             * \brief Get the Priority of the message
+             * \brief Get the class of the message
              * 
-             * @return Priority
+             * @return Class (priority, VC or both)
              */
-            uint8_t getPriority(){return priority_;}
+            uint8_t getClass(){return class_;}
 
             static uint8_t header_size; //! The size of the header in bits
 
@@ -100,8 +97,8 @@ namespace spike_model
             uint16_t                size_;              //! The message size in bits
             uint16_t                src_port_;          //! The source
             uint16_t                dst_port_;          //! The destination
-            uint8_t                 transaction_type_;  //! The transaction type (network, payload size, ...) but currently only represents the destination network
-            uint8_t                 priority_;          //! The priority field
+            uint8_t                 noc_network_;       //! The noc network to use
+            uint8_t                 class_;             //! The class which represents a priority or VC or both
 
     };
 
