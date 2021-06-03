@@ -34,6 +34,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     pending_get_vec_len.resize(num_cores,NULL);
     pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
+    waiting_on_mshrs.resize(num_cores,false);
 }
         
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -56,13 +57,23 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         }
 
         std::list<std::shared_ptr<spike_model::Event>> new_spike_events;
-        //auto t1 = std::chrono::high_resolution_clock::now();
 
         is_fetch = false;
-        bool success=spike->simulateOne(current_core, current_cycle, new_spike_events);
-        //auto t2 = std::chrono::high_resolution_clock::now();
-        //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
+        bool success=false;
+
+        //Stall the core if there are no remaining MSHRs. This is conservative. Actually the core may run until the next miss load happens
+        if(spike->checkNumInFlightL1Misses(current_core)<max_in_flight_l1_misses)
+        {
+            //auto t1 = std::chrono::high_resolution_clock::now();
+            success=spike->simulateOne(current_core, current_cycle, new_spike_events);
+            //auto t2 = std::chrono::high_resolution_clock::now();
+            //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
+        }
+        else
+        {
+            waiting_on_mshrs[current_core] = true;
+        }
         core_active=success;
 
         for(std::shared_ptr<spike_model::Event> e:new_spike_events)
@@ -217,7 +228,7 @@ void SimulationOrchestrator::selectRunnableThreads()
     //If active core is ehanged, mark the other active thread in RR fashion as runnable
     for(uint16_t i = 0; i < cur_cycle_suspended_threads.size(); i++)
     {
-        //Make runnable, the next active thread from the group
+        //Make runnable, the next active thread from the group if the core has available MSHRs
         uint16_t core = cur_cycle_suspended_threads[i];
         uint16_t core_group = core / num_threads_per_core;
         if(current_cycle >= runnable_after[core_group])
@@ -286,7 +297,13 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         uint16_t core=r->getCoreId();
 
         bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
+        bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
+        bool is_store=r->getType()==spike_model::CacheRequest::AccessType::STORE;
+
+        size_t prev_in_flight=0;
         bool can_run=false;
+
+        //TODO: This could be a switch
         if(is_fetch)
         {
             can_run = true;
@@ -322,25 +339,54 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             }
         }
 
-        bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
+
         if(is_load)
         {
             can_run=spike->ackRegister(r, current_cycle);
         }
+        
+        if(is_load || is_store)
+        {
+            prev_in_flight=spike->checkNumInFlightL1Misses(core);
+        }
+        
 
         can_run = can_run && !waiting_on_fetch[core];
+
         if(can_run)
         {
             submitPendingOps(core);
         }
 
-        //Notify Spike that a request has been serviced and generate the writeback
-        std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
-        if(wb!=nullptr)
+
+        //Reload the cache and generate a writeback
+        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
         {
-            submitToSparta(wb);
+            std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
+            if(wb!=nullptr)
+            {
+                submitToSparta(wb);
+            }
         }
 
+        //If MSHRs became available
+        if(prev_in_flight>=max_in_flight_l1_misses && spike->checkNumInFlightL1Misses(core)<max_in_flight_l1_misses)
+        {
+            //resume all the cores in the group that were waiting for MSHRs
+            uint16_t core_group_start=(core/num_threads_per_core)*num_threads_per_core;
+            uint16_t core_group_end=core_group_start+num_threads_per_core;
+            for(uint16_t i = core_group_start; i < core_group_end; i++)
+            {
+                if(waiting_on_mshrs[i])
+                {
+                    waiting_on_mshrs[i]=false;
+                    resumeCore(i);
+                }
+            }
+        }
+
+
+        //If there are MSHRs available, the core is not in a barrier and either a RAW was serviced or MSHRs just became available
         if(can_run && !threads_in_barrier[core])
         {
             resumeCore(core);

@@ -100,6 +100,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::vector<uint16_t> stalled_cores;
         std::vector<uint16_t> runnable_cores;
         std::vector<bool> waiting_on_fetch;
+        std::vector<bool> waiting_on_mshrs;
         std::vector<uint64_t> runnable_after;
         std::vector<uint16_t> cur_cycle_suspended_threads;
         std::vector<bool> threads_in_barrier;
@@ -123,6 +124,9 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         bool trace;
 
         bool is_fetch;
+
+        size_t max_in_flight_l1_misses=8;
+
         spike_model::DetailedNoC* detailed_noc_; //! Pointer to the NoC
 
         /*!
