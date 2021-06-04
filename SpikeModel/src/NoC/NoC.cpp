@@ -95,14 +95,14 @@ namespace spike_model
             case NoCMessageType::REMOTE_L2_REQUEST:
                 count_remote_l2_requests_++;
                 break;
-            case NoCMessageType::MEMORY_REQUEST:
-                count_memory_requests_++;
-                break;
             case NoCMessageType::MEMORY_REQUEST_LOAD:
                 count_memory_requests_load_++;
                 break;
             case NoCMessageType::MEMORY_REQUEST_STORE:
                 count_memory_requests_store_++;
+                break;
+            case NoCMessageType::MEMORY_REQUEST_WB:
+                count_memory_requests_wb_++;
                 break;
             case NoCMessageType::REMOTE_L2_ACK:
                 count_remote_l2_acks_++;

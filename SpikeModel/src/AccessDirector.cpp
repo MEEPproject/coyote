@@ -318,10 +318,12 @@ namespace spike_model
         req->setMemoryAccessInfo(memory_controller, rank, bank, row, col);
 
         uint32_t size=address_size;
+        NoCMessageType type=NoCMessageType::MEMORY_REQUEST_LOAD;
 
         if(req->getType()==CacheRequest::AccessType::STORE)
         {
             size=req->getSize();
+            type=NoCMessageType::MEMORY_REQUEST_STORE;
         }
         else if(req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
@@ -330,9 +332,10 @@ namespace spike_model
             req->setSourceTile(tile->id_);
             uint16_t home=calculateHome(req);
             req->setHomeTile(home);
+            type=NoCMessageType::MEMORY_REQUEST_WB;
         }
 
-        return std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_REQUEST, size, req->getHomeTile(), req->getMemoryController());
+        return std::make_shared<NoCMessage>(req, type, size, req->getHomeTile(), req->getMemoryController());
     }
      
     std::shared_ptr<NoCMessage> AccessDirector::getDataForwardMessage(std::shared_ptr<CacheRequest> req)     

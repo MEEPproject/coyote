@@ -1,4 +1,4 @@
-# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_3networks_prios.yml
+# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_3pnets_prios.yml
 # Description: Describes an architecture composed by:
 #  - 8 tiles with: 
 #     - 2 cores (2 threads)
@@ -77,9 +77,9 @@ top:
         header_size: 27                     # (uint8_t)         The size of messages' header including ECC
         message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
           - "REMOTE_L2_REQUEST:ADDRESS_ONLY.1"
-          - "MEMORY_REQUEST:ADDRESS_ONLY.0"
           - "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1"
           - "MEMORY_REQUEST_STORE:DATA_TRANSFER.0"
+          - "MEMORY_REQUEST_WB:DATA_TRANSFER.0"
           - "REMOTE_L2_ACK:DATA_TRANSFER.1"
           - "MEMORY_ACK:DATA_TRANSFER.0"
           - "MCPU_REQUEST:ADDRESS_ONLY.0"

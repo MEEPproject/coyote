@@ -166,16 +166,16 @@ namespace spike_model
                     tile_to_network_[mess->getSrcPort()],   // Source
                     tile_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getClass(),                    // Class of traffic -> Priority
+                    mess->getClass(),                       // Class of traffic -> Priority / VN / VC
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
 
             // VAS -> MCPU messages
-            case NoCMessageType::MEMORY_REQUEST:
             case NoCMessageType::MEMORY_REQUEST_LOAD:
             case NoCMessageType::MEMORY_REQUEST_STORE:
+            case NoCMessageType::MEMORY_REQUEST_WB:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:
@@ -183,7 +183,7 @@ namespace spike_model
                     tile_to_network_[mess->getSrcPort()],   // Source
                     mcpu_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getClass(),                    // Class of traffic -> Priority
+                    mess->getClass(),                       // Class of traffic -> Priority / VN / VC
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
@@ -235,7 +235,7 @@ namespace spike_model
                     mcpu_to_network_[mess->getSrcPort()],   // Source
                     tile_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
-                    mess->getClass(),                    // Class of traffic -> Priority
+                    mess->getClass(),                       // Class of traffic -> Priority / VN / VC
                     INJECTION_TIME                          // Injection time to add
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);

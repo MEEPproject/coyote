@@ -173,7 +173,9 @@ namespace spike_model
                     }*/
                     break;
 
-                case NoCMessageType::MEMORY_REQUEST:
+                case NoCMessageType::MEMORY_REQUEST_LOAD:
+                case NoCMessageType::MEMORY_REQUEST_STORE:
+                case NoCMessageType::MEMORY_REQUEST_WB:
                     //SHOULD DO SOMETHING HERE??
                     break;
 

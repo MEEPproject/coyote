@@ -56,9 +56,9 @@ namespace spike_model
             PARAMETER(uint8_t, header_size, 8, "The header size of the messages (in bits)")
             PARAMETER(std::vector<std::string>, message_to_network_and_class, std::vector<std::string>(
                 {"REMOTE_L2_REQUEST:ADDRESS_ONLY.1",
-                 "MEMORY_REQUEST:ADDRESS_ONLY.1",
                  "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1",
                  "MEMORY_REQUEST_STORE:DATA_TRANSFER.0",
+                 "MEMORY_REQUEST_WB:DATA_TRANSFER.0",
                  "REMOTE_L2_ACK:DATA_TRANSFER.1",
                  "MEMORY_ACK:DATA_TRANSFER.1",
                  "MCPU_REQUEST:ADDRESS_ONLY.0",
@@ -188,9 +188,9 @@ namespace spike_model
         NoCMessageType getMessageTypeFromString_(const std::string& mess)
         {
             if (mess == "REMOTE_L2_REQUEST") return NoCMessageType::REMOTE_L2_REQUEST;
-            else if (mess == "MEMORY_REQUEST") return NoCMessageType::MEMORY_REQUEST;
             else if (mess == "MEMORY_REQUEST_LOAD") return NoCMessageType::MEMORY_REQUEST_LOAD;
             else if (mess == "MEMORY_REQUEST_STORE") return NoCMessageType::MEMORY_REQUEST_STORE;
+            else if (mess == "MEMORY_REQUEST_WB") return NoCMessageType::MEMORY_REQUEST_WB;
             else if (mess == "REMOTE_L2_ACK") return NoCMessageType::REMOTE_L2_ACK;
             else if (mess == "MEMORY_ACK") return NoCMessageType::MEMORY_ACK;
             else if (mess == "MCPU_REQUEST") return NoCMessageType::MCPU_REQUEST;
@@ -233,13 +233,13 @@ namespace spike_model
             "Number of Remote_L2_Request",      // description
             sparta::Counter::COUNT_NORMAL       // behavior
         );                                                      //! The number of Remote_L2_Requests forwarded by NoC
-        sparta::Counter count_memory_requests_ = sparta::Counter
+        sparta::Counter count_memory_requests_wb_ = sparta::Counter
         (
             getStatisticSet(),                  // parent
-            "memory_requests",                  // name
-            "Number of Memory_Request",         // description
+            "memory_requests_wb",                  // name
+            "Number of Memory_Request_WriteBack",         // description
             sparta::Counter::COUNT_NORMAL       // behavior
-        );                                                      //! The number of Memory_Requests forwarded by NoC
+        );                                                      //! The number of Memory_Requests_WriteBack forwarded by NoC
         sparta::Counter count_memory_requests_load_ = sparta::Counter
         (
             getStatisticSet(),                  // parent

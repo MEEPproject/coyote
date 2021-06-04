@@ -30,7 +30,7 @@ void SpMV_ref(double *a, long *ia, long *ja, double *x, double *y, int nrows) {
 }
 
 void SpMV_vector(int coreid, int ncores, double *a, long *ia, long *ja, double *x, double *y, int nrows) {
-  printf("In SpMV EPI\n");
+  //printf("In SpMV EPI\n");
   
   int chunk=nrows/ncores;
   int start=coreid*(chunk);
@@ -67,7 +67,7 @@ void SpMV_vector_manual(
   double *Y,					// a4
   long nrows)					// a5
 {
-  printf("In SpMV Manual\n");
+  //printf("In SpMV Manual\n");
   int last = Row_ptr[0];
   int chunk=nrows/ncores;
   int start=coreid*(chunk);
@@ -124,7 +124,7 @@ void SpMV_vector_manual(
 
 void SpMV_vector_packed(int coreid, int ncores, double *a, long *ia, long *ja, double *x, double *y, long nrows) {
 
-  printf("In SpMV packed\n");
+  //printf("In SpMV packed\n");
 
   unsigned long gvl, shvl, red_rvl = 1, red_gvl; // requested & granted vector lengths
   unsigned long MAXVL;
@@ -258,6 +258,6 @@ int thread_entry(int cid, int nc)
 
   if(cid==0)
   {
-      exit(1);
+      exit(y[0]);
   }
 }

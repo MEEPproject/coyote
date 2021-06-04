@@ -1,4 +1,4 @@
-# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_3VCs_woprios.yml
+# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_3pnets_4prioqueues_prios.yml
 # Description: Describes an architecture composed by:
 #  - 8 tiles with: 
 #     - 2 cores (2 threads)
@@ -6,7 +6,7 @@
 #  - 8 MCPUs with: 
 #     - 1 MC
 #     - 8 memory banks 
-#  - a detailed NoC using 3 VCs without priorities
+#  - a detailed NoC using 3 physical networks with 4 priority queues and priority arbitration
 
 ---
 
@@ -76,17 +76,17 @@ top:
         noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
         header_size: 27                     # (uint8_t)         The size of messages' header including ECC
         message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
-          - "REMOTE_L2_REQUEST:DATA_TRANSFER.1"
-          - "MEMORY_REQUEST:DATA_TRANSFER.1"
-          - "MEMORY_REQUEST_LOAD:DATA_TRANSFER.1"
+          - "REMOTE_L2_REQUEST:ADDRESS_ONLY.1"
+          - "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1"
           - "MEMORY_REQUEST_STORE:DATA_TRANSFER.0"
-          - "REMOTE_L2_ACK:DATA_TRANSFER.0"
+          - "MEMORY_REQUEST_WB:DATA_TRANSFER.0"
+          - "REMOTE_L2_ACK:DATA_TRANSFER.1"
           - "MEMORY_ACK:DATA_TRANSFER.0"
-          - "MCPU_REQUEST:DATA_TRANSFER.1"
-          - "SCRATCHPAD_ACK:DATA_TRANSFER.2"
-          - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.0"
-          - "SCRATCHPAD_COMMAND:DATA_TRANSFER.0"
-        booksim_configuration: configs/booksim/4x4_mesh_iq_3vcs.cfg  # (std::string)   BookSim configuration file
+          - "MCPU_REQUEST:ADDRESS_ONLY.0"
+          - "SCRATCHPAD_ACK:CONTROL.0"
+          - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2"
+          - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
+        booksim_configuration: configs/booksim/4x4_mesh_iq_4vcs_prios.cfg  # (std::string)   BookSim configuration file
         mcpus_indices: [0,3,4,7,8,11,12,15] # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
         network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
         stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files

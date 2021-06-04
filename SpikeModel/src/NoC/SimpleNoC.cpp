@@ -82,9 +82,9 @@ namespace spike_model
                 break;
 
             // VAS -> MCPU messages
-            case NoCMessageType::MEMORY_REQUEST:
             case NoCMessageType::MEMORY_REQUEST_LOAD:
             case NoCMessageType::MEMORY_REQUEST_STORE:
+            case NoCMessageType::MEMORY_REQUEST_WB:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:

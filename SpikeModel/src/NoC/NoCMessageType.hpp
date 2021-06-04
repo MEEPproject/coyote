@@ -8,9 +8,9 @@ namespace spike_model
     enum class NoCMessageType
     {
         REMOTE_L2_REQUEST       = 0,
-        MEMORY_REQUEST          = 1,
-        MEMORY_REQUEST_LOAD     = 2,
-        MEMORY_REQUEST_STORE    = 3,
+        MEMORY_REQUEST_LOAD     = 1,
+        MEMORY_REQUEST_STORE    = 2,
+        MEMORY_REQUEST_WB       = 3,
         REMOTE_L2_ACK           = 4,
         MEMORY_ACK              = 5,
         MCPU_REQUEST            = 6,
