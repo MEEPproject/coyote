@@ -87,7 +87,7 @@ namespace spike_model
         vector<bool>                            network_is_mcpu_;           //! A network id is a MCPU or a TILE
         vector<uint16_t>                        network_width_;             //! Physical channel width (bits)
         string                                  stats_files_prefix_;        //! The prefix of the output statistics files
-        vector<map<int,shared_ptr<NoCMessage>>> pkts_map_;                  //! Map that contains in-flight packets and their messages
+        vector<map<long,shared_ptr<NoCMessage>>> pkts_map_;                 //! Map that contains in-flight packets and their messages
         sparta::Counter                         hop_count_data_transfer_ = sparta::Counter
         (
             getStatisticSet(),                                  // parent

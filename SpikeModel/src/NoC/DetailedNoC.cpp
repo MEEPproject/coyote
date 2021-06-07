@@ -17,7 +17,7 @@ namespace spike_model
         size_(num_tiles_ + num_memory_cpus_),
         network_width_(params->network_width),
         stats_files_prefix_(params->stats_files_prefix),
-        pkts_map_(vector(static_cast<int>(Networks::count), map<int,shared_ptr<NoCMessage>>()))
+        pkts_map_(vector(static_cast<int>(Networks::count), map<long,shared_ptr<NoCMessage>>()))
     {
         sparta_assert(noc_model_ == "detailed");
         sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.noc.params.mcpus_indices must be a vector");
@@ -156,7 +156,7 @@ namespace spike_model
         // Save the min space available at injection queues
         if(inj_queue_size < (int) min_space_in_inj_queue_)
             min_space_in_inj_queue_ = inj_queue_size;
-        int packet_id = INVALID_PKT_ID;
+        long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
             // VAS -> VAS messages
@@ -224,7 +224,7 @@ namespace spike_model
         // Save the min space available at injection queues
         if(inj_queue_size < (int) min_space_in_inj_queue_)
             min_space_in_inj_queue_ = inj_queue_size;
-        int packet_id = INVALID_PKT_ID;
+        long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
             // MCPU -> VAS messages
