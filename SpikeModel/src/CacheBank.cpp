@@ -161,9 +161,18 @@ namespace spike_model
     // Handle cache access request
     bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
-        // Access cache, and check cache hit or miss
-        const bool CACHE_HIT = cacheLookup_(mem_access_info_ptr);
-
+	bool CACHE_HIT;
+	//WBs always hit. No need to do anything else antil eviction
+        if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
+        {
+            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()));
+            CACHE_HIT=true;
+        }
+        else
+        {
+            // Access cache, and check cache hit or miss
+            CACHE_HIT = cacheLookup_(mem_access_info_ptr);
+        }	
 
         if (CACHE_HIT) {
                 mem_access_info_ptr->getReq()->setServiced();
@@ -210,12 +219,6 @@ namespace spike_model
                 else
                 {
                     count_misses_on_already_pending_++;
-                }
-
-                //THE CACHE IS WRITE ALLOCATE, SO MISSES ON WRITEBACKS NEED TO KEEP THE LINE APPART FROM FORWARDING IT
-                if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
-                {
-                    reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()));
                 }
 
                 if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
