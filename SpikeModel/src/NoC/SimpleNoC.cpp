@@ -11,6 +11,7 @@
 #define LINK_TRAVERSAL 1
 
 using std::abs;
+using std::vector;
 
 namespace spike_model
 {
@@ -19,11 +20,14 @@ namespace spike_model
         latency_per_hop_(params->latency_per_hop),
         x_size_(params->x_size),
         y_size_(params->y_size),
-        dst_count_(y_size_, std::vector<std::vector<uint64_t>>(x_size_, std::vector<uint64_t>(static_cast<int>(Networks::count), 0))),
-        src_count_(y_size_, std::vector<std::vector<uint64_t>>(x_size_, std::vector<uint64_t>(static_cast<int>(Networks::count), 0))),
+        dst_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))),
+        src_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))),
+        dst_src_count_(y_size_, vector<vector<vector<vector<uint64_t>>>>(x_size_, vector<vector<vector<uint64_t>>>(
+                   y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))))),
         pkt_count_prefix_(params->packet_count_file_prefix),
         pkt_count_period_(params->packet_count_periodicity),
-        pkt_count_stage_(0)
+        pkt_count_stage_(0),
+        pkt_count_flush_(params->flush_packet_count_each_period)
     {
         sparta_assert(noc_model_ == "simple");
         sparta_assert(x_size_ * y_size_ == num_memory_cpus_ + num_tiles_, 
@@ -77,6 +81,7 @@ namespace spike_model
                             DESTINATION_ROUTER;
                 dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
+                dst_src_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
                 // Latency: Injection + Link traversal + hops * latency_per_hop (RC - VA - SA - ST + output_link)
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
@@ -93,6 +98,7 @@ namespace spike_model
                             DESTINATION_ROUTER;
                 dst_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
+                dst_src_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
                 out_ports_memory_cpus_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
@@ -135,6 +141,7 @@ namespace spike_model
                             DESTINATION_ROUTER;;
                 dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
+                dst_src_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
@@ -174,7 +181,12 @@ namespace spike_model
         std::ofstream src_file_address_only;
         std::ofstream src_file_control;
         std::ofstream src_file_aggregated;
+        std::ofstream dst_src_file_data_transfer;
+        std::ofstream dst_src_file_address_only;
+        std::ofstream dst_src_file_control;
+        std::ofstream dst_src_file_aggregated;
 
+        // DST files
         dst_file_data_transfer.open(pkt_count_prefix_ + "dst_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
         dst_file_address_only.open(pkt_count_prefix_ + "dst_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
         dst_file_control.open(pkt_count_prefix_ + "dst_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
@@ -192,6 +204,12 @@ namespace spike_model
                 dst_file_control << dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] << ";";
                 aggregated += dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)];
                 dst_file_aggregated << aggregated << ";";
+                if(pkt_count_flush_)
+                {
+                    dst_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
+                    dst_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
+                    dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                }
             }
             dst_file_data_transfer << "\n";
             dst_file_address_only << "\n";
@@ -203,6 +221,7 @@ namespace spike_model
         dst_file_control.close();
         dst_file_aggregated.close();
 
+        // SRC files
         src_file_data_transfer.open(pkt_count_prefix_ + "src_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
         src_file_address_only.open(pkt_count_prefix_ + "src_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
         src_file_control.open(pkt_count_prefix_ + "src_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
@@ -219,6 +238,12 @@ namespace spike_model
                 src_file_control << src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] << ";";
                 aggregated += src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)];
                 src_file_aggregated << aggregated << ";";
+                if(pkt_count_flush_)
+                {
+                    src_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
+                    src_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
+                    src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                }
             }
             src_file_data_transfer << "\n";
             src_file_address_only << "\n";
@@ -229,6 +254,46 @@ namespace spike_model
         src_file_address_only.close();
         src_file_control.close();
         src_file_aggregated.close();
+
+        // DST_SRC files
+        dst_src_file_data_transfer.open(pkt_count_prefix_ + "dst_src_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        dst_src_file_address_only.open(pkt_count_prefix_ + "dst_src_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        dst_src_file_control.open(pkt_count_prefix_ + "dst_src_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        dst_src_file_aggregated.open(pkt_count_prefix_ + "dst_src_aggregated_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        for(int dsty=0; dsty < y_size_; ++dsty)
+        {
+            for(int dstx=0; dstx < x_size_; ++dstx)
+            {
+                for(int srcy=0; srcy < y_size_; ++srcy)
+                {
+                    for(int srcx=0; srcx < x_size_; ++srcx)
+                    {
+                        aggregated = 0;
+                        dst_src_file_data_transfer << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)] << ";";
+                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)];
+                        dst_src_file_address_only << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] << ";";
+                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)];
+                        dst_src_file_control << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)] << ";";
+                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)];
+                        dst_src_file_aggregated << aggregated << ";";
+                        if(pkt_count_flush_)
+                        {
+                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
+                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
+                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                        }
+                    }
+                }
+                dst_src_file_data_transfer << "\n";
+                dst_src_file_address_only << "\n";
+                dst_src_file_control << "\n";
+                dst_src_file_aggregated << "\n";
+            }
+        }
+        dst_src_file_data_transfer.close();
+        dst_src_file_address_only.close();
+        dst_src_file_control.close();
+        dst_src_file_aggregated.close();
     }
 
 } // spike_model

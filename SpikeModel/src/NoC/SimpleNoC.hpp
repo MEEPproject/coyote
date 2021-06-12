@@ -37,6 +37,7 @@ namespace spike_model
             PARAMETER(vector<string>, mcpus_location, {"0.0"}, "The coordinates of MCPUs in the NoC mesh like [X.Y,3.0] ordered by MCPU")
             PARAMETER(std::string, packet_count_file_prefix, "packet_count_", "The prefix of SRC and DST packet count filenames")
             PARAMETER(uint32_t, packet_count_periodicity, 100000, "SRC and DST packet count statistics write periodicity")
+            PARAMETER(bool, flush_packet_count_each_period, false, "Flush the packet count statistics or accumulate them")
         };
 
         /*!
@@ -116,11 +117,15 @@ namespace spike_model
             getStatisticSet(),                                  // context
             "hop_count_control/sent_packets_control"            // Expression
         );                                                      //! The average hop count in control NoC (counts crossed routers)
+        //[y][x][network]
         vector<vector<vector<uint64_t>>>    dst_count_;         //! Accumulates the number of packets to each destination by NoC network
         vector<vector<vector<uint64_t>>>    src_count_;         //! Accumulates the number of packets from each source by NoC network
+        //DST[y][x]SRC[y][x][network]
+        vector<vector<vector<vector<vector<uint64_t>>>>> dst_src_count_; //! Accumulates the number of packets from each src to each dst by NoC network
         std::string                         pkt_count_prefix_;  //! The filename prefix for SRC and DST packet count
         uint32_t                            pkt_count_period_;  //! The number of cycles to write packet count statistics
         uint16_t                            pkt_count_stage_;   //! The current stage of writting statistics
+        bool                                pkt_count_flush_;    //! Flush or accumulate packet counts
 
     };
 
