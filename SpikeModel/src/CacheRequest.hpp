@@ -20,6 +20,7 @@ namespace spike_model
          */
         
         friend class AccessDirector; 
+        friend class MemoryController; 
     
         public:
             enum class AccessType
@@ -148,15 +149,21 @@ namespace spike_model
             bool memory_ack;
             
             /*!
-             * \brief Set the information of the memory access triggered by the CacheRequest
-             * \param memory_controller The memory controller that will be accessed
+             * \brief Set the bank information of the memory access triggered by the CacheRequest
              * \param rank The rank that will be accessed
              * \param bank The bank that will be accessed
              * \param row The row that will be accessed
              * \param col The column that will be accessed
-             * \note This method is public but called through friending by instances of CacheEventManager
+             * \note This method is private but called through friending by instances of MemoryController
              */
-            void setMemoryAccessInfo(uint64_t memory_controller, uint64_t rank, uint64_t bank, uint64_t row, uint64_t col);
+            void setBankInfo(uint64_t rank, uint64_t bank, uint64_t row, uint64_t col);
+            
+            /*!
+             * \brief Set the information of the memory access triggered by the CacheRequest
+             * \param memory_controller The memory controller that will be accessed
+             * \note This method is private but called through friending by instances of AccessDirector
+             */
+            void setMemoryController(uint64_t memory_controller);
     };
     
     inline std::ostream & operator<<(std::ostream & Str, CacheRequest const & req)

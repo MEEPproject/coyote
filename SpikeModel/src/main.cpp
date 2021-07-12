@@ -94,7 +94,10 @@ int main(int argc, char **argv)
         auto mcpu_line_size         = upt.get("top.cpu.memory_cpu0.params.line_size").getAs<uint64_t>();
         auto num_memory_cpus        = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
         auto noc_model              = upt.get("top.cpu.noc.params.noc_model").getAs<std::string>();
-
+        auto bank_policy            = upt.get("top.cpu.tile0.params.bank_policy").getAs<std::string>();
+        auto tile_policy            = upt.get("top.cpu.tile0.params.tile_policy").getAs<std::string>();
+        auto num_banks              = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+        
         // Copy parameters shared by multiple units
         std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
         cls.getSimulationConfiguration().processParameter(num_tiles_p, sparta::utils::uint32_to_str(num_tiles));
@@ -103,7 +106,19 @@ int main(int argc, char **argv)
         std::string num_mcs_p ("top.cpu.params.num_memory_controllers");
         cls.getSimulationConfiguration().processParameter(num_mcs_p, sparta::utils::uint32_to_str(num_memory_cpus));
 
-       // Some general parameters checks
+        uint8_t bank_and_tile_bits=1;
+
+        if(bank_policy=="set_interleaving")
+        {
+            bank_and_tile_bits *= num_banks;
+        }
+        if(tile_policy=="set_interleaving")
+        {
+            bank_and_tile_bits *= num_tiles;
+        }
+        cls.getSimulationConfiguration().processParameter("top.cpu.tile*.l2_bank*.params.bank_and_tile_offset", sparta::utils::uint32_to_str(bank_and_tile_bits));
+
+        // Some general parameters checks
         std::string dcache_line_size=dcache_config.substr(dcache_config.rfind(":") + 1);
         std::string icache_line_size=icache_config.substr(icache_config.rfind(":") + 1);
         sparta_assert((l2bank_line_size == mcpu_line_size)            &&
@@ -147,6 +162,19 @@ int main(int argc, char **argv)
         if(trace)
         {
             spike_model::Logger l=sim->getLogger();
+
+            if(upt.hasValue("meta.params.trace_start_tick") && upt.hasValue("meta.params.trace_end_tick"))
+            {
+                uint64_t start=upt.get("meta.params.trace_start_tick").getAs<uint64_t>();
+                uint64_t end=upt.get("meta.params.trace_end_tick").getAs<uint64_t>();
+                std::cout << "Tracing between cycle "<< start << " and cycle " << end << "\n";
+                l.setTimeBounds(start, end);
+            }
+            else
+            {
+                std::cout << "No bounds specified. Tracing for the whole duration of the application.\n";
+            }
+
             orchestrator.setLogger(l);
 
             //Remove "[" and "]" from the string
@@ -164,7 +192,6 @@ int main(int argc, char **argv)
                 {
                     l.addEventOfInterest(token);
                 }
-                std::cout << token << "\n";
                 events_of_interest.erase(0, pos + delimiter.length());
             }
             if(events_of_interest!="any")

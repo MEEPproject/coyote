@@ -197,7 +197,6 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 {
     // Reading general parameters
     const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
-    auto num_memory_banks = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
     auto num_cores = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
     auto num_tiles = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
     auto num_memory_cpus = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
@@ -238,12 +237,26 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     uint64_t num_rows=m_b->getNumRows();
     uint64_t num_cols=m_b->getNumColumns();
 
+    spike_model::AddressMappingPolicy address_mapping=spike_model::AddressMappingPolicy::CLOSE_PAGE;
+
+    for(std::size_t i = 0; i < num_memory_controllers; i++)
+    {
+        auto mc_node = getRoot()->getChild(std::string("cpu.memory_controller") +
+                sparta::utils::uint32_to_str(i));
+        sparta_assert(mc_node != nullptr);
+
+        spike_model::MemoryController *mc=mc_node->getResourceAs<spike_model::MemoryController>();
+
+        mc->setup_masks_and_shifts_(num_memory_controllers, num_rows, num_cols, bank_line);
+        address_mapping=mc->getAddressMapping();
+    }
+
     m->setServicedRequestsStorage(s);
 
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, num_memory_banks, num_rows, num_cols);
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping);
     }
 
     for(std::size_t i = 0; i < num_memory_cpus; ++i)
@@ -257,6 +270,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         mcpu->setRequestManager(m);
     }
 
+     
     return m;
 }
 

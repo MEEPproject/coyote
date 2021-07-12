@@ -26,21 +26,19 @@ namespace spike_model
             /*!
              * \brief Constructor for AccessDirector
              * \param t The tile that contains the AccessDirector
-             * \param address_mapping_policy The mapping policy when accessing main memory
              */
-            AccessDirector(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy) 
-                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(CacheDataMappingPolicy::PAGE_TO_BANK), 
+            AccessDirector(Tile * t) 
+                                                    : tile(t), bank_data_mapping_policy_(CacheDataMappingPolicy::PAGE_TO_BANK), 
                                                       scratchpad_data_mapping_policy_(CacheDataMappingPolicy::SET_INTERLEAVING), pending_scratchpad_management_ops(){}
             
             /*!
              * \brief Constructor for AccessDirector
              * \param t The tile that contains the AccessDirector
-             * \param address_mapping_policy The mapping policy when accessing main memory
              * \param b The data mapping policy for cache access
              * \param s The data mapping policy for scratchpad accesses
              */
-            AccessDirector(Tile * t, spike_model::AddressMappingPolicy address_mapping_policy, CacheDataMappingPolicy b, CacheDataMappingPolicy s) 
-                                                    : tile(t), address_mapping_policy_(address_mapping_policy), bank_data_mapping_policy_(b), 
+            AccessDirector(Tile * t, CacheDataMappingPolicy b, CacheDataMappingPolicy s) 
+                                                    : tile(t), bank_data_mapping_policy_(b), 
                                                       scratchpad_data_mapping_policy_(s), pending_scratchpad_management_ops(){}
 
             /*!
@@ -69,12 +67,10 @@ namespace spike_model
              * \param banks_per_tile The number of banks per Tile
              * \param the number of tiles in the system
              * \param num_mcs The number of memory controllers
-             * \param num_banks_per_mc The number of banks per memory controller
-             * \param num_rows_per_bank The number of rows per memory bank
-             * \param num_cols_per_bank The number of columns per memory bank
+             * \param address_mapping_policy The address mapping policy in the memory controllers
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile,  uint16_t num_tiles, 
-                                uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank);
+                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy);
             
             /*!
              * \brief Get a NoCMessage representing a remote L2 Request
@@ -116,8 +112,6 @@ namespace spike_model
         private:
             Tile * tile;
 
-            AddressMappingPolicy address_mapping_policy_;
-
             uint64_t num_ways;
             uint64_t way_size;
 
@@ -125,16 +119,7 @@ namespace spike_model
             uint64_t scratchpad_available_size=0;
             
             uint64_t mc_shift; //One channel per memory controller
-            uint64_t rank_shift;
-            uint64_t bank_shift;
-            uint64_t row_shift;
-            uint64_t col_shift;
-            
             uint64_t mc_mask;
-            uint64_t rank_mask;
-            uint64_t bank_mask;
-            uint64_t row_mask;
-            uint64_t col_mask;
 
             const uint8_t address_size=8; //In bytes
              
@@ -158,6 +143,8 @@ namespace spike_model
             * \return The bank to access
             */
             uint16_t calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r);
+            
+            uint8_t nextPowerOf2(uint64_t v);
 
 
         protected:

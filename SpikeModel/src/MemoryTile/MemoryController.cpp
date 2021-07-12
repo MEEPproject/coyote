@@ -35,13 +35,58 @@ namespace spike_model
             std::cout << "Unsupported reordering policy. Falling back to the default policy.\n";
             sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
         }
+        
+        address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        if(p->address_policy=="open_page")
+        {
+            printf("Using OPEN\n");
+            address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
+        }
+        else if(p->address_policy=="close_page")
+        {
+            printf("Using CLOSE\n");
+            address_mapping_policy_=spike_model::AddressMappingPolicy::CLOSE_PAGE;
+        }
+        else
+        {
+            printf("Unsupported address data mapping policy\n");
+        }
+
     }
 
 
     void MemoryController::receiveMessage_(const std::shared_ptr<spike_model::CacheRequest> &mes)
     {
         count_requests_++;
-        uint64_t bank=mes->getMemoryBank();
+        
+        uint64_t address=mes->getAddress();
+
+        uint64_t rank=0;
+        if(rank_mask!=0)
+        {
+            rank=(address >> rank_shift) & rank_mask;
+        }
+
+        uint64_t bank=0;
+        if(bank_mask!=0)
+        {
+            bank=(address >> bank_shift) & bank_mask;
+        }
+
+        uint64_t row=0;
+        if(row_mask!=0)
+        {
+            row=(address >> row_shift) & row_mask;
+        }
+
+        uint64_t col=0;
+        if(col_mask!=0)
+        {
+            col=(address >> col_shift) & col_mask;
+        }
+
+        mes->setBankInfo(rank, bank, row, col);
+
         sched->putRequest(mes, bank);
         if(trace_)
         {
@@ -197,5 +242,53 @@ namespace spike_model
             idle_=false;
         }
     }
+
+    spike_model::AddressMappingPolicy MemoryController::getAddressMapping()
+    {
+        return address_mapping_policy_;
+    }
+    
+    uint8_t MemoryController::nextPowerOf2(uint64_t v)
+    {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v |= v >> 32;
+        v++;
+        return v;
+    }
+
+    void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size)
+    {
+        this->line_size=line_size;
+        uint64_t mc_shift;
+        switch(address_mapping_policy_)
+        {
+            case AddressMappingPolicy::OPEN_PAGE:
+                mc_shift=ceil(log2(line_size));
+                col_shift=mc_shift+ceil(log2(num_cols_per_bank));
+                bank_shift=col_shift+ceil(log2(num_banks_));
+                rank_shift=bank_shift+0;
+                row_shift=rank_shift+ceil(log2(num_rows_per_bank));
+                break;
+
+                
+            case AddressMappingPolicy::CLOSE_PAGE:
+                mc_shift=ceil(log2(line_size));
+                bank_shift=mc_shift+ceil(log2(num_banks_));
+                rank_shift=bank_shift+0;
+                col_shift=rank_shift+ceil(log2(num_cols_per_bank));
+                row_shift=col_shift+ceil(log2(num_rows_per_bank));
+                break;
+        }
+        
+        rank_mask=0;
+        bank_mask=nextPowerOf2(num_banks_)-1;
+        row_mask=nextPowerOf2(num_rows_per_bank)-1;
+        col_mask=nextPowerOf2(num_cols_per_bank)-1;
+    }    
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

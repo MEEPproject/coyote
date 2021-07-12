@@ -41,10 +41,9 @@ top:
         num_l2_banks: 16                    # (uint16_t)        The number of l2 cache banks in the tile
         latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
         l2_sharing_mode: tile_private       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
-        bank_policy: set_interleaving       # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        bank_policy: page_to_bank           # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
         scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
-        address_policy: open_page           # (std::string)     The data mapping molicy in main memory (open_page, close_page)
       l2_bank*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
@@ -63,6 +62,7 @@ top:
         num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
         write_allocate: true                # (bool)            The write allocation policy
         reordering_policy: access_type      # (std::string)     The reordering policy for memory requests
+        address_policy: close_page           # (std::string)     The data mapping molicy in main memory (open_page, close_page)
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows

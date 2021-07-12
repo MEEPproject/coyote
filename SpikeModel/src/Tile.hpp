@@ -70,7 +70,6 @@ namespace spike_model
                 PARAMETER(std::string, bank_policy, "set_interleaving", "The data mapping policy for banks")
                 PARAMETER(std::string, scratchpad_policy, "set_interleaving", "The data mapping policy for the scratchpad")
                 PARAMETER(std::string, tile_policy, "set_interleaving", "The data mapping policy for tiles")
-                PARAMETER(std::string, address_policy, "open_page", "The data mapping molicy in main memory")
             };
 
             /*!
@@ -156,12 +155,10 @@ namespace spike_model
              * \param banks_per_tile The number of banks per Tile
              * \param num_tiles The number of tiles in the system
              * \param num_mcs The number of memory controllers
-             * \param num_banks_per_mc The number of banks per memory controller
-             * \param num_rows_per_bank The number of rows per memory bank
-             * \param num_cols_per_bank The number of columns per memory bank
+             * \param address_mapping_policy The address mapping policy of the memory controllers
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
-                                uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank);
+                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy);
 
         private:
             uint16_t id_;
@@ -174,7 +171,6 @@ namespace spike_model
             std::string bank_policy_;
             std::string scratchpad_policy_;
             std::string tile_policy_;
-            std::string address_policy_;
  
             std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_l2_acks_;
             std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_l2_reqs_;

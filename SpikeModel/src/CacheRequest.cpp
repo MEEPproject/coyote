@@ -3,14 +3,17 @@
 
 namespace spike_model
 {
-
-    void CacheRequest::setMemoryAccessInfo(uint64_t memory_controller, uint64_t rank, uint64_t bank, uint64_t row, uint64_t col)
+    void CacheRequest::setBankInfo(uint64_t rank, uint64_t bank, uint64_t row, uint64_t col)
     {
-        memory_controller_=memory_controller;
         rank_=rank;
         memory_bank_=bank;
         row_=row;
         col_=col;
+    }
+
+    void CacheRequest::setMemoryController(uint64_t memory_controller)
+    {
+        memory_controller_=memory_controller;
     }
     
     uint64_t CacheRequest::getMemoryController()

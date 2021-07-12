@@ -26,6 +26,7 @@
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
+#include "AddressMappingPolicy.hpp"
 
 namespace spike_model
 {
@@ -57,6 +58,7 @@ namespace spike_model
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
                 PARAMETER(std::string, reordering_policy, "none", "Request reordering policy")
+                PARAMETER(std::string, address_policy, "close_page", "Request reordering policy")
             };
 
             /*!
@@ -87,6 +89,21 @@ namespace spike_model
              */
             void notifyCompletion_(std::shared_ptr<BankCommand> c);
 
+            /*!
+             * \brief Set up the masks and shifts to identify where the data is in the memory.
+             * \brief The number of memory controllers
+             * \param The number of rows in each bank
+             * \param The number of columns in each bank
+             * \param The size of a cache line
+             */
+            void setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size);
+
+            /*
+             *\brief Get the AddressMappingPolicy for the memory controller
+             *\return The address mapping policy
+             */
+            spike_model::AddressMappingPolicy getAddressMapping();
+
         private:
 
             sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_mcpu_
@@ -101,12 +118,25 @@ namespace spike_model
             uint64_t num_banks_;
 
             bool write_allocate_;
-
+ 
             std::string reordering_policy_;
+            spike_model::AddressMappingPolicy address_mapping_policy_;
 
             bool idle_=true;
 
             std::vector<MemoryBank *> banks;
+            
+            uint64_t rank_shift;
+            uint64_t bank_shift;
+            uint64_t row_shift;
+            uint64_t col_shift;
+
+            uint64_t rank_mask;
+            uint64_t bank_mask;
+            uint64_t row_mask;
+            uint64_t col_mask;
+
+            uint16_t line_size;
 
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
@@ -147,6 +177,8 @@ namespace spike_model
              * \return A command for the write allocate
              */
             std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
+    
+            uint8_t nextPowerOf2(uint64_t v);
     };
 }
 #endif

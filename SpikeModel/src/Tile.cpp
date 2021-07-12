@@ -21,7 +21,6 @@ namespace spike_model
         bank_policy_(p->bank_policy),
         scratchpad_policy_(p->scratchpad_policy),
         tile_policy_(p->tile_policy),
-        address_policy_(p->address_policy),
         in_ports_l2_acks_(num_l2_banks_),
         in_ports_l2_reqs_(num_l2_banks_),
         out_ports_l2_acks_(num_l2_banks_),
@@ -84,25 +83,9 @@ namespace spike_model
             printf("Unsupported cache data mapping policy\n");
         }
 
-
-        spike_model::AddressMappingPolicy a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-        if(address_policy_=="open_page")
-        {
-            a_pol=spike_model::AddressMappingPolicy::OPEN_PAGE;
-        }
-        else if(address_policy_=="close_page")
-        {
-            a_pol=spike_model::AddressMappingPolicy::CLOSE_PAGE;
-        }
-        else
-        {
-            printf("Unsupported address data mapping policy\n");
-        }
-
-
         if(l2_sharing_mode_=="tile_private")
         {
-            access_director=new PrivateL2Director(this, a_pol, b_pol, s_pol);
+            access_director=new PrivateL2Director(this, b_pol, s_pol);
         }
         else
         {
@@ -119,7 +102,7 @@ namespace spike_model
             {
                 printf("Unsupported cache data mapping policy\n");
             }
-            access_director=new SharedL2Director(this, a_pol, b_pol, t_pol, s_pol);
+            access_director=new SharedL2Director(this, b_pol, t_pol, s_pol);
         }
     }
 
@@ -256,10 +239,9 @@ namespace spike_model
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
                uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-               uint64_t num_mcs, uint64_t num_banks_per_mc, uint64_t num_rows_per_bank,
-               uint64_t num_cols_per_bank)
+               uint64_t num_mcs, AddressMappingPolicy address_mapping_policy)
     {
-        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile,  num_tiles, num_mcs, num_banks_per_mc, num_rows_per_bank, num_cols_per_bank);
+        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, address_mapping_policy);
     }
 
     void Tile::insnLatencyCallback(const std::shared_ptr<spike_model::InsnLatencyEvent>& r)
