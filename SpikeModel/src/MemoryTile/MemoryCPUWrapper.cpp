@@ -47,11 +47,10 @@ namespace spike_model {
         //Note that VVL of 0 is received when the simulation is setting up
         //and the processor objects are created.
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
-		std::cout <<  "  VVL " << mes->getVVL() << " received from MCPU: Core "
-                          << mes->getCoreId() <<std::endl;
-
-			//mcpu_req.push_back(mes);
-			//issue_mcpu_event_.schedule(1);
+	    std::cout <<  "  AVL " << mes->getAVL() << " received from MCPU: Core "
+                      << mes->getCoreId() <<std::endl;
+            mcpu_req.push_back(mes);
+            issue_mcpu_event_.schedule(1);
 	}
 
 	//-- An instruction for the MCPU
@@ -78,19 +77,19 @@ namespace spike_model {
 	/////////////////////////////////////
 	//-- Command Execution
 	/////////////////////////////////////
-	/*void MemoryCPUWrapper::issueMCPU_() {
-		std::shared_ptr<MCPUSetVVL> mes = mcpu_req.front();
-		mes->setReturnedVecLen(mes->getRequestedVecLen());
-		std::cout << "MCPU: Returning VVL " << mes->getReturnedVecLen() << " to core " << mes->getCoreId() << std::endl;
-		mes->setServiced();
-		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
+	void MemoryCPUWrapper::issueMCPU_() {
+            std::shared_ptr<MCPUSetVVL> mes = mcpu_req.front();
+	    mes->setVVL(mes->getAVL());
+	    std::cout << "MCPU: Returning VVL " << mes->getVVL() << " to core " << mes->getCoreId() << std::endl;
+	    mes->setServiced();
+	    out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
 
-		//-- Are there any messages left in the queue?
-		mcpu_req.pop_front();
-		if(mcpu_req.size() > 0) {
-			issue_mcpu_event_.schedule(1);
-		}
-	}*/
+            //-- Are there any messages left in the queue?
+            mcpu_req.pop_front();
+	    if(mcpu_req.size() > 0) {
+	        issue_mcpu_event_.schedule(1);
+	    }
+	}
 
 
 

@@ -73,11 +73,11 @@ namespace spike_model {
 
 
 			//-- commands coming from the tile
-			//sparta::UniqueEvent<> issue_mcpu_event_ {
-			//	&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)
-			//};
-			//std::list<std::shared_ptr<MCPUSetVVL>> mcpu_req;
-			//void issueMCPU_();
+			void issueMCPU_();
+			sparta::UniqueEvent<> issue_mcpu_event_ {
+				&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)
+			};
+			std::list<std::shared_ptr<MCPUSetVVL>> mcpu_req;
 
 
 			//-- message handling

@@ -342,7 +342,8 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
 
         if(is_load)
         {
-            can_run=spike->ackRegister(r, current_cycle);
+            can_run=spike->ackRegister(r->getCoreId(), r->getDestinationRegType(),
+                                       r->getDestinationRegId(), current_cycle);
         }
         
         if(is_load || is_store)
@@ -495,14 +496,29 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
 
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
 {
-    if(is_fetch == true) //RAW miss and a Fetch miss
+    if(!r->isServiced())
     {
-        //Fetch miss could be handled by this. RAW miss cannot
-        pending_get_vec_len[current_core] = r;
+        if(is_fetch == true)
+        {
+            pending_get_vec_len[current_core] = r;
+        }
+        else
+            submitToSparta(r);
     }
     else
     {
-        submitToSparta(r);
+        uint16_t core = r->getCoreId();
+        spike->setVVL(core, r->getVVL());
+        bool can_run=spike->ackRegister(r->getCoreId(), spike_model::Request::RegType::INTEGER,
+                                       r->getDestinationRegId(), current_cycle);
+        if(can_run && !threads_in_barrier[core])
+        {
+            resumeCore(core);
+            if(trace_)
+            {
+                logger_.logResume(current_cycle, core);
+            }
+        }
     }
 }
 
@@ -512,7 +528,8 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadReque
 
     uint64_t core=r->getCoreId();
 
-    bool can_run=spike->ackRegister(r, current_cycle);
+    bool can_run=spike->ackRegister(r->getCoreId(), r->getDestinationRegType(),
+                                       r->getDestinationRegId(), current_cycle);
     if(can_run && !threads_in_barrier[core])
     {
         resumeCore(core);
