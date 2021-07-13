@@ -24,9 +24,11 @@ namespace spike_model
         pending_load_requests_(),
         pending_store_requests_(),
         pending_scratchpad_requests_(),
+        eviction_times_(),
         l2_size_kb_ (p->size_kb),
         l2_associativity_ (p->associativity),
-        l2_line_size_ (p->line_size)
+        l2_line_size_ (p->line_size),
+        bank_and_tile_offset_ (p->bank_and_tile_offset)
     {
 
         in_core_req_.registerConsumerHandler
@@ -39,7 +41,7 @@ namespace spike_model
         // DL1 cache config
         std::unique_ptr<sparta::cache::ReplacementIF> repl(new sparta::cache::TreePLRUReplacement
                                                          (l2_associativity_));
-        l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, *repl ));
+        l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, l2_line_size_*bank_and_tile_offset_, *repl ));
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "CacheBank construct: #" << node->getGroupIdx();
@@ -137,7 +139,9 @@ namespace spike_model
             
             //if(m!=NULL) // m might be null if two events get scheduled for the same cycle, due to an event with hit_latency delay and a miss response mathing
             //{
+
                 handleCacheLookupReq_(m);
+//                std::cout << "Access to 0x" << std::hex << m->getReq()->getAddress() << ", bank, " << std::dec << m->getReq()->getCacheBank() << ", set " << ((m->getReq()->getAddress() << 46) >> 56)  << " hit=" << b << "\n";
 
                 if(in_flight_reads_.is_full())
                 {
@@ -161,8 +165,8 @@ namespace spike_model
     // Handle cache access request
     bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
-	bool CACHE_HIT;
-	//WBs always hit. No need to do anything else antil eviction
+
+        bool CACHE_HIT;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
             reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()));
@@ -180,10 +184,17 @@ namespace spike_model
         }
         else {
             count_cache_misses_++;
+
             // Update memory access info
             if(trace_)
             {
                 logger_.logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());
+                auto evicted_line_time=eviction_times_.find(mem_access_info_ptr->getReq()->getAddress());
+                if(evicted_line_time!=eviction_times_.end())
+                {
+                    logger_.logMissOnEvicted(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress(), getClock()->currentCycle()-evicted_line_time->second);
+                    eviction_times_.erase(evicted_line_time);
+                }
             }
 
             if (cache_busy_ == false) {
@@ -289,9 +300,17 @@ namespace spike_model
             if(trace_)
             {
                 logger_.logL2WB(getClock()->currentCycle(), 0, 0, l2_cache_line->getAddr());
+                eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
             }
         }
+        
+        if(trace_ && l2_cache_line->isValid())
+        {
+            eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
+        }
+
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
+            
 
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {

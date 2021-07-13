@@ -104,10 +104,11 @@ namespace spike_model
         SimpleDL1(sparta::TreeNode* parent,
                   uint64_t cache_size_kb,
                   uint64_t line_size,
+                  uint64_t bank_and_tile_offset,
                   const sparta::cache::ReplacementIF& rep) :
             sparta::cache::SimpleCache<SimpleCacheLine> (cache_size_kb,
                                                         line_size,
-                                                        line_size,
+                                                        bank_and_tile_offset,
                                                         SimpleCacheLine(line_size),
                                                         rep),
             sparta::TreeNode(parent, "l1cache", "Simple L1 Cache"),

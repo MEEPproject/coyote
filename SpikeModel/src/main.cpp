@@ -96,6 +96,7 @@ int main(int argc, char **argv)
         auto noc_model              = upt.get("top.cpu.noc.params.noc_model").getAs<std::string>();
         auto bank_policy            = upt.get("top.cpu.tile0.params.bank_policy").getAs<std::string>();
         auto tile_policy            = upt.get("top.cpu.tile0.params.tile_policy").getAs<std::string>();
+        auto sharing                = upt.get("top.cpu.tile0.params.l2_sharing_mode").getAs<std::string>();
         auto num_banks              = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
         
         // Copy parameters shared by multiple units
@@ -112,7 +113,7 @@ int main(int argc, char **argv)
         {
             bank_and_tile_bits *= num_banks;
         }
-        if(tile_policy=="set_interleaving")
+        if(tile_policy=="set_interleaving" && sharing=="fully_shared")
         {
             bank_and_tile_bits *= num_tiles;
         }

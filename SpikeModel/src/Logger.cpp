@@ -20,10 +20,54 @@ namespace spike_model
         *trace_file_ << std::dec << timestamp << "," << id << "," << std::hex << pc << "," << ev << std::endl;
     }
 
+    void Logger::logResumeWithMC(uint64_t timestamp, uint64_t id, uint64_t mc)
+    {
+        std::string ev="resume_mc";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << mc;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+
+    void Logger::logResumeWithMemBank(uint64_t timestamp, uint64_t id, uint64_t mem_bank)
+    {
+        std::string ev="resume_memory_bank";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << mem_bank;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+
+    void Logger::logResumeWithCacheBank(uint64_t timestamp, uint64_t id, uint64_t cache_bank)
+    {
+        std::string ev="resume_cache_bank";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << cache_bank;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+
+    void Logger::logResumeWithTile(uint64_t timestamp, uint64_t id, uint64_t tile_id)
+    {
+        std::string ev="resume_tile";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << tile_id;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+
     void Logger::logResumeWithAddress(uint64_t timestamp, uint64_t id, uint64_t address)
     {
         std::string ev="resume";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << ",0," << std::hex << address;
@@ -39,7 +83,7 @@ namespace spike_model
     void Logger::logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="l2_read";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev  << std::hex << address;
@@ -50,7 +94,7 @@ namespace spike_model
     void Logger::logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="l2_write";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev  << std::hex << address;
@@ -61,7 +105,7 @@ namespace spike_model
     void Logger::logStall(uint64_t timestamp, uint64_t id, uint64_t pc)
     {
         std::string ev="stall";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             log(timestamp, id, pc, "stall,0,0");
         }
@@ -70,7 +114,7 @@ namespace spike_model
     void Logger::logL2Miss(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="l2_miss";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << ",0," << std::hex << address;
@@ -81,7 +125,7 @@ namespace spike_model
     void Logger::logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="l2_wb";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << ",0," << std::hex << address;
@@ -92,7 +136,7 @@ namespace spike_model
     void Logger::logLocalBankRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t bank, uint64_t address)
     {
         std::string ev="local_request";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(bank) << "," << std::hex << address;
@@ -103,7 +147,7 @@ namespace spike_model
     void Logger::logSurrogateBankRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t bank, uint64_t address)
     {
         std::string ev="surrogate_request";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(bank) << "," << std::hex << address;
@@ -114,7 +158,7 @@ namespace spike_model
     void Logger::logRemoteBankRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t tile, uint64_t address)
     {
         std::string ev="remote_request";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(tile) << "," << std::hex << address;
@@ -125,7 +169,7 @@ namespace spike_model
     void Logger::logMemoryCPURequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address)
     {
         std::string ev="memory_request";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(mc) << "," << std::hex << address;
@@ -136,7 +180,7 @@ namespace spike_model
     void Logger::logMemoryCPUOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="memory_operation";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << 0 << "," << std::hex << address;
@@ -144,10 +188,54 @@ namespace spike_model
         }
     }
 
+    void Logger::logNoCMessageSource(uint64_t timestamp, uint64_t src_id, uint64_t pc)
+    {
+        std::string ev="noc_message_src";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0,1";
+            log(timestamp, src_id, pc, sstream.str());
+        }
+    }
+   
+    void Logger::logNoCMessageSourceCummulated(uint64_t timestamp, uint64_t src_id, uint64_t pc, uint64_t num_packets)
+    {
+        std::string ev="noc_message_src_cummulated";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << num_packets;
+            log(timestamp, src_id, pc, sstream.str());
+        }
+    }
+
+    void Logger::logNoCMessageDestination(uint64_t timestamp, uint64_t dst_id, uint64_t pc)
+    {
+        std::string ev="noc_message_dst";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0,1";
+            log(timestamp, dst_id, pc, sstream.str());
+        }
+    }
+    
+    void Logger::logNoCMessageDestinationCummulated(uint64_t timestamp, uint64_t dst_id, uint64_t pc, uint64_t num_packets)
+    {
+        std::string ev="noc_message_dst_cummulated";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << num_packets;
+            log(timestamp, dst_id, pc, sstream.str());
+        }
+    }
+
     void Logger::logMemoryCPUAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address)
     {
         std::string ev="memory_ack";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(tile) << "," << std::hex << address;
@@ -158,7 +246,7 @@ namespace spike_model
     void Logger::logMemoryControllerRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address)
     {
         std::string ev="memory_request";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(mc) << "," << std::hex << address;
@@ -169,7 +257,7 @@ namespace spike_model
     void Logger::logMemoryControllerOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address)
     {
         std::string ev="memory_operation";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(mc) << "," << std::hex << address;
@@ -180,7 +268,7 @@ namespace spike_model
     void Logger::logMemoryBankCommand(uint64_t timestamp, uint64_t mc, uint64_t pc, uint8_t bank, uint64_t address)
     {
         std::string ev="bank_operation";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(bank) << "," << std::hex << address;
@@ -188,10 +276,21 @@ namespace spike_model
         }
     }
 
+    void Logger::logMissOnEvicted(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint64_t time_since_eviction)
+    {
+        std::string ev="miss_on_evicted";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << "," << unsigned(time_since_eviction) << "," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
+    }
+
     void Logger::logMemoryControllerAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address)
     {
         std::string ev="memory_ack";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(tile) << "," << std::hex << address;
@@ -201,15 +300,19 @@ namespace spike_model
 
     void Logger::logTileRecAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
-        std::stringstream sstream;
-        sstream << "ack_received," << 0 << "," << std::hex << address;
-        log(timestamp, id, pc, sstream.str());
+        std::string ev="ack_received";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev <<",0," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
     }
 
     void Logger::logTileSendAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address)
     {
         std::string ev="ack_forwarded";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << unsigned(tile) << "," << std::hex << address;
@@ -220,7 +323,7 @@ namespace spike_model
     void Logger::logTileRecAckForwarded(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="ack_forward_received";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << 0 << "," << std::hex << address;
@@ -231,7 +334,7 @@ namespace spike_model
     void Logger::logMissServiced(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="miss_serviced";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
             sstream << ev << "," << 0 << "," << std::hex << address;
@@ -242,7 +345,7 @@ namespace spike_model
     void Logger::logKI(uint64_t timestamp, uint64_t id)
     {
         std::string ev="KI";
-        if(checkIfEventOfInterest(ev))
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
            log(timestamp, id, 0, "KI,0,0");
         }
@@ -261,5 +364,16 @@ namespace spike_model
     void Logger::addEventOfInterest(std::string ev)
     {
         events_of_interest_->push_back(ev);
+    }
+    
+    void Logger::setTimeBounds(uint64_t lower, uint64_t upper)
+    {
+        *lower_bound_=lower;
+        *upper_bound_=upper;
+    }
+            
+    bool Logger::checkBounds(uint64_t t)
+    {
+        return t>=*lower_bound_ && t<*upper_bound_;
     }
 }

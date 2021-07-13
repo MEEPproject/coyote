@@ -14,6 +14,7 @@ namespace spike_model
          * \brief The Logger class is the writer for the trace of the simulation
          */
         public:
+
             Logger();
 
             /*!
@@ -22,6 +23,38 @@ namespace spike_model
              * \param id The id of the producing core
              */
             void logResume(uint64_t timestamp, uint64_t id);
+            
+            /*!
+             * \brief Add a resume event to the trace. This means that a core is no longer stalled
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param mc The id of the memory controller that serviced the request that resumes the core
+             */
+            void logResumeWithMC(uint64_t timestamp, uint64_t id, uint64_t mc);
+
+            /*!
+             * \brief Add a resume event to the trace. This means that a core is no longer stalled
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param mem_bank The id of the memory bank that serviced the request that resumes the core
+             */
+            void logResumeWithMemBank(uint64_t timestamp, uint64_t id, uint64_t mem_bank);
+            
+            /*!
+             * \brief Add a resume event to the trace. This means that a core is no longer stalled
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param mem_bank The id of the cache bank that serviced the request that resumes the core
+             */
+            void logResumeWithCacheBank(uint64_t timestamp, uint64_t id, uint64_t cache_bank);
+
+            /*!
+             * \brief Add a resume event to the trace. This means that a core is no longer stalled
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param tile_id The id of the tile that serviced the request that resumes the core
+             */
+            void logResumeWithTile(uint64_t timestamp, uint64_t id, uint64_t tile_id);
 
             /*!
              * \brief Add a resume event to the trace. This means that a core is no longer stalled
@@ -233,10 +266,65 @@ namespace spike_model
              */
             void addEventOfInterest(std::string ev);
 
+            /*!
+             * \brief Add an L2 writeback event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core (does not fully apply...)
+             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param address The accessed address
+             * \param time_since_eviction The number of cycles that have passed since the line was evicted
+             */
+            void logMissOnEvicted(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint64_t time_since_eviction);
+
+            
+            /*!
+             * \brief Add an NoCMessage Source event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the source of the message
+             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             */
+            void logNoCMessageSource(uint64_t timestamp, uint64_t src_id, uint64_t pc);
+
+            /*!
+             * \brief Add an NoCMessage Source event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the source of the message
+             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param num_packets The number of packets that have been enqueued since the last event
+             */
+            void logNoCMessageSourceCummulated(uint64_t timestamp, uint64_t src_id, uint64_t pc, uint64_t num_packets);
+
+            /*!
+             * \brief Add a cummulated NoCMessage Destination event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the source of the message
+             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             */
+            void logNoCMessageDestination(uint64_t timestamp, uint64_t dst_id, uint64_t pc);
+            
+            /*!
+             * \brief Add a cummulated NoCMessage Destination event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the source of the message
+             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param num_packets The number of packets that have been enqueued since the last event
+             */
+            void logNoCMessageDestinationCummulated(uint64_t timestamp, uint64_t dst_id, uint64_t pc, uint64_t num_packets);
+
+            /*!
+             * \brief Set the time bounds within which events are traced
+             * \param lower The lower bound
+             * \param upper The upper bound
+             */
+            void setTimeBounds(uint64_t lower, uint64_t upper);
+
         private:
             std::shared_ptr<std::ofstream> trace_file_;
 
             std::shared_ptr<std::list<std::string>> events_of_interest_;
+
+            std::shared_ptr<uint64_t> lower_bound_=std::make_shared<uint64_t> (0);
+            std::shared_ptr<uint64_t> upper_bound_=std::make_shared<uint64_t> (std::numeric_limits<uint64_t>::max());
 
             /*!
              * \brief Implementation: Add a generic event.
@@ -252,6 +340,12 @@ namespace spike_model
              * \return True if the event is in the list of events of interest. If the list is empty, all the events are traced
              */
             bool checkIfEventOfInterest(std::string ev);
+            
+            /*!
+             * \brief Check if a particular timestamp has to be traced
+             * \param t The timestamp to check
+             */
+            bool checkBounds(uint64_t t);
     };
 }
 #endif

@@ -28,7 +28,16 @@ derived_event_dict= {
                         "stall" : 14,
                         "resume" : 15,
                         "KI" : 16,
-                        "bank_operation" : 17
+                        "bank_operation" : 17,
+                        "miss_on_evicted" : 18,
+                        "resume_mc" : 19,
+                        "resume_memory_bank" : 20,
+                        "resume_cache_bank" : 21,
+                        "resume_tile" : 22,
+                        "noc_message_dst" : 23,
+                        "noc_message_src" : 24,
+                        "noc_message_dst_cummulated" : 25,
+                        "noc_message_src_cummulated" : 26
                     }
 
 base_event_dict= {
@@ -115,6 +124,8 @@ def intToPRV(string, event, paraver_line, last_state):
     if string != "":
         base=0
         if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
+            base=16
+        elif "Resume" in event.name: #Resume with bank, tile, mc... info
             base=16
 
         value=int(string, base)
@@ -236,7 +247,8 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
         paraver_line.events = []
 
 
-        if (prev_type=="l2_miss" and (row[3]!="l2_miss" or row[coreid_col]!=prev_core)) or (prev_type=="KI" and (row[3]!="KI" or row[coreid_col]!=prev_core)): #Handle the no miss case and no KI case
+        #To be able to count events, we need to add an event with value zero after an actual event of the kind to count (unless there is an event of that kind actually happenning the cycle after)
+        if prev_type in ["l2_miss", "KI", "bank_operation", "miss_on_evicted", "resume_cache_bank"] and (row[coreid_col]!=prev_core or prev_type!=row[3] or ( prev_type==row[3] and  int(paraver_line.time)>prev_time+1)):
             last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict[prev_type]-2], paraver_line, last_state[3])
             paraver_line.time = str(prev_time+1)
             writePRVFile(prvfile, paraver_line.getLine())
@@ -247,7 +259,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
 
         for col in row[1:]:
             i = i + 1
-            if (i==2 or i==4 or i==5) and (row[3]=="resume" or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
+            if (i==2 or i==4 or i==5) and ("resume" in row[3] or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
                 continue
 
             if i==4 and (row[3]=="l2_miss" or row[3]=="bank_operation"): #L2 misses have no destination
@@ -262,9 +274,11 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 value=row[-1]
                 if col=="l2_miss" or col=="KI":
                     value="1"
-                if col=="bank_operation":
+                elif col=="bank_operation":
+                    value=str(int(row[4])+1) #Banks should start from 1 so we can distinguis the case in which no bank was accessed
+                elif col=="miss_on_evicted":
                     value=row[4]
-                    
+
                 last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2], paraver_line, last_state[i])
             else:
                 if i==1: #Core id

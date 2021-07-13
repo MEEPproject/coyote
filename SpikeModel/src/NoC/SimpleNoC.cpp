@@ -210,6 +210,10 @@ namespace spike_model
                     dst_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
                     dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
                 }
+                if(trace_)
+                {
+                    logger_.logNoCMessageDestinationCummulated(getClock()->currentCycle(), y*dst_count_[0].size()+x, 0, aggregated);
+                }
             }
             dst_file_data_transfer << "\n";
             dst_file_address_only << "\n";
@@ -243,6 +247,10 @@ namespace spike_model
                     src_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
                     src_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
                     src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                }
+                if(trace_)
+                {
+                    logger_.logNoCMessageSourceCummulated(getClock()->currentCycle(), y*dst_count_.size()+x, 0, aggregated);
                 }
             }
             src_file_data_transfer << "\n";

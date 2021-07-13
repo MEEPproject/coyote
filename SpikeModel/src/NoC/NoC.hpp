@@ -296,9 +296,14 @@ namespace spike_model
             "Number of Scratchpad_Command",     // description
             sparta::Counter::COUNT_NORMAL       // behavior
         );                                                      //! The number of Scratchpad_Commands forwarded by NoC
+        
+        /*! \brief Trace the source a destination for a message
+        * \param mes The message
+        */
+        void traceSrcDst_(const std::shared_ptr<NoCMessage> & mess);
 
     };
-
+    
 } // spike_model
 
 #endif // __NoC_H__

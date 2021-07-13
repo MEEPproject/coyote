@@ -393,6 +393,21 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             if(trace_)
             {
                 logger_.logResumeWithAddress(current_cycle, core, r->getAddress());
+
+                /*if(r->memoryAck())
+                {
+                    printf("In\n");
+                    mc=r->getMemoryController()+1;
+                    bank=r->getMemoryBank()+1;
+                }
+                else
+                {
+                    printf("Out\n");
+                }*/
+                logger_.logResumeWithMC(current_cycle, core, r->getMemoryController());
+                logger_.logResumeWithMemBank(current_cycle, core, r->getMemoryBank());
+                logger_.logResumeWithCacheBank(current_cycle, core, r->getCacheBank());
+                logger_.logResumeWithTile(current_cycle, core, r->getHomeTile());
             }
         }
     }

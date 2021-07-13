@@ -119,6 +119,31 @@ namespace spike_model
             default:
                 sparta_assert(false, "Unsupported message received from a Tile!!!");
         }
+
+        if(trace_)
+        {
+            traceSrcDst_(mess);
+        }
+    }
+
+    void NoC::traceSrcDst_(const std::shared_ptr<NoCMessage> & mess)
+    {
+        uint32_t dst_id=mess->getDstPort();
+        uint32_t src_id=mess->getSrcPort();
+        switch(mess->getType())
+        {
+            case NoCMessageType::MEMORY_REQUEST_LOAD:
+            case NoCMessageType::MEMORY_REQUEST_WB:
+            case NoCMessageType::MEMORY_REQUEST_STORE:
+            case NoCMessageType::MCPU_REQUEST:
+                dst_id=dst_id+in_ports_tiles_.size();
+                src_id=src_id+in_ports_tiles_.size();
+                break;
+            default:
+                break;
+        }
+        logger_.logNoCMessageDestination(getClock()->currentCycle(), dst_id, mess->getRequest()->getPC());
+        logger_.logNoCMessageSource(getClock()->currentCycle(), src_id, mess->getRequest()->getPC());
     }
 
     void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
@@ -155,6 +180,11 @@ namespace spike_model
                 break;
             default:
                 sparta_assert(false, "Unsupported message received from a MCPU!!!");
+        }
+        
+        if(trace_)
+        {
+            traceSrcDst_(mess);
         }
     }
 

@@ -21,7 +21,16 @@
           {"eventName": "Stall",               "eventID": "14"  },
           {"eventName": "Resume",               "eventID": "15"  },
           {"eventName": "KI",               "eventID": "16"  },
-          {"eventName": "BankOperation",               "eventID": "17"  }
+          {"eventName": "BankOperation",               "eventID": "17"  },
+          {"eventName": "MissOnEvicted",               "eventID": "18"  },
+          {"eventName": "ResumeMC",               "eventID": "19"  },
+          {"eventName": "ResumeMemoryBank",               "eventID": "20"  },
+          {"eventName": "ResumeCacheBank",               "eventID": "21"  },
+          {"eventName": "ResumeTile",               "eventID": "22"  },
+          {"eventName": "NocMessageDestination",               "eventID": "23"  },
+          {"eventName": "NocMessageSource",               "eventID": "24"  },
+          {"eventName": "NocMessageDestinationCummulated",               "eventID": "25"  },
+          {"eventName": "NocMessageSourceCummulated",               "eventID": "26"  }
         ]
       },
       { "eventName": "destination",          "eventID": "516"},
