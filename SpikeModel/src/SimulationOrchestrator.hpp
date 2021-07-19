@@ -127,7 +127,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         size_t max_in_flight_l1_misses=8;
 
-        spike_model::DetailedNoC* detailed_noc_; //! Pointer to the NoC
+        spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
+        bool booksim_has_packets_in_flight_;        //! Flag that indicates if booksim has packets in flight
 
         /*!
          * \brief Simulate an instruction in each of the active cores

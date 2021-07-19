@@ -16,7 +16,8 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     spike_finished(false),
     trace(trace),
     is_fetch(false),
-    detailed_noc_(detailed_noc)
+    detailed_noc_(detailed_noc),
+    booksim_has_packets_in_flight_(false)
 {
     for(uint16_t i=0;i<num_cores;i++)
     {
@@ -178,24 +179,23 @@ void SimulationOrchestrator::run()
 {
     //Each iteration of the loop handles a cycle
     //Simulation will end when there are neither pending events nor more instructions to simulate
-    while(!spike_model->getScheduler()->isFinished() || !spike_finished)
+    while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
     {
         //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
 
         simulateInstInActiveCores();
         handleSpartaEvents();
-        bool booksim_at_next_cycle = false;
         // Execute one cycle of BookSim
         if(detailed_noc_ != NULL)
         {
-            booksim_at_next_cycle = detailed_noc_->runBookSimCycles(1, current_cycle);
+            booksim_has_packets_in_flight_ = detailed_noc_->runBookSimCycles(1, current_cycle);
             // BookSim can retire a packet and introduce an event that must be executed before the cycle saved in next_event_tick
             next_event_tick=spike_model->getScheduler()->nextEventTick();
         }
         selectRunnableThreads();
     
         //If there are no active cores, booksim must not be executed at next cycle and there is a pending event
-        if(active_cores.size()==0 && !booksim_at_next_cycle && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1)
+        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1)
         {
             // Advance BookSim clock
             if(detailed_noc_ != NULL)
