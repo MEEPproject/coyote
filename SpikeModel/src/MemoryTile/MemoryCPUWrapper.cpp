@@ -42,7 +42,13 @@ namespace spike_model {
 		}
 		
 		//-- Schedule memory request for the MC
+		//DO sth (Reggy)
 		mem_req_pipeline.push(mes);
+		if(bypass_incoming_idle) {
+			controller_cycle_event_s.schedule();
+			bypass_incoming_idle = false;
+		}
+		
 	}
 
 	//-- A memory transaction to be handled by the MCPU
@@ -69,13 +75,13 @@ namespace spike_model {
 		sched_incoming.push(r);
 		
 		if(mcpu_incoming_idle) {
-			controller_cycle_event_.schedule();
+			controller_cycle_event_v.schedule();
 			mcpu_incoming_idle = false;
 		}
 	}
 
 
-	void MemoryCPUWrapper::controllerCycle_() {
+	void MemoryCPUWrapper::controllerCycle_vec() {
 		schedule_incoming_mem_ops();
 		//schedule_mem_ops_to_mc();
 		//schedule_outgoing_mem_ops();
@@ -83,10 +89,20 @@ namespace spike_model {
 		if(sched_incoming.size() == 0) {
 			mcpu_incoming_idle = true;
 		} else {
-			controller_cycle_event_.schedule(1);
+			controller_cycle_event_v.schedule(1);
 		}
 	}
-	
+	// Do sth (Reggy)
+	void MemoryCPUWrapper::controllerCycle_sca() {
+        schedule_incoming_mem_ops();
+		
+		if(mem_req_pipeline.size() == 0) {
+			bypass_incoming_idle = true;
+		} else {
+			controller_cycle_event_s.schedule(1);
+		}
+
+	}
 	
 	void MemoryCPUWrapper::schedule_incoming_mem_ops() {
 		if(sched_incoming.size() == 0) {
@@ -156,6 +172,13 @@ namespace spike_model {
 			
 			//-- schedule this request for the MC
 			mem_req_pipeline.push(memory_request);
+			//mem_req_pipeline.push(mes);
+			//DO sth (Reggy)
+		if(mcpu_incoming_idle) {
+			controller_cycle_event_v.schedule();
+			mcpu_incoming_idle = false;
+		}
+			
 		}
 	}
 	

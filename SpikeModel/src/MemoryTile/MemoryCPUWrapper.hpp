@@ -86,6 +86,7 @@ namespace spike_model {
 
 			//-- message handling
 			bool mcpu_incoming_idle;
+			bool bypass_incoming_idle;
 			
 			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
 				&unit_port_set_, "out_noc"
@@ -107,10 +108,13 @@ namespace spike_model {
 			
 			
 			
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_ {
-					&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_)
+			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_v {
+					&unit_event_set_, "controller_cycle_vector", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_vec)
 			};
-			
+
+			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_s {
+					&unit_event_set_, "controller_cycle_scalar", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_sca)
+			};
 			std::queue<std::shared_ptr<MCPUInstruction>> sched_incoming;
 			std::queue<std::shared_ptr<CacheRequest>> mem_req_pipeline;
 
@@ -130,7 +134,8 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
 
 
-			void controllerCycle_();
+			void controllerCycle_vec();
+			void controllerCycle_sca();
 			void schedule_incoming_mem_ops();
 			void schedule_outgoing_mem_ops();
 			void schedule_mem_ops_to_mc();

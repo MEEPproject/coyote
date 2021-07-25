@@ -95,7 +95,7 @@ namespace spike_model
 
         if(idle_ & sched->hasIdleBanks())
         {
-            controller_cycle_event_.schedule();
+            controller_cycle_event_s.schedule();
             idle_=false;
         }
     }
@@ -135,7 +135,8 @@ namespace spike_model
         return res_command;
     }
 
-    void MemoryController::controllerCycle_()
+    //For MCPUInstruction
+    void MemoryController::controllerCycle_vec()
     {
         while(sched->hasIdleBanks())
         {
@@ -168,7 +169,7 @@ namespace spike_model
             banks[next->getDestinationBank()]->issue(next);
             if(ready_commands->hasCommands())
             {
-                controller_cycle_event_.schedule(1);
+                controller_cycle_event_v.schedule(1);
             }
             else
             {
@@ -176,6 +177,55 @@ namespace spike_model
             }
         }
     }
+
+    //For CacheReq
+    void MemoryController::controllerCycle_sca()
+    {
+        while(sched->hasIdleBanks())
+        {
+            uint64_t bank_to_schedule=sched->getNextBank();
+            std::shared_ptr<CacheRequest> request_to_schedule=sched->getRequest(bank_to_schedule);
+            if(trace_)
+            {
+                logger_.logMemoryControllerOperation(getClock()->currentCycle(), request_to_schedule->getCoreId(), request_to_schedule->getPC(), request_to_schedule->getMemoryController(), request_to_schedule->getAddress());
+
+            }
+            uint64_t row_to_schedule=request_to_schedule->getRow();
+
+            std::shared_ptr<BankCommand> com;
+            if(banks[bank_to_schedule]->isOpen()) {
+				if(banks[bank_to_schedule]->getOpenRow()==row_to_schedule) {
+                	com=getAccessCommand_(request_to_schedule, bank_to_schedule);
+				} else {
+                    com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0, request_to_schedule);
+				}
+			} else {
+				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule, request_to_schedule);
+			}
+
+            ready_commands->addCommand(com);
+        }
+
+        if(ready_commands->hasCommands())
+        {
+            std::shared_ptr<BankCommand> next=ready_commands->getNextCommand();
+            banks[next->getDestinationBank()]->issue(next);
+            if(ready_commands->hasCommands())
+            {
+                controller_cycle_event_s.schedule(1);
+            }
+            else
+            {
+                idle_=true;
+            }
+        }
+    }
+
+
+
+
+
+
 
     void MemoryController::addBank_(MemoryBank * bank)
     {
