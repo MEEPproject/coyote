@@ -115,11 +115,6 @@ namespace spike_model
             sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
-            sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_v
-                {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_vec)};
-            
-            sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_s
-             {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_sca)};
             uint64_t num_banks_;
 
 
@@ -168,8 +163,7 @@ namespace spike_model
              *  This method implements the main operation of the controller and will be
              *  executed every cycle, provided there is work to do
              */
-            void controllerCycle_vec();
-            void controllerCycle_sca();
+            void controllerCycle_();
 
             /*!
              * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
