@@ -85,8 +85,7 @@ namespace spike_model {
 			//void issueMCPU_();
 
 
-			//-- message handling
-			bool bus_idle;
+			//-- message handling 
 			
 			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
 				&unit_port_set_, "out_noc"
@@ -104,21 +103,19 @@ namespace spike_model {
 				&unit_port_set_, "in_mc"
 			};
 			
-			/*sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_vAG {
-					&unit_event_set_, "controller_cycle_mem_request", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_vAG)
-			};*/ //necessary??
             
-            //-- The Memory Tile Bus
-		    sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_bus {
-			   &unit_event_set_, "controller_cycle_bus_cycle", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_bus)
+            //-- The Memory Tile Bus (for Memory requests from VAG,bypass...)
+		    sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_mem_req {
+			   &unit_event_set_, "controller_cycle_mem_requests", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_mem_requests)
 			}; 
-			std::queue<std::shared_ptr<CacheRequest>> bus_queue;
+			Bus<std::shared_ptr<CacheRequest>> sched_mem_req;
 
 			//-- Bus for incoming transactions
 			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_incoming_transaction {
 					&unit_event_set_, "controller_cycle_incoming_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_incoming_transaction)
 			};
 			Bus<std::shared_ptr<MCPUInstruction>> sched_incoming;
+			
 			
 
 
@@ -137,11 +134,9 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
 
 
-			//void controllerCycle_vAG();// For memory requests from VAG ??
 			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
-			void controllerCycle_bus(); // ??
+			void controllerCycle_mem_requests(); // ??
 			void schedule_outgoing_mem_ops(); // Outgoing transaction queue
-			void schedule_mem_ops_to_mc(); // queue for using the bus
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);

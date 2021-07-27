@@ -12,11 +12,14 @@ namespace spike_model {
 			sparta::Unit(node),
 			line_size_(p->line_size),
 			latency_(p->latency),
+			sched_mem_req(&controller_cycle_event_mem_req),
 			sched_incoming(&controller_cycle_event_incoming_transaction)
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 			}
+            
+			
 
 	/////////////////////////////////////
 	//-- Message handling from the NoC
@@ -44,12 +47,7 @@ namespace spike_model {
 		}
 		
 		//-- Schedule memory request for the MC
-		//DO sth (Reggy)
-		bus_queue.push(mes);
-		if(bus_idle) {
-			controller_cycle_event_bus.schedule();
-			bus_idle = false;
-		}
+		sched_mem_req.push(mes);
 		
 	}
 
@@ -102,41 +100,17 @@ namespace spike_model {
 		sched_incoming.pop();
 	}
 	
-	/*void MemoryCPUWrapper::controllerCycle_vAG() {
-        schedule_mem_ops_to_mc();
-	
-		
-		if(bus_queue.size() == 0) {
-			bus_idle = true;
-		} else {
-			controller_cycle_event_vAG.schedule(1);
-		}
+	void MemoryCPUWrapper::controllerCycle_mem_requests() {
+		// Schedule the memory operations going to mc
 
-	}
-    */// necessary???
-	void MemoryCPUWrapper::controllerCycle_bus() {
-        schedule_mem_ops_to_mc();
-		
-		if(bus_queue.size() == 0) {
-			bus_idle = true;
-		} else {
-			controller_cycle_event_bus.schedule(1);
-		}
-
-	}
-	
-	
-	
-	void MemoryCPUWrapper::schedule_mem_ops_to_mc() {
-		if(bus_queue.size() == 0) {
-			return;
-		}
-		
 		//-- Get the oldest Cache Request from the queue
-		std::shared_ptr<CacheRequest> instr_for_mc = bus_queue.front();
+		std::shared_ptr<CacheRequest> instr_for_mc = sched_mem_req.front();
 		
 		//-- Send to the MC
 		out_port_mc_.send(instr_for_mc, 0);
+
+        //-- consume the memory request from the scheduler
+		sched_mem_req.pop();
 	}
 	
 	
@@ -165,13 +139,7 @@ namespace spike_model {
 						(uint16_t)-1);
 			
 			//-- schedule this request for the MC
-			bus_queue.push(memory_request);
-			//mem_req_pipeline.push(mes);
-			//DO sth (Reggy)
-		if(bus_idle) {
-			controller_cycle_event_bus.schedule();
-			bus_idle = false;
-		}
+			sched_mem_req.push(memory_request);	
 			
 		}
 	}
@@ -184,7 +152,7 @@ namespace spike_model {
 			//std::shared_ptr<MCPUInstruction> mem_op = std::make_shared<MCPUInstruction>(*instr);
 			//
 			//mem_op->set_baseAddress(instr->get_baseAddress() + *it);
-			//mem_req_pipeline.push(mem_op);
+			//sched_mem_req.push(mem_op);
 		}
 	}
 	
