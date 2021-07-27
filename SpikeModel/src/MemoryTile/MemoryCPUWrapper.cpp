@@ -11,7 +11,9 @@ namespace spike_model {
 	MemoryCPUWrapper::MemoryCPUWrapper(sparta::TreeNode *node, const MemoryCPUWrapperParameterSet *p):
 			sparta::Unit(node),
 			line_size_(p->line_size),
-			latency_(p->latency) {
+			latency_(p->latency),
+			sched_incoming(&controller_cycle_event_incoming_transaction)
+			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 			}
@@ -73,53 +75,10 @@ namespace spike_model {
 		
 		//-- schedule the incoming message
 		sched_incoming.push(r);
-		
-		if(mcpu_incoming_idle) {
-			controller_cycle_event_transaction.schedule();
-			mcpu_incoming_idle = false;
-		}
 	}
 
-    // Do sth (Reggy)
-	void MemoryCPUWrapper::controllerCycle_transaction(){
-		schedule_incoming_mem_ops();
-		//schedule_mem_ops_to_mc();
-		//schedule_outgoing_mem_ops();
-		
-		if(sched_incoming.size() == 0) {
-			mcpu_incoming_idle = true;
-		} else {
-			controller_cycle_event_transaction.schedule(1);
-		}
-	}
-	
-	/*void MemoryCPUWrapper::controllerCycle_vAG() {
-        schedule_mem_ops_to_mc();
-		
-		if(bus_queue.size() == 0) {
-			bus_idle = true;
-		} else {
-			controller_cycle_event_vAG.schedule(1);
-		}
-
-	}
-    */// necessary???
-	void MemoryCPUWrapper::controllerCycle_bus() {
-        schedule_mem_ops_to_mc();
-		
-		if(bus_queue.size() == 0) {
-			bus_idle = true;
-		} else {
-			controller_cycle_event_bus.schedule(1);
-		}
-
-	}
-	
-	void MemoryCPUWrapper::schedule_incoming_mem_ops() {
-		if(sched_incoming.size() == 0) {
-			return;
-		}
-		
+    
+	void MemoryCPUWrapper::controllerCycle_incoming_transaction(){
 		std::shared_ptr<MCPUInstruction> instr_to_schedule = sched_incoming.front();
 		
 		switch(instr_to_schedule->get_suboperation()) {
@@ -142,6 +101,30 @@ namespace spike_model {
 		//-- consume the instruction from the scheduler
 		sched_incoming.pop();
 	}
+	
+	/*void MemoryCPUWrapper::controllerCycle_vAG() {
+        schedule_mem_ops_to_mc();
+	
+		
+		if(bus_queue.size() == 0) {
+			bus_idle = true;
+		} else {
+			controller_cycle_event_vAG.schedule(1);
+		}
+
+	}
+    */// necessary???
+	void MemoryCPUWrapper::controllerCycle_bus() {
+        schedule_mem_ops_to_mc();
+		
+		if(bus_queue.size() == 0) {
+			bus_idle = true;
+		} else {
+			controller_cycle_event_bus.schedule(1);
+		}
+
+	}
+	
 	
 	
 	void MemoryCPUWrapper::schedule_mem_ops_to_mc() {

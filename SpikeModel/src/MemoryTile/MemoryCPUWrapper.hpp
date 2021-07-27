@@ -26,6 +26,7 @@
 #include "MCPUSetVVL.hpp"
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
+#include "Bus.hpp"
 
 namespace spike_model {
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {
@@ -85,7 +86,6 @@ namespace spike_model {
 
 
 			//-- message handling
-			bool mcpu_incoming_idle;
 			bool bus_idle;
 			
 			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
@@ -108,15 +108,18 @@ namespace spike_model {
 					&unit_event_set_, "controller_cycle_mem_request", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_vAG)
 			};*/ //necessary??
             
+            //-- The Memory Tile Bus
 		    sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_bus {
 			   &unit_event_set_, "controller_cycle_bus_cycle", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_bus)
 			}; 
-
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_transaction {
-					&unit_event_set_, "controller_cycle_mcpu_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_transaction)
-			};
-			std::queue<std::shared_ptr<MCPUInstruction>> sched_incoming;
 			std::queue<std::shared_ptr<CacheRequest>> bus_queue;
+
+			//-- Bus for incoming transactions
+			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_incoming_transaction {
+					&unit_event_set_, "controller_cycle_incoming_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_incoming_transaction)
+			};
+			Bus<std::shared_ptr<MCPUInstruction>> sched_incoming;
+			
 
 
 			std::shared_ptr<EventManager> request_manager_;
@@ -135,9 +138,8 @@ namespace spike_model {
 
 
 			//void controllerCycle_vAG();// For memory requests from VAG ??
-			void controllerCycle_transaction(); //for MCPUInstruction
+			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
 			void controllerCycle_bus(); // ??
-			void schedule_incoming_mem_ops(); // incoming transaction queue
 			void schedule_outgoing_mem_ops(); // Outgoing transaction queue
 			void schedule_mem_ops_to_mc(); // queue for using the bus
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);

@@ -117,9 +117,6 @@ namespace spike_model
 
             uint64_t num_banks_;
 
-
-            uint64_t num_banks_;
-
             bool write_allocate_;
  
             std::string reordering_policy_;
