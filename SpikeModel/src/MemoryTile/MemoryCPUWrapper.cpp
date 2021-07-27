@@ -43,10 +43,10 @@ namespace spike_model {
 		
 		//-- Schedule memory request for the MC
 		//DO sth (Reggy)
-		mem_req_pipeline.push(mes);
-		if(bypass_incoming_idle) {
-			controller_cycle_event_s.schedule();
-			bypass_incoming_idle = false;
+		bus_queue.push(mes);
+		if(bus_idle) {
+			controller_cycle_event_bus.schedule();
+			bus_idle = false;
 		}
 		
 	}
@@ -75,13 +75,13 @@ namespace spike_model {
 		sched_incoming.push(r);
 		
 		if(mcpu_incoming_idle) {
-			controller_cycle_event_v.schedule();
+			controller_cycle_event_transaction.schedule();
 			mcpu_incoming_idle = false;
 		}
 	}
 
-
-	void MemoryCPUWrapper::controllerCycle_vec() {
+    // Do sth (Reggy)
+	void MemoryCPUWrapper::controllerCycle_transaction(){
 		schedule_incoming_mem_ops();
 		//schedule_mem_ops_to_mc();
 		//schedule_outgoing_mem_ops();
@@ -89,17 +89,28 @@ namespace spike_model {
 		if(sched_incoming.size() == 0) {
 			mcpu_incoming_idle = true;
 		} else {
-			controller_cycle_event_v.schedule(1);
+			controller_cycle_event_transaction.schedule(1);
 		}
 	}
-	// Do sth (Reggy)
-	void MemoryCPUWrapper::controllerCycle_sca() {
-        schedule_incoming_mem_ops();
+	
+	/*void MemoryCPUWrapper::controllerCycle_vAG() {
+        schedule_mem_ops_to_mc();
 		
-		if(mem_req_pipeline.size() == 0) {
-			bypass_incoming_idle = true;
+		if(bus_queue.size() == 0) {
+			bus_idle = true;
 		} else {
-			controller_cycle_event_s.schedule(1);
+			controller_cycle_event_vAG.schedule(1);
+		}
+
+	}
+    */// necessary???
+	void MemoryCPUWrapper::controllerCycle_bus() {
+        schedule_mem_ops_to_mc();
+		
+		if(bus_queue.size() == 0) {
+			bus_idle = true;
+		} else {
+			controller_cycle_event_bus.schedule(1);
 		}
 
 	}
@@ -134,12 +145,12 @@ namespace spike_model {
 	
 	
 	void MemoryCPUWrapper::schedule_mem_ops_to_mc() {
-		if(mem_req_pipeline.size() == 0) {
+		if(bus_queue.size() == 0) {
 			return;
 		}
 		
 		//-- Get the oldest Cache Request from the queue
-		std::shared_ptr<CacheRequest> instr_for_mc = mem_req_pipeline.front();
+		std::shared_ptr<CacheRequest> instr_for_mc = bus_queue.front();
 		
 		//-- Send to the MC
 		out_port_mc_.send(instr_for_mc, 0);
@@ -171,12 +182,12 @@ namespace spike_model {
 						(uint16_t)-1);
 			
 			//-- schedule this request for the MC
-			mem_req_pipeline.push(memory_request);
+			bus_queue.push(memory_request);
 			//mem_req_pipeline.push(mes);
 			//DO sth (Reggy)
-		if(mcpu_incoming_idle) {
-			controller_cycle_event_v.schedule();
-			mcpu_incoming_idle = false;
+		if(bus_idle) {
+			controller_cycle_event_bus.schedule();
+			bus_idle = false;
 		}
 			
 		}

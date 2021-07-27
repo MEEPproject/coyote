@@ -86,7 +86,7 @@ namespace spike_model {
 
 			//-- message handling
 			bool mcpu_incoming_idle;
-			bool bypass_incoming_idle;
+			bool bus_idle;
 			
 			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
 				&unit_port_set_, "out_noc"
@@ -104,19 +104,19 @@ namespace spike_model {
 				&unit_port_set_, "in_mc"
 			};
 			
-			
-			
-			
-			
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_v {
-					&unit_event_set_, "controller_cycle_vector", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_vec)
-			};
+			/*sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_vAG {
+					&unit_event_set_, "controller_cycle_mem_request", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_vAG)
+			};*/ //necessary??
+            
+		    sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_bus {
+			   &unit_event_set_, "controller_cycle_bus_cycle", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_bus)
+			}; 
 
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_s {
-					&unit_event_set_, "controller_cycle_scalar", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_sca)
+			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_transaction {
+					&unit_event_set_, "controller_cycle_mcpu_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_transaction)
 			};
 			std::queue<std::shared_ptr<MCPUInstruction>> sched_incoming;
-			std::queue<std::shared_ptr<CacheRequest>> mem_req_pipeline;
+			std::queue<std::shared_ptr<CacheRequest>> bus_queue;
 
 
 			std::shared_ptr<EventManager> request_manager_;
@@ -134,11 +134,12 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
 
 
-			void controllerCycle_vec();
-			void controllerCycle_sca();
-			void schedule_incoming_mem_ops();
-			void schedule_outgoing_mem_ops();
-			void schedule_mem_ops_to_mc();
+			//void controllerCycle_vAG();// For memory requests from VAG ??
+			void controllerCycle_transaction(); //for MCPUInstruction
+			void controllerCycle_bus(); // ??
+			void schedule_incoming_mem_ops(); // incoming transaction queue
+			void schedule_outgoing_mem_ops(); // Outgoing transaction queue
+			void schedule_mem_ops_to_mc(); // queue for using the bus
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
