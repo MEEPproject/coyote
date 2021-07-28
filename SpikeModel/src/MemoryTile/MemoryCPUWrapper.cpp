@@ -124,14 +124,14 @@ namespace spike_model {
 				
 		//-- get the number of elements loaded by 1 memory request
 		uint number_of_elements_per_request = line_size_ / (uint32_t)instr->get_width();
-		uint number_of_mem_ops = vvl_ / number_of_elements_per_request;
+		uint32_t remaining_elements = vvl_;
+		uint64_t address = instr->get_baseAddress();
 		
-		if(number_of_mem_ops == 0) number_of_mem_ops=1;
 		
-		for(uint i=0; i<number_of_mem_ops; ++i) {
+		while(remaining_elements > 0) {
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = std::make_shared<CacheRequest>(
-						instr->get_baseAddress()+i*64, 
+						address,
 						(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
 									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
 						0,
@@ -140,7 +140,8 @@ namespace spike_model {
 			
 			//-- schedule this request for the MC
 			sched_mem_req.push(memory_request);	
-			
+			remaining_elements -= number_of_elements_per_request;
+			address += line_size_;
 		}
 	}
 	
@@ -149,6 +150,16 @@ namespace spike_model {
 		std::vector<uint64_t> indices = instr->get_index();
 		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
 			//-- TODO Generate cache line requests
+			// The following code is incorrect. @Regina: Have a look at the method "memOp_unit", which handles
+			// unit stride vector memory operations (unit stride = all vector elements are next to each other). This is
+			// the non-unit stride vector memory operation, in which the elements are handled in regular intervals. E.g.,
+			// load every second, third,... element.
+			// In Coyote we handle the non-unit stride vector operations a bit differently: The MCPU instruction contains
+			// a field with indices. So for e.g. a non-unit stride vector load with a stride of 2, the field contains
+			// 0, 2, 4, 6, 8, 10,... (VVL times). Hence, there is no difference in unordered indexed memory operations (methods below)
+			
+			
+			// So here is the incorrect code:
 			//std::shared_ptr<MCPUInstruction> mem_op = std::make_shared<MCPUInstruction>(*instr);
 			//
 			//mem_op->set_baseAddress(instr->get_baseAddress() + *it);
