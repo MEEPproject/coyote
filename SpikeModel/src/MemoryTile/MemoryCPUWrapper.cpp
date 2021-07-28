@@ -148,6 +148,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr) {
 		
 		std::vector<uint64_t> indices = instr->get_index();
+		uint64_t address = instr->get_baseAddress();
 		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
 			//-- TODO Generate cache line requests
 			// The following code is incorrect. @Regina: Have a look at the method "memOp_unit", which handles
@@ -164,6 +165,19 @@ namespace spike_model {
 			//
 			//mem_op->set_baseAddress(instr->get_baseAddress() + *it);
 			//sched_mem_req.push(mem_op);
+
+			//
+            std::shared_ptr<CacheRequest> mem_op = std::make_shared<CacheRequest>(
+						(address + *it),
+						(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
+									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
+						0,
+						getClock()->currentCycle(), 
+						(uint16_t)-1); 
+            
+			//-- schedule request for the MC
+             sched_mem_req.push(mem_op);
+
 		}
 	}
 	
