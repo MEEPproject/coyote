@@ -136,10 +136,22 @@ namespace spike_model
                 memory_ack = ack;
             }
 
+            uint32_t  getParentInstruction_ID();
+            {
+               return  parentinstruction_ID ;
+            }
+
+            void setParentInstruction_ID(uint32_t instr_id);
+            {
+                parentinstruction_ID = instr_id;
+            }
+
         private:
             AccessType type;
 
             uint16_t home_tile;
+
+            uint32_t parentinstruction_ID; // id of the mcpu instruction it was generated from
 
             uint64_t memory_controller_;
             uint64_t rank_;
@@ -164,6 +176,8 @@ namespace spike_model
              * \note This method is private but called through friending by instances of AccessDirector
              */
             void setMemoryController(uint64_t memory_controller);
+
+
     };
     
     inline std::ostream & operator<<(std::ostream & Str, CacheRequest const & req)

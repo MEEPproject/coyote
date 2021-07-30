@@ -27,6 +27,7 @@
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 #include "Bus.hpp"
+#include <unordered_map>
 
 namespace spike_model {
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {
@@ -76,7 +77,9 @@ namespace spike_model {
 			uint32_t line_size_;
 			uint32_t vvl_;
 			uint64_t latency_;
-
+			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
+			std::unordered_map<std::uint32_t,std::shared_ptr<MCPUInstruction>> instruction_hashmap;
+            
 			//-- commands coming from the tile
 			//sparta::UniqueEvent<> issue_mcpu_event_ {
 			//	&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 
+
 namespace spike_model {
 	class MCPUInstruction : public Event, public std::enable_shared_from_this<MCPUInstruction> {
 		/**
@@ -80,7 +81,12 @@ namespace spike_model {
 			Operation get_operation() {return operation;}
 			SubOperation get_suboperation() {return sub_operation;}
 
+			uint32_t  getMCPUInstruction_ID();{return  MCPUInstruction_ID ;}
+
+            void setMCPUInstruction_ID(uint32_t instr_id);{MCPUInstruction_ID = instr_id;}
+
 		private:
+		    uint32_t MCPUInstruction_ID;
 			uint64_t base_address;
 			std::vector<uint64_t> indices;
 			Operation operation;
