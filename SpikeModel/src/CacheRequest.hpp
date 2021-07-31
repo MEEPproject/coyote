@@ -136,12 +136,12 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            uint32_t  getParentInstruction_ID();
+            uint32_t  getParentInstruction_ID()
             {
                return  parentinstruction_ID ;
             }
 
-            void setParentInstruction_ID(uint32_t instr_id);
+            void setParentInstruction_ID(uint32_t instr_id)
             {
                 parentinstruction_ID = instr_id;
             }

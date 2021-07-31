@@ -81,12 +81,11 @@ namespace spike_model {
 			Operation get_operation() {return operation;}
 			SubOperation get_suboperation() {return sub_operation;}
 
-			uint32_t  getMCPUInstruction_ID();{return  MCPUInstruction_ID ;}
-
-            void setMCPUInstruction_ID(uint32_t instr_id);{MCPUInstruction_ID = instr_id;}
+			uint32_t getMCPUInstruction_ID() {return  id;}
+            void setMCPUInstruction_ID(uint32_t id) {this->id = id;}
 
 		private:
-		    uint32_t MCPUInstruction_ID;
+		    uint32_t id;
 			uint64_t base_address;
 			std::vector<uint64_t> indices;
 			Operation operation;

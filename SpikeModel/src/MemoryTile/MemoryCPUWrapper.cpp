@@ -12,12 +12,12 @@ namespace spike_model {
 			sparta::Unit(node),
 			line_size_(p->line_size),
 			latency_(p->latency),
-			instructionID_counter = 0; // set to 0 at the beginning
 			sched_mem_req(&controller_cycle_event_mem_req),
 			sched_incoming(&controller_cycle_event_incoming_transaction)
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
+				instructionID_counter = 0; // set to 0 at the beginning
 			}
             
 			
@@ -71,8 +71,11 @@ namespace spike_model {
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
 		std::cout << "MCPU: Memory instruction received. Core: " << r->getCoreId() << ", BaseAddress: " << r->get_baseAddress() << ", Size: "
 					<< (int)r->get_width() << ", op: " << (int)r->get_operation() << ", sub_op: " << (int)r->get_suboperation() << std::endl;
+		
+		r->setMCPUInstruction_ID(instructionID_counter);
+		instruction_hashmap.insert({instructionID_counter, r}); // insert instruction into hashmap
 		instructionID_counter++; // increment ID
-		instruction_hashmap.insert({instructionID_counter,r}); // insert instruction into hashmap
+		
 		//-- schedule the incoming message
 		sched_incoming.push(r);
 	}
@@ -140,7 +143,7 @@ namespace spike_model {
 						getClock()->currentCycle(), 
 						(uint16_t)-1);
 
-		    memory_request.setParentInstruction_ID(instructionID_counter);	// set cacherequest ID to the mcpu instruction ID it was generated from		
+		    memory_request->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from		
 			
 			//-- schedule this request for the MC
 			sched_mem_req.push(memory_request);	
@@ -179,10 +182,10 @@ namespace spike_model {
 						getClock()->currentCycle(), 
 						(uint16_t)-1); 
 
-			mem_op.setParentInstruction_ID(instructionID_counter);	// set cacherequest ID to the mcpu instruction ID it was generated from			
+			mem_op->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from			
             
 			//-- schedule request for the MC
-             sched_mem_req.push(mem_op);
+            sched_mem_req.push(mem_op);
 
 		}
 	}
