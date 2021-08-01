@@ -73,7 +73,9 @@ namespace spike_model {
 					<< (int)r->get_width() << ", op: " << (int)r->get_operation() << ", sub_op: " << (int)r->get_suboperation() << std::endl;
 		
 		r->setMCPUInstruction_ID(instructionID_counter);
-		instruction_hashmap.insert({instructionID_counter, r}); // insert instruction into hashmap
+		struct hashmap_value instruction_attributes = {r,0,0};
+
+		instruction_hashmap.insert({instructionID_counter, instruction_attributes}); // insert instruction into hashmap
 		instructionID_counter++; // increment ID
 		
 		//-- schedule the incoming message
@@ -144,7 +146,7 @@ namespace spike_model {
 						(uint16_t)-1);
 
 		    memory_request->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from		
-			
+			instruction_hashmap.find(memory_request->getMCPUInstruction_ID())->second.CacheRequest_counter++; // increment CacheRequest counter
 			//-- schedule this request for the MC
 			sched_mem_req.push(memory_request);	
 			remaining_elements -= number_of_elements_per_request;
@@ -183,7 +185,7 @@ namespace spike_model {
 						(uint16_t)-1); 
 
 			mem_op->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from			
-            
+            instruction_hashmap.find(mem_op->getMCPUInstruction_ID())->second.CacheRequest_counter++; // increment CacheRequest counter
 			//-- schedule request for the MC
             sched_mem_req.push(mem_op);
 
