@@ -74,6 +74,10 @@ namespace spike_model {
 		
 		r->setMCPUInstruction_ID(instructionID_counter);
 		
+		struct transaction instruction_attributes = {r, 0, 0, 1};
+		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // keep track of the transaction
+		this->instructionID_counter++; // increment ID
+		
 		//-- schedule the incoming message
 		sched_incoming.push(r);
 	}
@@ -151,15 +155,11 @@ namespace spike_model {
 		}
 		uint32_t number_of_replies = vvl_ / number_of_elements_per_request; // the number of expected CacheRequests returned from the memory controller
 		
-		struct transaction instruction_attributes = {instr, number_of_replies, number_of_replies, 1};
-		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // insert instruction into hashmap
-		this->instructionID_counter++; // increment ID
-		/*
-		std::unordered_map<std::uint32_t, hashmap_value>::const_iterator transaction_id = transaction_table.find(instr->getMCPUInstruction_ID());
-		transaction_id->second.counter_cacheRequests = number_of_replies;
-		transaction_id->second.counter_scratchpadRequests = number_of_replies;
-		transaction_id->second.number_of_elements_per_request = number_of_elements_per_request;
-		*/
+		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getMCPUInstruction_ID());
+		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
+		transaction_id->second.counter_scratchpadRequests = number_of_replies;	// How many responses are sent back to the VAS Tile?
+		transaction_id->second.number_of_elements_per_response = 1; 			// Send out every received CacheRequest from the MC (no parasitic bytes)
+
 	}
 	
 	void MemoryCPUWrapper::memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr) {
@@ -198,21 +198,11 @@ namespace spike_model {
             sched_mem_req.push(mem_op);
 		}
 		
-		uint number_of_elements_per_request = line_size_ / (uint32_t)instr->get_width(); // how many elements fit into 1 line_size (64 Bytes)?
-		
-		struct transaction instruction_attributes = {instr, vvl_, vvl_/number_of_elements_per_request, number_of_elements_per_request};
-		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // insert instruction into hashmap
-		this->instructionID_counter++; // increment ID
-		
-		/*
-		transaction_table.find(mem_op->getMCPUInstruction_ID())->second.counter_cacheRequests = vvl_;	// since we generate VVL memory requests, we also expect VVL replies from the MC
-		
-		
-		
-		
-		transaction_table.find(mem_op->getMCPUInstruction_ID())->second.counter_scratchpadRequests = vvl_ / number_of_elements_per_request; // the number of Scratchpad Request
-																																			// that the MemTile is going to send out.
-		*/
+		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
+		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getMCPUInstruction_ID());
+		transaction_id->second.counter_cacheRequests = vvl_;										// How many responses are expected from the MC?
+		transaction_id->second.counter_scratchpadRequests = vvl_/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile?
+		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 	// How many elements fit into 1 line_size (64 Bytes)?
 	}
 	
 	void MemoryCPUWrapper::memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr) {
@@ -274,7 +264,7 @@ namespace spike_model {
 			transaction_id->second.counter_cacheRequests--;
 			
 			/*
-			2) If the counter_cacheRequests % number_of_elements_per_request (a new value in the struct) is 0, then create a ScratchpadRequest and schedule it (like the incoming messages)
+			2) If the counter_cacheRequests % number_of_elements_per_response (a new value in the struct) is 0, then create a ScratchpadRequest and schedule it (like the incoming messages)
 			3) decrement counter_scratchpadRequests
 			4) if counter_scratchpadRequests = 0, delete from hashtable, since we are done with this transaction
 			*/

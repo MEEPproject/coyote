@@ -81,8 +81,8 @@ namespace spike_model {
 			struct transaction {
                 std::shared_ptr<MCPUInstruction> mcpu_instruction;
 				uint32_t counter_cacheRequests;
-				uint32_t counter_scatchpadRequests;
-				uint32_t number_of_elements_per_request;
+				uint32_t counter_scratchpadRequests;
+				uint32_t number_of_elements_per_response;
 			};
 			std::unordered_map<std::uint32_t, transaction> transaction_table;
             
