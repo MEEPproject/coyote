@@ -78,12 +78,13 @@ namespace spike_model {
 			uint32_t vvl_;
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
-			struct hashmap_value {
-                  std::shared_ptr<MCPUInstruction>instruction_ptr;
-				  uint32_t CacheRequest_counter;
-				  uint32_t ScratchpadRequest_counter;
+			struct transaction {
+                std::shared_ptr<MCPUInstruction> mcpu_instruction;
+				uint32_t counter_cacheRequests;
+				uint32_t counter_scatchpadRequests;
+				uint32_t number_of_elements_per_request;
 			};
-			std::unordered_map<std::uint32_t,hashmap_value> instruction_hashmap;
+			std::unordered_map<std::uint32_t, transaction> transaction_table;
             
 			//-- commands coming from the tile
 			//sparta::UniqueEvent<> issue_mcpu_event_ {
