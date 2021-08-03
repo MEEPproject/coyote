@@ -253,15 +253,14 @@ namespace spike_model {
 						mes->getPC(),
 						getClock()->currentCycle(), 
 						transaction_id->second.counter_scratchpadRequests == 0);
-            	
+				
+				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_DATA_REPLY, line_size_, this->id, transaction_id->second.mcpu_instruction->getSourceTile());
+				sched_outgoing.push(outgoing_noc_message);
+				
 				if(transaction_id->second.counter_scratchpadRequests == 0) {
 					// delete from hash table
 					transaction_table.erase(transaction_id);
 				}
-				
-				
-				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_DATA_REPLY, line_size_, this->id, transaction_id->second.mcpu_instruction->getSourceTile());
-				sched_outgoing.push(outgoing_noc_message);
 			}
 		}
 	}
