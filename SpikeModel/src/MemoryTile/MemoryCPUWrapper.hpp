@@ -26,6 +26,7 @@
 #include "MCPUSetVVL.hpp"
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
+#include "ScratchpadRequest.hpp"
 #include "Bus.hpp"
 #include <unordered_map>
 
@@ -74,6 +75,7 @@ namespace spike_model {
 
 		private:
 
+			uint16_t id;
 			uint32_t line_size_;
 			uint32_t vvl_;
 			uint64_t latency_;
@@ -129,7 +131,7 @@ namespace spike_model {
 			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_outgoing_transaction {
 					&unit_event_set_, "controller_cycle_outgoing_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_outgoing_transaction)
 			};
-			Bus<std::shared_ptr<ScratchpadRequest>> sched_outgoing;
+			Bus<std::shared_ptr<NoCMessage>> sched_outgoing;
 
 
 			std::shared_ptr<EventManager> request_manager_;
@@ -148,14 +150,14 @@ namespace spike_model {
 
 
 			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
-			void controllerCycle_outgoing_transaction();
-			void controllerCycle_mem_requests(); // 
-			void schedule_outgoing_mem_ops(); // Outgoing transaction queue
+			void controllerCycle_outgoing_transaction(); // Outgoing transaction queue
+			void controllerCycle_mem_requests();
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			
+			void set_id(uint16_t id) {this->id = id;}
 
 			//-- reporting and logging
 			sparta::Counter count_requests_noc_=sparta::Counter(getStatisticSet(), "requests_noc", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);

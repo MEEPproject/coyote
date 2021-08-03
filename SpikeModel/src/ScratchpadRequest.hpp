@@ -7,7 +7,7 @@
 
 namespace spike_model
 {
-    class ScratchpadRequest : public Request, public std::enable_shared_from_this<CacheRequest>
+    class ScratchpadRequest : public Request, public std::enable_shared_from_this<ScratchpadRequest>
     {
         /**
          * \class spike_model::ScratchpadRequest
