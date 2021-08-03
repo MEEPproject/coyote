@@ -147,7 +147,7 @@ namespace spike_model {
 									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
 						0,
 						getClock()->currentCycle(), 
-						(uint16_t)-1);
+						this->id * (-1));
 
 		    memory_request->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from		
 			
