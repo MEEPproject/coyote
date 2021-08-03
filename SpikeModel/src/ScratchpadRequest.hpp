@@ -80,6 +80,7 @@ namespace spike_model
              * \return True if an operand will become ready after servicing this request
              */
             bool isOperandReady() const {return operand_ready;}
+            void setoperand_ready(bool ready) {operand_ready = ready;}
 
         private:
             ScratchpadCommand command;

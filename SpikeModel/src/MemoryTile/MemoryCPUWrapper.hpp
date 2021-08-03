@@ -125,7 +125,11 @@ namespace spike_model {
 			};
 			Bus<std::shared_ptr<MCPUInstruction>> sched_incoming;
 			
-			
+			//-- Bus for outgoing transactions
+			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_outgoing_transaction {
+					&unit_event_set_, "controller_cycle_outgoing_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_outgoing_transaction)
+			};
+			Bus<std::shared_ptr<ScratchpadRequest>> sched_outgoing;
 
 
 			std::shared_ptr<EventManager> request_manager_;
@@ -144,7 +148,8 @@ namespace spike_model {
 
 
 			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
-			void controllerCycle_mem_requests(); // ??
+			void controllerCycle_outgoing_transaction();
+			void controllerCycle_mem_requests(); // 
 			void schedule_outgoing_mem_ops(); // Outgoing transaction queue
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr);

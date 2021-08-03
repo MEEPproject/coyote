@@ -121,8 +121,11 @@ namespace spike_model {
 	}
 	
 	
-	void MemoryCPUWrapper::schedule_outgoing_mem_ops() {
-		
+	void MemoryCPUWrapper::schedule_outgoing_mem_ops()
+	
+	{
+	  //std::shared_ptr<ScratchpadRequest> sc_req = sched_outgoing.front();	
+
 	}
 	
 	
@@ -241,7 +244,7 @@ namespace spike_model {
 		count_requests_mc_++;
 		std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		mes->setServiced();
-		
+	    
 		
 		//-- If the ID of the reply is < -, the cache line is for the MCPU and not for the VAS Tile
 		if(mes->getCoreId() != (uint16_t)-1) {
@@ -249,9 +252,11 @@ namespace spike_model {
 			// TODO Regina:
 			
 			// 0) Instead of sending out this message using the Bypass, we need to schedule into Bus.hpp for outgoing messages.
-			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+			//out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+             sched_outgoing.push(mes);
 		} else {
-			std::cout << "For the MCPU" << std::endl;
+			std::cout << "For the MCPU" << std::endl; 
+			 
 			
 			// ###############################
 			// TODO Regina:
@@ -263,11 +268,38 @@ namespace spike_model {
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getParentInstruction_ID());
 			transaction_id->second.counter_cacheRequests--;
 			
-			/*
-			2) If the counter_cacheRequests % number_of_elements_per_response (a new value in the struct) is 0, then create a ScratchpadRequest and schedule it (like the incoming messages)
-			3) decrement counter_scratchpadRequests
-			4) if counter_scratchpadRequests = 0, delete from hashtable, since we are done with this transaction
-			*/
+			uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
+       
+	    //2) If the counter_cacheRequests % number_of_elements_per_response (a new value in the struct) is 0, then create a ScratchpadRequest and schedule it (like the incoming messages)
+			if ( scratchpadRequest_to_fill == 0 ){
+	        uint64_t address = transaction_id->second.mcpu_instruction->getCoreId();
+				  std::shared_ptr<ScratchpadRequest> outgoing_request = std::make_shared<ScratchpadRequest>(
+					    address ,
+						(mes->getType() == CacheRequest::AccessType::LOAD) ? 
+									ScratchpadRequest::ScratchpadCommand::READ : ScratchpadRequest::ScratchpadCommand::WRITE,
+						0,
+						getClock()->currentCycle(), 
+						false);
+            //3) decrement counter_scratchpadRequests
+			transaction_id->second.counter_scratchpadRequests--;
+//4) if counter_scratchpadRequests = 0, delete from hashtable, since we are done with this transaction
+if( transaction_id->second.counter_scratchpadRequests == 0)
+{
+	//set ready to true
+	outgoing_request->setoperand_ready(true);
+	
+ // delete from hashtable
+	transaction_table.erase(transaction_id);
+	
+	
+	
+}
+
+
+			  }
+			
+			
+			
 		}
 	}
 
