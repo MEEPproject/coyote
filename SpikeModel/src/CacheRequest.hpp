@@ -180,10 +180,10 @@ namespace spike_model
 
     };
     
-    inline std::ostream & operator<<(std::ostream & Str, CacheRequest const & req)
+    inline std::ostream& operator<<(std::ostream &str, CacheRequest const &req)
     {
-        Str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp();
-        return Str;
+        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: " << req.getCoreId();
+        return str;
     }
 }
 #endif

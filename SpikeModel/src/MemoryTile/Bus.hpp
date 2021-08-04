@@ -2,7 +2,6 @@
 #define __BUS_HPP__
 
 #include <queue>
-#include <stdexcept>
 #include "sparta/events/UniqueEvent.hpp"
 
 
@@ -19,7 +18,7 @@ namespace spike_model {
 			 * To schedule the queue, the Sparta scheduler is used.
 			 * @controller_cycle_event: A pointer to the the scheduler for this queue
 			 */
-			Bus(sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> *controller_cycle_event) {
+			Bus(sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event) {
 				this->controller_cycle_event = controller_cycle_event;
 				idle = true;
 			}
@@ -48,7 +47,7 @@ namespace spike_model {
 			void push(T element);
 						
 		private:
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> *controller_cycle_event;
+			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event;
 			std::queue<T> bus;
 			bool idle;
 	};
@@ -57,23 +56,19 @@ namespace spike_model {
 	
 	
 	template <class T> T Bus<T>::front() {
-		if(bus.empty()) {
-			throw std::out_of_range("Bus<T>::front: There is no element in the queue.");
-		}
+		sparta_assert(!bus.empty(), "Bus<T>::front: There is no element in the queue.\n");
 		return bus.front();
 	}
 
 	template <class T> void Bus<T>::pop() {
-		if(bus.empty()) {
-			throw std::out_of_range("Bus<T>::pop: No element in the queue to be removed.");
-		}
+		sparta_assert(!bus.empty(), "Bus<T>::pop: No element in the queue to be removed.\n");
 		
 		bus.pop();
 		
 		if(bus.empty()) {
-			controller_cycle_event->schedule(1);
-		} else {
 			idle = true;
+		} else {
+			controller_cycle_event->schedule(1);
 		}
 	}
 
@@ -82,7 +77,7 @@ namespace spike_model {
 		
 		if(idle) {
 			idle = false;
-			controller_cycle_event->schedule();
+			controller_cycle_event->schedule(1);
 		}
 	}
 }

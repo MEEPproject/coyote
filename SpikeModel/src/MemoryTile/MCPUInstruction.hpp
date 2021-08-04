@@ -46,7 +46,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Event(pc), base_address(addr), operation(o), width(w){}
+			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Event(pc), base_address(addr), operation(o), width(w) {}
 
 			/*!
 			 * \brief Constructor for memory instruction that will be handled by the MCPU
@@ -57,7 +57,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Event(pc, time, c), base_address(addr), operation(o), width(w){}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Event(pc, time, c), base_address(addr), operation(o), width(w) {}
 
 			/*!
 			 * \brief Handle the event
@@ -92,5 +92,10 @@ namespace spike_model {
 			SubOperation sub_operation = SubOperation::UNIT;
 			Width width;            // 8, 16, 32, or 64 bit memory operation
 	};
+	
+	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
+		str << "0x" << std::hex << instr.get_baseAddress() << " Op: " << (uint)instr.get_operation() << " SubOp: " << (uint)instr.get_suboperation() << ", width: " << (uint)instr.get_width() << ", coreID: " << instr.getCoreId();
+		return str;
+	}
 }
 #endif

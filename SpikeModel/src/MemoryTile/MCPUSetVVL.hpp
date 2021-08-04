@@ -25,8 +25,7 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Event(pc)
-            {}
+            MCPUSetVVL(uint64_t pc):Event(pc), AVL(0), VVL(0), memoryCPU(-1), regId(-1) {}
 
             /*!
              * \brief Constructor for MCPUSetVVL
@@ -36,7 +35,7 @@ namespace spike_model
              * \param c The core which submitted the event
              */
             MCPUSetVVL(uint64_t AVL, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c)
-                          , AVL(AVL), regId(regId) {}
+                          , AVL(AVL), VVL(0), regId(regId) {}
 
             /*!
              * \brief Handle the event
@@ -92,5 +91,11 @@ namespace spike_model
             uint64_t AVL, VVL, memoryCPU;
             size_t regId;
     };
+    
+    
+    inline std::ostream& operator<<(std::ostream &str, MCPUSetVVL &instr) {
+        str << "AVL: " << instr.getAVL() << ", VVL: " << instr.getVVL() << ", coreID: " << instr.getCoreId();
+        return str;
+    }
 }
 #endif

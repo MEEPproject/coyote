@@ -19,6 +19,8 @@ namespace spike_model {
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 0; // set to 0 at the beginning
+				id = 0;
+				vvl_ = 0;
 			}
             
 			
@@ -34,7 +36,7 @@ namespace spike_model {
 
 	//-- Bypass for a scalar memory operation
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
-		std::cout << "MCPU: Instruction for the MC received" << std::endl;
+		std::cout << getClock()->currentCycle() << ": " << name << ": Instruction for the MC received: " << *mes << std::endl;
 		switch(mes->getType()) {
 			case CacheRequest::AccessType::FETCH:
 			case CacheRequest::AccessType::LOAD:
@@ -49,16 +51,14 @@ namespace spike_model {
 		}
 		
 		//-- Schedule memory request for the MC
-		sched_mem_req.push(mes);
-		
+		sched_mem_req.push(mes);	
 	}
 
 	//-- A memory transaction to be handled by the MCPU
 	//   Note that VVL of 0 is received when the simulation is setting up
 	//   and the processor objects are created.
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
-		std::cout <<  "  VVL " << mes->getVVL() << " received from MCPU: Core "
-						<< mes->getCoreId() <<std::endl;
+		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
 			//-- TODO: Compute AVL
 			vvl_ = mes->getAVL();
@@ -71,8 +71,7 @@ namespace spike_model {
 
 	//-- A vector instruction for the MCPU
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
-		std::cout << "MCPU: Memory instruction received. Core: " << r->getCoreId() << ", BaseAddress: " << r->get_baseAddress() << ", Size: "
-					<< (int)r->get_width() << ", op: " << (int)r->get_operation() << ", sub_op: " << (int)r->get_suboperation() << std::endl;
+		std::cout << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << std::endl;
 		
 		r->setMCPUInstruction_ID(instructionID_counter);
 		
@@ -85,8 +84,9 @@ namespace spike_model {
 	}
 
     
-	void MemoryCPUWrapper::controllerCycle_incoming_transaction(){
+	void MemoryCPUWrapper::controllerCycle_incoming_transaction() {
 		std::shared_ptr<MCPUInstruction> instr_to_schedule = sched_incoming.front();
+		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *instr_to_schedule << std::endl;
 		
 		switch(instr_to_schedule->get_suboperation()) {
 			case MCPUInstruction::SubOperation::UNIT:
@@ -102,15 +102,15 @@ namespace spike_model {
 				memOp_unorderedIndex(instr_to_schedule);
 				break;
 			default:
-				std::cerr << "UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means. Ignoring it." << std::endl;
+				std::cerr << getClock()->currentCycle() << ": " << name << ": UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means. Ignoring it." << std::endl;
 		}
 		
 		//-- consume the instruction from the scheduler
 		sched_incoming.pop();
 	}
 	
+	//-- Schedule the memory operations going to mc
 	void MemoryCPUWrapper::controllerCycle_mem_requests() {
-		// Schedule the memory operations going to mc
 
 		//-- Get the oldest Cache Request from the queue
 		std::shared_ptr<CacheRequest> instr_for_mc = sched_mem_req.front();
@@ -120,6 +120,7 @@ namespace spike_model {
 
         //-- consume the memory request from the scheduler
 		sched_mem_req.pop();
+		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_mem_request: Sending to MC " << *instr_for_mc << std::endl;
 	}
 	
 	
@@ -127,6 +128,7 @@ namespace spike_model {
 	  	std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
 		out_port_noc_.send(response, 0);
 		sched_outgoing.pop();
+		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC:" << *response << std::endl;
 	}
 	
 	
@@ -201,23 +203,6 @@ namespace spike_model {
 	}
 
 
-	/////////////////////////////////////
-	//-- Command Execution
-	/////////////////////////////////////
-	/*void MemoryCPUWrapper::issueMCPU_() {
-		std::shared_ptr<MCPUSetVVL> mes = mcpu_req.front();
-		mes->setReturnedVecLen(mes->getRequestedVecLen());
-		std::cout << "MCPU: Returning VVL " << mes->getReturnedVecLen() << " to core " << mes->getCoreId() << std::endl;
-		mes->setServiced();
-		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
-
-		//-- Are there any messages left in the queue?
-		mcpu_req.pop_front();
-		if(mcpu_req.size() > 0) {
-			issue_mcpu_event_.schedule(1);
-		}
-	}*/
-
 
 
 
@@ -226,17 +211,17 @@ namespace spike_model {
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
 		count_requests_mc_++;
-		std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
+		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes;
 		mes->setServiced();
 	    
 		
 		//-- If the ID of the reply is < -, the cache line is for the MCPU and not for the VAS Tile
 		if((uint16_t)mes->getCoreId() != (this->id * (-1))) {
-			std::cout << "CacheRequest using the Bypass" << std::endl;
+			std::cout << " - CacheRequest using the Bypass" << std::endl;
 			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
             sched_outgoing.push(outgoing_noc_message);
 		} else {
-			std::cout << "For the MCPU" << std::endl; 
+			std::cout << " - Handled in the MCPU" << std::endl; 
 
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getParentInstruction_ID());
 			transaction_id->second.counter_cacheRequests--;

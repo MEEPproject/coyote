@@ -87,17 +87,9 @@ namespace spike_model {
 				uint32_t number_of_elements_per_response;
 			};
 			std::unordered_map<std::uint32_t, transaction> transaction_table;
-            
-			//-- commands coming from the tile
-			//sparta::UniqueEvent<> issue_mcpu_event_ {
-			//	&unit_event_set_, "issue_mcpu_", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, issueMCPU_)
-			//};
-			//std::list<std::shared_ptr<MCPUSetVVL>> mcpu_req;
-			//void issueMCPU_();
-
+			
 
 			//-- message handling 
-			
 			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
 				&unit_port_set_, "out_noc"
 			};
@@ -116,19 +108,19 @@ namespace spike_model {
 			
             
             //-- The Memory Tile Bus (for Memory requests from VAG,bypass...)
-		    sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_mem_req {
+		    sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_mem_req {
 			   &unit_event_set_, "controller_cycle_mem_requests", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_mem_requests)
 			}; 
 			Bus<std::shared_ptr<CacheRequest>> sched_mem_req;
 
 			//-- Bus for incoming transactions
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_incoming_transaction {
+			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_incoming_transaction {
 					&unit_event_set_, "controller_cycle_incoming_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_incoming_transaction)
 			};
 			Bus<std::shared_ptr<MCPUInstruction>> sched_incoming;
 			
 			//-- Bus for outgoing transactions
-			sparta::UniqueEvent<sparta::SchedulingPhase::PostTick> controller_cycle_event_outgoing_transaction {
+			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_outgoing_transaction {
 					&unit_event_set_, "controller_cycle_outgoing_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_outgoing_transaction)
 			};
 			Bus<std::shared_ptr<NoCMessage>> sched_outgoing;
