@@ -42,7 +42,10 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t){memory_ack=false;}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t) {
+                memory_ack=false;
+                parentinstruction_ID = 0; // 0 is not used by the memory tile
+            }
 
             /*!
              * \brief Constructor for CacheRequest
@@ -52,7 +55,10 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t) {memory_ack=false;}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t) {
+                memory_ack=false;
+                parentinstruction_ID = 0; // 0 is not used by the memory tile
+            }
 
             /*!
              * \brief Get the type of the request
@@ -136,7 +142,7 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            uint32_t  getParentInstruction_ID()
+            uint32_t getParentInstruction_ID()
             {
                return  parentinstruction_ID ;
             }

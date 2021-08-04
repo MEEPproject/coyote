@@ -18,9 +18,9 @@ namespace spike_model {
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
-				instructionID_counter = 0; // set to 0 at the beginning
-				id = 0;
+				instructionID_counter = 1; // set to 0 at the beginning
 				vvl_ = 0;
+				set_id(0);
 			}
             
 			
@@ -50,8 +50,11 @@ namespace spike_model {
 				break;
 		}
 		
+		mes->setParentInstruction_ID(0);	// 0 is not used by the Memory Tile as an ID
+		
 		//-- Schedule memory request for the MC
-		sched_mem_req.push(mes);	
+		sched_mem_req.push(mes);
+		std::cout << "instr: " << mes->getParentInstruction_ID() << std::endl;
 	}
 
 	//-- A memory transaction to be handled by the MCPU
@@ -73,11 +76,12 @@ namespace spike_model {
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
 		std::cout << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << std::endl;
 		
-		r->setMCPUInstruction_ID(instructionID_counter);
+		r->setMCPUInstruction_ID(this->instructionID_counter);
 		
 		struct transaction instruction_attributes = {r, 0, 0, 1};
 		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // keep track of the transaction
 		this->instructionID_counter++; // increment ID
+		if(this->instructionID_counter == 0) this->instructionID_counter = 1;	// handle the overflow. 0 is reserved for cache requests that use the bypass
 		
 		//-- schedule the incoming message
 		sched_incoming.push(r);
@@ -149,7 +153,7 @@ namespace spike_model {
 									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
 						0,
 						getClock()->currentCycle(), 
-						this->id * (-1));
+						get_id());
 
 		    memory_request->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from		
 			
@@ -179,7 +183,7 @@ namespace spike_model {
 									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
 						0,
 						getClock()->currentCycle(), 
-						this->id * (-1)); 
+						get_id()); 
 
 			mem_op->setParentInstruction_ID(instr->getMCPUInstruction_ID());	// set cacherequest ID to the mcpu instruction ID it was generated from			
             
@@ -211,12 +215,12 @@ namespace spike_model {
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
 		count_requests_mc_++;
-		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes;
+		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes << " instrID: " << mes->getParentInstruction_ID();
 		mes->setServiced();
 	    
 		
 		//-- If the ID of the reply is < -, the cache line is for the MCPU and not for the VAS Tile
-		if((uint16_t)mes->getCoreId() != (this->id * (-1))) {
+		if(mes->getParentInstruction_ID() == 0) {
 			std::cout << " - CacheRequest using the Bypass" << std::endl;
 			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
             sched_outgoing.push(outgoing_noc_message);
@@ -239,7 +243,7 @@ namespace spike_model {
 						getClock()->currentCycle(), 
 						transaction_id->second.counter_scratchpadRequests == 0);
 				
-				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_DATA_REPLY, line_size_, this->id, transaction_id->second.mcpu_instruction->getSourceTile());
+				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_DATA_REPLY, line_size_, get_id(), transaction_id->second.mcpu_instruction->getSourceTile());
 				sched_outgoing.push(outgoing_noc_message);
 				
 				if(transaction_id->second.counter_scratchpadRequests == 0) {

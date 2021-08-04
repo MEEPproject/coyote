@@ -150,6 +150,7 @@ namespace spike_model {
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			
 			void set_id(uint16_t id) {this->id = id;}
+			uint16_t get_id() {return this->id;}
 
 			//-- reporting and logging
 			sparta::Counter count_requests_noc_=sparta::Counter(getStatisticSet(), "requests_noc", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
