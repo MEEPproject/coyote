@@ -13,13 +13,14 @@ namespace spike_model {
 			line_size_(p->line_size),
 			latency_(p->latency),
 			sched_mem_req(&controller_cycle_event_mem_req),
-			sched_incoming(&controller_cycle_event_incoming_transaction),
-			sched_outgoing(&controller_cycle_event_outgoing_transaction)
+			sched_outgoing(&controller_cycle_event_outgoing_transaction),
+			sched_incoming(&controller_cycle_event_incoming_transaction)
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
-				instructionID_counter = 1; // set to 0 at the beginning
-				vvl_ = 0;
+				instructionID_counter = 1; 
+				vvl_ = 32;
+				avl_= 128;
 				set_id(0);
 			}
             
@@ -64,6 +65,7 @@ namespace spike_model {
 		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
 			//-- TODO: Compute AVL
+			mes->setAVL(avl_);
 			vvl_ = mes->getAVL();
 			mes->setVVL(vvl_);
 			
@@ -263,3 +265,4 @@ namespace spike_model {
 	}
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:
+
