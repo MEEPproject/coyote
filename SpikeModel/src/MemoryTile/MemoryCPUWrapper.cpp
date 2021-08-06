@@ -51,11 +51,6 @@ namespace spike_model {
 				break;
 		}
 		
-		mes->setParentInstruction_ID(0);	// 0 is not used by the Memory Tile as an ID
-		//std::cout << "instr:" << mes->getParentInstruction_ID() << std::endl; // FIXME: Somehow the CacheRequest constructor
-																				// is not called and hence parentInstruction_ID might
-																				// be != 0.
-		
 		//-- Schedule memory request for the MC
 		sched_mem_req.push(mes);
 	}
@@ -69,6 +64,8 @@ namespace spike_model {
 			//-- TODO: Compute AVL using some more reasonable value.
 			vvl_ = mes->getAVL()/2;
 			mes->setVVL(vvl_);
+			
+			mes->setServiced();
 			
 			//   Thread ID is not required currently
 			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, this->id, mes->getSourceTile());
