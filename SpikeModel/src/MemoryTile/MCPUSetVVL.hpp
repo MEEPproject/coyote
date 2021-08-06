@@ -25,7 +25,7 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Event(pc), AVL(0), VVL(0), memoryCPU(-1), regId(-1) {}
+            MCPUSetVVL(uint64_t pc):Event(pc) {}
 
             /*!
              * \brief Constructor for MCPUSetVVL
@@ -35,7 +35,7 @@ namespace spike_model
              * \param c The core which submitted the event
              */
             MCPUSetVVL(uint64_t AVL, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c)
-                          , AVL(AVL), VVL(0), regId(regId) {}
+                          , AVL(AVL), regId(regId) {}
 
             /*!
              * \brief Handle the event
@@ -79,16 +79,8 @@ namespace spike_model
              */
             size_t getDestinationRegId() { return regId;}
 
-            /*!
-             * \brief Get the memory CPU that will be accessed
-             * \return The address of the line              */
-            uint64_t getMemoryCPU()
-            {
-                return memoryCPU;
-            }
-
         private:
-            uint64_t AVL, VVL, memoryCPU;
+            uint64_t AVL, VVL;
             size_t regId;
     };
     

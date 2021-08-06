@@ -18,9 +18,7 @@ namespace spike_model {
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
-				instructionID_counter = 1; 
-				vvl_ = 32;
-				avl_= 128;
+				instructionID_counter = 1;
 				set_id(0);
 			}
             
@@ -30,6 +28,8 @@ namespace spike_model {
 	//-- Message handling from the NoC
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes) {
+		std::cout << getClock()->currentCycle() << ": " << name << ": receiveMessage_noc_: Received from NoC: " << *mes << std::endl;
+		
 		count_requests_noc_++;
 		mes->getRequest()->handle(this);
 	}
@@ -66,13 +66,12 @@ namespace spike_model {
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
 		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
-			//-- TODO: Compute AVL
-			mes->setAVL(avl_);
-			vvl_ = mes->getAVL();
+			//-- TODO: Compute AVL using some more reasonable value.
+			vvl_ = mes->getAVL()/2;
 			mes->setVVL(vvl_);
 			
 			//   Thread ID is not required currently
-			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile());
+			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, this->id, mes->getSourceTile());
 			sched_outgoing.push(outgoing_noc_message);
 	}
 
