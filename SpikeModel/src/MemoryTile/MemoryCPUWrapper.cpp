@@ -52,10 +52,12 @@ namespace spike_model {
 		}
 		
 		mes->setParentInstruction_ID(0);	// 0 is not used by the Memory Tile as an ID
+		//std::cout << "instr:" << mes->getParentInstruction_ID() << std::endl; // FIXME: Somehow the CacheRequest constructor
+																				// is not called and hence parentInstruction_ID might
+																				// be != 0.
 		
 		//-- Schedule memory request for the MC
 		sched_mem_req.push(mes);
-		std::cout << "instr: " << mes->getParentInstruction_ID() << std::endl;
 	}
 
 	//-- A memory transaction to be handled by the MCPU
@@ -126,7 +128,7 @@ namespace spike_model {
 
         //-- consume the memory request from the scheduler
 		sched_mem_req.pop();
-		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_mem_request: Sending to MC " << *instr_for_mc << std::endl;
+		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_mem_request: Sending to MC: " << *instr_for_mc << std::endl;
 	}
 	
 	
@@ -134,7 +136,7 @@ namespace spike_model {
 	  	std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
 		out_port_noc_.send(response, 0);
 		sched_outgoing.pop();
-		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC:" << *response << std::endl;
+		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << std::endl;
 	}
 	
 	
