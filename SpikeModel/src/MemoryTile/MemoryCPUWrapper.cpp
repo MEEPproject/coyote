@@ -62,13 +62,15 @@ namespace spike_model {
 		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
 			//-- TODO: Compute AVL using some more reasonable value.
-			vvl_ = mes->getAVL()/2;
+			mes->setAVL(64);
+			avl_ = mes->getAVL();
+			vvl_ = avl_/2;
 			mes->setVVL(vvl_);
 			
 			mes->setServiced();
 			
 			//   Thread ID is not required currently
-			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, this->id, mes->getSourceTile());
+			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, this->id, mes->getSourceTile());
 			sched_outgoing.push(outgoing_noc_message);
 	}
 
@@ -243,7 +245,7 @@ namespace spike_model {
 						getClock()->currentCycle(), 
 						transaction_id->second.counter_scratchpadRequests == 0);
 				
-				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_DATA_REPLY, line_size_, get_id(), transaction_id->second.mcpu_instruction->getSourceTile());
+				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, get_id(), transaction_id->second.mcpu_instruction->getSourceTile());
 				sched_outgoing.push(outgoing_noc_message);
 				
 				if(transaction_id->second.counter_scratchpadRequests == 0) {
