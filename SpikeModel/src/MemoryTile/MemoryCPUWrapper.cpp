@@ -62,7 +62,7 @@ namespace spike_model {
 		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
 			//-- TODO: Compute AVL using some more reasonable value.
-			vvl_ = mes->getAVL();/2;
+			vvl_ = mes->getAVL()/2;
 			mes->setVVL(vvl_);
 			
 			mes->setServiced();
