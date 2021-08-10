@@ -62,15 +62,13 @@ namespace spike_model {
 		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
 
 			//-- TODO: Compute AVL using some more reasonable value.
-			mes->setAVL(64);
-			avl_ = mes->getAVL();
-			vvl_ = avl_/2;
+			vvl_ = mes->getAVL();/2;
 			mes->setVVL(vvl_);
 			
 			mes->setServiced();
 			
 			//   Thread ID is not required currently
-			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, this->id, mes->getSourceTile());
+			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, this->id, mes->getSourceTile());
 			sched_outgoing.push(outgoing_noc_message);
 	}
 
