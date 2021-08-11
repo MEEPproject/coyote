@@ -81,10 +81,20 @@ namespace spike_model
              */
             bool isOperandReady() const {return operand_ready;}
             void setoperand_ready(bool ready) {operand_ready = ready;}
+            uint32_t getParentInstruction_ID()
+            {
+               return  parentinstruction_ID ;
+            }
+
+            void setParentInstruction_ID(uint32_t instr_id)
+            {
+                parentinstruction_ID = instr_id;
+            }
 
         private:
             ScratchpadCommand command;
             bool operand_ready;
+            uint32_t parentinstruction_ID;  // 1a) add parentInstr_ID to ScratchpadRequest.hpp
     };
     
     inline std::ostream & operator<<(std::ostream & Str, ScratchpadRequest const & req)

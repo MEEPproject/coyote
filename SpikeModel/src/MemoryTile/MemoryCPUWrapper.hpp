@@ -143,7 +143,7 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
-
+            virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
 
 			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
 			void controllerCycle_outgoing_transaction(); // Outgoing transaction queue
@@ -161,6 +161,7 @@ namespace spike_model {
 			sparta::Counter count_load_=sparta::Counter(getStatisticSet(), "requests_noc_load", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
 			sparta::Counter count_store_=sparta::Counter(getStatisticSet(), "requests_noc_store", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
 			sparta::Counter count_requests_mc_=sparta::Counter(getStatisticSet(), "requests_mc", "Number of requests from MC", sparta::Counter::COUNT_NORMAL);
+
 			
 	};
 }
