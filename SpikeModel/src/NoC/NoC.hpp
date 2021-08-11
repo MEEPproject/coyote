@@ -84,6 +84,13 @@ namespace spike_model
 
         static Networks getNetworkForMessage(const NoCMessageType mess);
         static uint8_t getClassForMessage(const NoCMessageType mess);
+        /*!
+         * \brief Check the injection queue space in NoC for a packet
+         * \param injectedByTile Indicates that the source of the messages is a VAS tile
+         * \param mess The packet
+         * \return If there is space for the packet on its corresponding injection queue
+         */
+        virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) = 0;
 
     protected:
 
@@ -99,7 +106,7 @@ namespace spike_model
 
         /*!
          * \brief Constructor for NoC
-         * \param node The node that represent the NoC and
+         * \param node The node that represent the NoC
          * \param p The NoC parameter set
          */
         NoC(sparta::TreeNode* node, const NoCParameterSet* params);
