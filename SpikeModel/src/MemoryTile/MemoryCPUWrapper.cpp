@@ -92,6 +92,14 @@ namespace spike_model {
 		std::shared_ptr<MCPUInstruction> instr_to_schedule = sched_incoming.front();
 		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *instr_to_schedule << std::endl;
 		
+		//-- TODO Regina: Is it a vector load or a store?
+		// 1) Generate a scratchpad request with READ
+		// 1a) add parentInstr_ID to ScratchpadRequest.hpp
+		// 2) Put it into a NoCMessage
+		// 3) schedule it outgoing
+		
+		
+		//-- If it is a load
 		switch(instr_to_schedule->get_suboperation()) {
 			case MCPUInstruction::SubOperation::UNIT:
 				memOp_unit(instr_to_schedule);
@@ -228,6 +236,10 @@ namespace spike_model {
 			std::cout << " - Handled in the MCPU" << std::endl; 
 
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getParentInstruction_ID());
+			
+			// TODO Regina:
+			// Check, if the CacheRequest has a load, then do this
+			// If it was a store, do not send out any reply. Count the number of the CacheRequest-Replies, if the counter reaches 0, remove MCPUInstr from hash table.
 			transaction_id->second.counter_cacheRequests--;
 			
 			uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
