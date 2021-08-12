@@ -42,7 +42,7 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t), parentinstruction_ID(0), memory_ack(false) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t), memory_ack(false) {}
             
 
             /*!
@@ -53,7 +53,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t), parentinstruction_ID(0), memory_ack(false) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t), memory_ack(false) {}
 
             /*!
              * \brief Get the type of the request
@@ -137,23 +137,11 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            uint32_t getParentInstruction_ID()
-            {
-               return  parentinstruction_ID ;
-            }
-
-            void setParentInstruction_ID(uint32_t instr_id)
-            {
-                parentinstruction_ID = instr_id;
-            }
-
+            
         private:
             AccessType type;
 
             uint16_t home_tile;
-
-            uint32_t parentinstruction_ID; // id of the mcpu instruction it was generated from
-
             uint64_t memory_controller_;
             uint64_t rank_;
             uint64_t memory_bank_;

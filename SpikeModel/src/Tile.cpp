@@ -180,6 +180,11 @@ namespace spike_model
 
                 case NoCMessageType::MCPU_REQUEST:
                     break;
+                    
+                case NoCMessageType::SCRATCHPAD_COMMAND:
+                case NoCMessageType::SCRATCHPAD_DATA_REPLY:
+                case NoCMessageType::SCRATCHPAD_ACK:
+                    break;
 
                 default:
                     std::cout << "Unsupported message received from the NoC!!!\n";

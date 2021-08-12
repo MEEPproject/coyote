@@ -125,7 +125,7 @@ namespace spike_model {
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_incoming_transaction {
 					&unit_event_set_, "controller_cycle_incoming_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_incoming_transaction)
 			};
-			Bus<std::shared_ptr<MCPUInstruction>> sched_incoming;
+			Bus<std::shared_ptr<Request>> sched_incoming;
 			
 			
 
@@ -153,16 +153,14 @@ namespace spike_model {
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			
-			void set_id(uint16_t id) {this->id = id;}
-			uint16_t get_id() {return this->id;}
+			void setID(uint16_t id) {this->id = id;}
+			uint16_t getID() {return this->id;}
 
 			//-- reporting and logging
 			sparta::Counter count_requests_noc_=sparta::Counter(getStatisticSet(), "requests_noc", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
 			sparta::Counter count_load_=sparta::Counter(getStatisticSet(), "requests_noc_load", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
 			sparta::Counter count_store_=sparta::Counter(getStatisticSet(), "requests_noc_store", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
 			sparta::Counter count_requests_mc_=sparta::Counter(getStatisticSet(), "requests_mc", "Number of requests from MC", sparta::Counter::COUNT_NORMAL);
-
-			
 	};
 }
 #endif

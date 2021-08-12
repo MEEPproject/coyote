@@ -42,6 +42,24 @@ namespace spike_model
              * \param pc The program counter of the instruction related to this scratchpad request
              * \param time The timestamp for the request
              * \param ready True if the this request completes an operand and the associated instruction may proceed
+             * \param c The ID of the destination core
+             * \param src The ID of the Memory Tile that is generating this ScratchpadRequest
+             * \param destReg The destination register
+             */
+            ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, bool ready, uint16_t c, uint16_t src, uint16_t destReg): Request(a, pc, time, c), command(comm), operand_ready(ready)
+            {
+            setDestinationReg(destReg, RegType::VECTOR);
+            setSourceTile(src);
+            //This constructor will have an extra parameter: The memory instruction that triggered the request. The pc would then be redundant, but we need it for the Event class hierarchy
+            }
+            
+            /*!
+             * \brief Constructor for ScratchpadRequest
+             * \param a The address for the request
+             * \param comm The command for the scratchpad
+             * \param pc The program counter of the instruction related to this scratchpad request
+             * \param time The timestamp for the request
+             * \param ready True if the this request completes an operand and the associated instruction may proceed
              */
             ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, bool ready): Request(a, pc), command(comm), operand_ready(ready)
             {
@@ -81,20 +99,10 @@ namespace spike_model
              */
             bool isOperandReady() const {return operand_ready;}
             void setoperand_ready(bool ready) {operand_ready = ready;}
-            uint32_t getParentInstruction_ID()
-            {
-               return  parentinstruction_ID ;
-            }
-
-            void setParentInstruction_ID(uint32_t instr_id)
-            {
-                parentinstruction_ID = instr_id;
-            }
 
         private:
             ScratchpadCommand command;
             bool operand_ready;
-            uint32_t parentinstruction_ID;  // 1a) add parentInstr_ID to ScratchpadRequest.hpp
     };
     
     inline std::ostream & operator<<(std::ostream & Str, ScratchpadRequest const & req)

@@ -1,13 +1,13 @@
 #ifndef __MCPU_INSTRUCTION_HH__
 #define __MCPU_INSTRUCTION_HH__
 
-#include "EventVisitor.hpp"
+#include "Request.hpp"
 #include <iostream>
 #include <vector>
 
 
 namespace spike_model {
-	class MCPUInstruction : public Event, public std::enable_shared_from_this<MCPUInstruction> {
+	class MCPUInstruction : public Request, public std::enable_shared_from_this<MCPUInstruction> {
 		/**
 		 * \class spike_model::Fence
 		 *
@@ -46,7 +46,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Event(pc), base_address(addr), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Request(addr, pc), operation(o), width(w) {}
 
 			/*!
 			 * \brief Constructor for memory instruction that will be handled by the MCPU
@@ -57,7 +57,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Event(pc, time, c), base_address(addr), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Request(addr, pc, time, c), operation(o), width(w) {}
 
 			/*!
 			 * \brief Handle the event
@@ -67,8 +67,6 @@ namespace spike_model {
 				v->handle(shared_from_this());
 			}
 
-			void set_baseAddress(uint64_t address) {base_address = address;}
-			uint64_t get_baseAddress() {return base_address;}
 
 			void setIndexed(std::vector<uint64_t> indices_) {indices=indices_; sub_operation = SubOperation::UNORDERED_INDEX;}
 			void setOrdered(std::vector<uint64_t> indices_) {indices=indices_; sub_operation = SubOperation::ORDERED_INDEX;}
@@ -81,20 +79,17 @@ namespace spike_model {
 			Operation get_operation() {return operation;}
 			SubOperation get_suboperation() {return sub_operation;}
 
-			uint32_t getMCPUInstruction_ID() {return  id;}
-            void setMCPUInstruction_ID(uint32_t id) {this->id = id;}
+
 
 		private:
-		    uint32_t id;
-			uint64_t base_address;
 			std::vector<uint64_t> indices;
 			Operation operation;
 			SubOperation sub_operation = SubOperation::UNIT;
-			Width width;            // 8, 16, 32, or 64 bit memory operation
+			Width width;		 // 8, 16, 32, or 64 bit memory operation
 	};
 	
 	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
-		str << "0x" << std::hex << instr.get_baseAddress() << " Op: " << (uint)instr.get_operation() << " SubOp: " << (uint)instr.get_suboperation() << ", width: " << (uint)instr.get_width() << ", coreID: " << instr.getCoreId();
+		str << "0x" << std::hex << instr.getAddress() << " Op: " << (uint)instr.get_operation() << " SubOp: " << (uint)instr.get_suboperation() << ", width: " << (uint)instr.get_width() << ", coreID: " << instr.getCoreId();
 		return str;
 	}
 }
