@@ -71,6 +71,18 @@ namespace spike_model {
 			 * \brief Sets the request manager for the tile
 			 */
 			void setRequestManager(std::shared_ptr<EventManager> r);
+			
+			/*!
+			 * \brief Set the ID for the Memory Tile
+			 * \param The ID to be set
+			 */
+			void setID(uint16_t id) {this->id = id;}
+			
+			/*!
+			 * \brief Get the ID of the current Memory Tile
+			 * \return The ID of this Memory Tile
+			 */
+			uint16_t getID() {return this->id;}
 
 
 		private:
@@ -153,8 +165,7 @@ namespace spike_model {
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			
-			void setID(uint16_t id) {this->id = id;}
-			uint16_t getID() {return this->id;}
+
 
 			//-- reporting and logging
 			sparta::Counter count_requests_noc_=sparta::Counter(getStatisticSet(), "requests_noc", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);

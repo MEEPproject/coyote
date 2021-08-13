@@ -332,6 +332,9 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 				sparta::utils::uint32_to_str(num_of_memory_cpus)); 					// the MPCU is bound to one MC
 
 		sparta_assert(mc_node != nullptr);
+        
+        MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
+        mcpu->setID(num_of_memory_cpus);
 
 		for(const auto& port : ports) {
 			bool bind = false;

@@ -209,7 +209,7 @@ namespace spike_model {
 		
 		
 		while(remaining_elements > 0) {
-			std::cout << "memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << std::endl;
+			std::cout << getClock()->currentCycle() << ": " << name << "memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << std::endl;
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = std::make_shared<CacheRequest>(
 						address,
