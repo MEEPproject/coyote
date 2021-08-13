@@ -14,52 +14,50 @@ namespace spike_model {
 			latency_(p->latency),
 			sched_mem_req(&controller_cycle_event_mem_req, p->latency),
 			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency),
-			sched_incoming(&controller_cycle_event_incoming_transaction, p->latency)
-			{
+			sched_incoming(&controller_cycle_event_incoming_transaction, p->latency) {
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
 				setID(0);
+				
+				auto root_node = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
+				this->enabled = root_node.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
+				std::cout << "Memory Tile is " << (this->enabled ? "enabled" : "disabled") << "." << std::endl;
 			}
-			
-			
+
 
 	/////////////////////////////////////
 	//-- Message handling from the NoC
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes) {
-		std::cout << getClock()->currentCycle() << ": " << name << ": receiveMessage_noc_: Received from NoC: " << *mes << std::endl;
+		if(enabled) {
+			std::cout << getClock()->currentCycle() << ": " << name << ": receiveMessage_noc_: Received from NoC: " << *mes << std::endl;
+			count_requests_noc_++;
+		}
 		
-		count_requests_noc_++;
 		mes->getRequest()->handle(this);
 	}
 
 
 	//-- Bypass for a scalar memory operation
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
-		std::cout << getClock()->currentCycle() << ": " << name << ": Instruction for the MC received: " << *mes << std::endl;
-		switch(mes->getType()) 
-		{
-			case CacheRequest::AccessType::FETCH:
-			case CacheRequest::AccessType::LOAD:
-				count_load_++;
-				//std::cout << "Loading: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
-				break;
-			case CacheRequest::AccessType::WRITEBACK:
-			case CacheRequest::AccessType::STORE:
-				count_store_++;
-				//std::cout << "Storing: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
-				break;
-		}
 		
-		//-- Schedule memory request for the MC
-		sched_mem_req.push(mes);
+		if(enabled) {
+			//-- Schedule memory request for the MC
+			sched_mem_req.push(mes);
+			std::cout << getClock()->currentCycle() << ": " << name << ": Instruction for the MC received: " << *mes << std::endl;
+		} else {
+			//-- whatever comes into the Memory Tile, just send it out to the MC
+			out_port_mc_.send(mes, 0);
+		}
 	}
 
 	//-- A memory transaction to be handled by the MCPU
 	//   Note that VVL of 0 is received when the simulation is setting up
 	//   and the processor objects are created.
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
+		
+		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUSetVVL instruction!");
 
 		//-- TODO: Compute AVL using some more reasonable value.
 		//		   Thread ID is not required currently
@@ -77,6 +75,9 @@ namespace spike_model {
 
 	//-- A vector instruction for the MCPU
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r){
+		
+		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
+		
 		std::cout << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << std::endl;
 		
 		r->setID(this->instructionID_counter);
@@ -93,6 +94,9 @@ namespace spike_model {
 
 	//-- Handle for Scratchpad requests
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> c){
+		
+		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
+		
 		std::cout << getClock()->currentCycle() << ": " << name << ": handle: ScratchpadRequest: " << *c << std::endl;
 		sched_incoming.push(c);
 	}
@@ -281,6 +285,14 @@ namespace spike_model {
 	//-- Message handling from the MC
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
+		
+		if(!enabled) {
+			//-- whatever we received from the MC, just forward it to the NoC
+			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+			
+			return;
+		}
+		
 		count_requests_mc_++;
 		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes << " instrID: " << mes->getID();
 		mes->setServiced();

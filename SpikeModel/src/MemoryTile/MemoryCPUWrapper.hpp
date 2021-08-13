@@ -18,6 +18,7 @@
 //#include "sparta/pairs/SpartaKeyPairs.hpp"
 //#include "sparta/simulation/State.hpp"
 #include "sparta/utils/SpartaSharedPointer.hpp"
+#include "sparta/app/Simulation.hpp"
 
 #include "LogCapable.hpp"
 #include "NoC/NoCMessage.hpp"
@@ -45,7 +46,7 @@ namespace spike_model {
 				public:
 					//! Constructor for MemoryCPUParameterSet
 					MemoryCPUWrapperParameterSet(sparta::TreeNode* n):sparta::ParameterSet(n) { }
-					PARAMETER(uint64_t, line_size, 128, "The cache line size")
+					PARAMETER(uint64_t, line_size, 64, "The cache line size")
 					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
 			};
 
@@ -92,6 +93,9 @@ namespace spike_model {
 			uint32_t vvl_;
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
+			bool enabled;
+			
+			
 			struct transaction {
 				std::shared_ptr<MCPUInstruction> mcpu_instruction;
 				uint32_t counter_cacheRequests;
