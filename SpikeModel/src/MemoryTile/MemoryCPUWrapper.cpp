@@ -12,9 +12,9 @@ namespace spike_model {
 			sparta::Unit(node),
 			line_size_(p->line_size),
 			latency_(p->latency),
-			sched_mem_req(&controller_cycle_event_mem_req),
-			sched_outgoing(&controller_cycle_event_outgoing_transaction),
-			sched_incoming(&controller_cycle_event_incoming_transaction)
+			sched_mem_req(&controller_cycle_event_mem_req, p->latency),
+			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency),
+			sched_incoming(&controller_cycle_event_incoming_transaction, p->latency)
 			{
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));

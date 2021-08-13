@@ -18,7 +18,7 @@ namespace spike_model {
 			 * To schedule the queue, the Sparta scheduler is used.
 			 * @controller_cycle_event: A pointer to the the scheduler for this queue
 			 */
-			Bus(sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event) {
+			Bus(sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event, const uint64_t latency_):latency(latency_) {
 				this->controller_cycle_event = controller_cycle_event;
 				idle = true;
 			}
@@ -50,6 +50,7 @@ namespace spike_model {
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event;
 			std::queue<T> bus;
 			bool idle;
+			const uint64_t latency;
 	};
 	
 	
@@ -68,7 +69,7 @@ namespace spike_model {
 		if(bus.empty()) {
 			idle = true;
 		} else {
-			controller_cycle_event->schedule(1);
+			controller_cycle_event->schedule(latency);
 		}
 	}
 
@@ -77,7 +78,7 @@ namespace spike_model {
 		
 		if(idle) {
 			idle = false;
-			controller_cycle_event->schedule(1);
+			controller_cycle_event->schedule(latency);
 		}
 	}
 }

@@ -46,7 +46,7 @@ namespace spike_model {
 					//! Constructor for MemoryCPUParameterSet
 					MemoryCPUWrapperParameterSet(sparta::TreeNode* n):sparta::ParameterSet(n) { }
 					PARAMETER(uint64_t, line_size, 128, "The cache line size")
-					PARAMETER(uint64_t, latency, 100, "The latency in the memory CPU wrapper")
+					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
 			};
 
 			/*!
@@ -93,7 +93,7 @@ namespace spike_model {
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			struct transaction {
-                std::shared_ptr<MCPUInstruction> mcpu_instruction;
+				std::shared_ptr<MCPUInstruction> mcpu_instruction;
 				uint32_t counter_cacheRequests;
 				uint32_t counter_scratchpadRequests;
 				uint32_t number_of_elements_per_response;
@@ -118,9 +118,9 @@ namespace spike_model {
 				&unit_port_set_, "in_mc"
 			};
 			
-            
-            //-- The Memory Tile Bus (for Memory requests from VAG,bypass...)
-		    sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_mem_req {
+
+			//-- The Memory Tile Bus (for Memory requests from VAG,bypass...)
+			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_mem_req {
 			   &unit_event_set_, "controller_cycle_mem_requests", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_mem_requests)
 			}; 
 			Bus<std::shared_ptr<CacheRequest>> sched_mem_req;
@@ -155,7 +155,7 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
-            virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
+			virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
 
 			void controllerCycle_incoming_transaction(); // for incoming MCPUInstructions
 			void controllerCycle_outgoing_transaction(); // Outgoing transaction queue

@@ -56,7 +56,7 @@ top:
     memory_cpu*:
       params:
         line_size: 64                       # (uint64_t)        Cache line size (power of 2)
-        latency: 0                          # (uint64_t)        The latency of the MCPU
+        latency: 1                          # (uint64_t)        The latency of the MCPU
     memory_controller*:
       params:
         num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
