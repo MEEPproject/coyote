@@ -97,6 +97,10 @@ namespace spike_model {
 		sched_incoming.push(c);
 	}
 
+
+
+
+
 	void MemoryCPUWrapper::controllerCycle_incoming_transaction() {
 		
 		//-- If the incoming transaction is a MCPU instruction, that means, that the VAS Tile instructs the MCPU to perform an operation.
@@ -162,7 +166,11 @@ namespace spike_model {
 				default:
 					std::cerr << getClock()->currentCycle() << ": " << name << ": UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means. Ignoring it." << std::endl;
 			}
+		} else {
+			sparta_assert(false, "The incoming packet type is unknown!");
 		}
+		
+		
 		//-- consume the instruction from the scheduler
 		sched_incoming.pop();
 	}
