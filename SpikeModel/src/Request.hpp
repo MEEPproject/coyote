@@ -125,7 +125,7 @@ namespace spike_model
              * \brief Get the ID of the instruction.
              * We use that in the Memory Tile to map original instructions to generated ones.
              */
-            uint32_t getID() {return  id;}
+            uint32_t getID() {return id;}
             
             /*!
              * \brief Set the ID of the instruction.

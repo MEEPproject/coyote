@@ -45,7 +45,7 @@ namespace spike_model {
 		if(enabled) {
 			//-- Schedule memory request for the MC
 			sched_mem_req.push(mes);
-			std::cout << getClock()->currentCycle() << ": " << name << ": Instruction for the MC received: " << *mes << std::endl;
+			std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle CacheRequest: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		} else {
 			//-- whatever comes into the Memory Tile, just send it out to the MC
 			out_port_mc_.send(mes, 0);
@@ -66,7 +66,7 @@ namespace spike_model {
 			
 		mes->setServiced();
 		
-		std::cout <<  getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 			
 		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
@@ -78,7 +78,7 @@ namespace spike_model {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
 		
-		std::cout << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		
 		r->setID(this->instructionID_counter);
 		
@@ -93,12 +93,13 @@ namespace spike_model {
 
 
 	//-- Handle for Scratchpad requests
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> c){
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> r){
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
 		
-		std::cout << getClock()->currentCycle() << ": " << name << ": handle: ScratchpadRequest: " << *c << std::endl;
-		sched_incoming.push(c);
+		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle: ScratchpadRequest: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		
+		sched_incoming.push(r);
 	}
 
 
@@ -109,11 +110,20 @@ namespace spike_model {
 		
 		//-- If the incoming transaction is a MCPU instruction, that means, that the VAS Tile instructs the MCPU to perform an operation.
 		if(std::shared_ptr<MCPUInstruction> instr_to_schedule = std::dynamic_pointer_cast<MCPUInstruction>(sched_incoming.front())) {
-			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *instr_to_schedule << std::endl;
+			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *instr_to_schedule;
 			
 			//-- If it is a load
 			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
-			
+				
+				//-- We have to send an ALLOCATE to the VAS Tile, so it reserves space for the data to be written to the SP
+				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
+				sp_request->setSize(vvl_ * (uint)instr_to_schedule->get_width());	// reserve the space in the VAS Tile
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
+				sched_outgoing.push(noc_message);
+				
+				std::cout << ", sending SP ALLOC: " << *sp_request << std::endl;
+				
+				//-- Send the request to the Vector Address Generators (VAG)
 				computeMemReqAddresses(instr_to_schedule);
 				
 			} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
@@ -125,15 +135,27 @@ namespace spike_model {
 				
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
 				sched_outgoing.push(noc_message);
+				std::cout << std::endl;
 			}
 		
-		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task. In this case it
-		//   is always a vector store operation.
+		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task.
 		} else if(std::shared_ptr<ScratchpadRequest> sp_instr_to_schedule = std::dynamic_pointer_cast<ScratchpadRequest>(sched_incoming.front())) {
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(sp_instr_to_schedule->getID());
 			std::shared_ptr<spike_model::MCPUInstruction> instr_to_schedule = transaction_id->second.mcpu_instruction;
+			
+			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *sp_instr_to_schedule << ", parent instr: " << instr_to_schedule << std::endl;
 
-			computeMemReqAddresses(instr_to_schedule);
+			switch(sp_instr_to_schedule->getCommand()) {
+				case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
+				case ScratchpadRequest::ScratchpadCommand::FREE:
+					break;
+				case ScratchpadRequest::ScratchpadCommand::READ:
+				case ScratchpadRequest::ScratchpadCommand::WRITE:
+					computeMemReqAddresses(instr_to_schedule);
+					break;
+				default:
+					sparta_assert(false, "The Memory Tile does not understand this Scratchpad command!");
+			}
 			
 		} else {
 			sparta_assert(false, "The incoming packet type is unknown!");
@@ -164,7 +186,7 @@ namespace spike_model {
 		std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
 		out_port_noc_.send(response, 0);
 		sched_outgoing.pop();
-		std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 	}
 	
 	
@@ -179,18 +201,10 @@ namespace spike_model {
 		
 		while(remaining_elements > 0) {
 			std::cout << getClock()->currentCycle() << ": " << name << "memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << std::endl;
+			
 			//-- Generate a cache line request
-			std::shared_ptr<CacheRequest> memory_request = std::make_shared<CacheRequest>(
-						address,
-						(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
-									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
-						0,
-						getClock()->currentCycle(), 
-						getID());
-
-			memory_request->setID(instr->getID());	// set cacherequest ID to the mcpu instruction ID it was generated from		
-			
-			
+			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
+									
 			//-- schedule this request for the MC
 			sched_mem_req.push(memory_request);	
 			remaining_elements -= number_of_elements_per_request;
@@ -202,28 +216,18 @@ namespace spike_model {
 		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
 		transaction_id->second.counter_scratchpadRequests = number_of_replies;	// How many responses are sent back to the VAS Tile?
 		transaction_id->second.number_of_elements_per_response = 1; 			// Send out every received CacheRequest from the MC (no parasitic bytes)
-		
-		std::cout << "memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << ", nor: " << number_of_replies << std::endl;
-		
 	}
 	
 	void MemoryCPUWrapper::memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr) {
 		
 		std::vector<uint64_t> indices = instr->get_index();
 		uint64_t address = instr->getAddress();
+		
 		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
-			std::shared_ptr<CacheRequest> mem_op = std::make_shared<CacheRequest>(
-						(address + *it),
-						(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
-									CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
-						0,
-						getClock()->currentCycle(), 
-						getID()); 
-
-			mem_op->setID(instr->getID());	// set cacherequest ID to the mcpu instruction ID it was generated from			
 			
-			//-- schedule request for the MC
-			sched_mem_req.push(mem_op);
+			//-- create and schedule request for the MC
+			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr); 
+			sched_mem_req.push(memory_request);
 		}
 		
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
@@ -258,17 +262,17 @@ namespace spike_model {
 		}
 		
 		count_requests_mc_++;
-		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes << " instrID: " << mes->getID();
+		std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: instrID: " << mes->getID();
 		mes->setServiced();
 		
 		
 		//-- If the ID of the reply is < -, the cache line is for the MCPU and not for the VAS Tile
 		if(mes->getID() == 0) {
-			std::cout << " - CacheRequest using the Bypass" << std::endl;
+			std::cout << " - CacheRequest using the Bypass: " << *mes << std::endl;
 			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
 			sched_outgoing.push(outgoing_noc_message);
 		} else {
-			std::cout << " - Handled in the MCPU";
+			std::cout << " - Handled in the MCPU: ";
 
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getID());
 			
@@ -292,6 +296,8 @@ namespace spike_model {
 						
 						std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
 						sched_outgoing.push(noc_message);
+						
+						std::cout << "Returning SP: " << *outgoing_message;
 						
 						if(transaction_id->second.counter_scratchpadRequests == 0) {
 							// delete from hash table
@@ -323,13 +329,29 @@ namespace spike_model {
 						mes->getAddress(),
 						command,
 						mes->getPC(),
-						getClock()->currentCycle(),
+						mes->getTimestamp(),
 						mes->getCoreId(),
 						getID(),
 						mes->getDestinationRegId()
 		);
 		sp_request->setID(mes->getID());
 		return sp_request;
+	}
+	
+	
+	std::shared_ptr<CacheRequest> MemoryCPUWrapper::createCacheRequest(uint64_t address, std::shared_ptr<MCPUInstruction> instr) {
+		std::shared_ptr<CacheRequest> cr = std::make_shared<CacheRequest>(
+					address,
+					(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
+								CacheRequest::AccessType::LOAD : CacheRequest::AccessType::STORE,
+					instr->getPC(),
+					instr->getTimestamp(), 
+					instr->getCoreId());
+
+		cr->setDestinationReg(instr->getDestinationRegId(), instr->getDestinationRegType());
+		cr->setID(instr->getID());	// set CacheRequest ID to the mcpu instruction ID it was generated from		
+		
+		return cr;
 	}
 	
 	
