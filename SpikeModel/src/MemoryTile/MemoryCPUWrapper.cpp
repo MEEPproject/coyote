@@ -110,7 +110,6 @@ namespace spike_model {
 		//-- If the incoming transaction is a MCPU instruction, that means, that the VAS Tile instructs the MCPU to perform an operation.
 		if(std::shared_ptr<MCPUInstruction> instr_to_schedule = std::dynamic_pointer_cast<MCPUInstruction>(sched_incoming.front())) {
 			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *instr_to_schedule << std::endl;
-			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr_to_schedule->getID());
 			
 			//-- If it is a load
 			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
@@ -118,7 +117,14 @@ namespace spike_model {
 				computeMemReqAddresses(instr_to_schedule);
 				
 			} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
-				sendScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::READ, false, true, transaction_id->second.mcpu_instruction->getSourceTile());
+				
+				std::shared_ptr outgoing_message = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::READ);
+				outgoing_message->setSize(line_size_);
+				outgoing_message->setOperandReady();
+				
+				
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
+				sched_outgoing.push(noc_message);
 			}
 		
 		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task. In this case it
@@ -277,7 +283,15 @@ namespace spike_model {
 					if(scratchpadRequest_to_fill == 0) {
 						transaction_id->second.counter_scratchpadRequests--;
 						
-						sendScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE, true, transaction_id->second.counter_scratchpadRequests == 0, transaction_id->second.mcpu_instruction->getSourceTile());
+						std::shared_ptr outgoing_message = createScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE);
+						outgoing_message->setSize(line_size_);
+						outgoing_message->setServiced();
+						if(transaction_id->second.counter_scratchpadRequests == 0) {
+							outgoing_message->setOperandReady();
+						}
+						
+						std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
+						sched_outgoing.push(noc_message);
 						
 						if(transaction_id->second.counter_scratchpadRequests == 0) {
 							// delete from hash table
@@ -304,24 +318,18 @@ namespace spike_model {
 	/////////////////////////////////////
 	//-- Helper functions
 	/////////////////////////////////////
-	void MemoryCPUWrapper::sendScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command, bool serviced, bool last_transaction, uint16_t dest) {
+	std::shared_ptr<ScratchpadRequest> MemoryCPUWrapper::createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command) {
 		std::shared_ptr<ScratchpadRequest> sp_request = std::make_shared<ScratchpadRequest>(
 						mes->getAddress(),
 						command,
 						mes->getPC(),
-						getClock()->currentCycle(), 
-						last_transaction,
+						getClock()->currentCycle(),
 						mes->getCoreId(),
 						getID(),
 						mes->getDestinationRegId()
 		);
 		sp_request->setID(mes->getID());
-		if(serviced) {
-			sp_request->setServiced();
-		}
-		
-		std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), dest);
-		sched_outgoing.push(noc_message);
+		return sp_request;
 	}
 	
 	

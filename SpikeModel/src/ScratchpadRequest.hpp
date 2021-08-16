@@ -41,13 +41,11 @@ namespace spike_model
              * \param comm The command for the scratchpad
              * \param pc The program counter of the instruction related to this scratchpad request
              * \param time The timestamp for the request
-             * \param ready True if the this request completes an operand and the associated instruction may proceed
              * \param c The ID of the destination core
              * \param src The ID of the Memory Tile that is generating this ScratchpadRequest
              * \param destReg The destination register
              */
-            ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, bool ready, uint16_t c, uint16_t src, uint16_t destReg): Request(a, pc, time, c), command(comm), operand_ready(ready)
-            {
+            ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, uint16_t c, uint16_t src, uint16_t destReg): Request(a, pc, time, c), command(comm) {
             setDestinationReg(destReg, RegType::VECTOR);
             setSourceTile(src);
             //This constructor will have an extra parameter: The memory instruction that triggered the request. The pc would then be redundant, but we need it for the Event class hierarchy
@@ -98,7 +96,7 @@ namespace spike_model
              * \return True if an operand will become ready after servicing this request
              */
             bool isOperandReady() const {return operand_ready;}
-            void setoperand_ready(bool ready) {operand_ready = ready;}
+            void setOperandReady() {operand_ready = true;}
 
         private:
             ScratchpadCommand command;
@@ -107,7 +105,7 @@ namespace spike_model
     
     inline std::ostream & operator<<(std::ostream & Str, ScratchpadRequest const & req)
     {
-        Str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp();
+        Str << "0x" << std::hex << req.getAddress() << ", type: " << (int)req.getCommand() << " @ " << req.getTimestamp();
         return Str;
     }
 }
