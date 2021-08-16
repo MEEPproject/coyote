@@ -115,37 +115,10 @@ namespace spike_model {
 			//-- If it is a load
 			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
 			
-				switch(instr_to_schedule->get_suboperation()) {
-					case MCPUInstruction::SubOperation::UNIT:
-						memOp_unit(instr_to_schedule);
-						break;
-					case MCPUInstruction::SubOperation::NON_UNIT:
-						memOp_nonUnit(instr_to_schedule);
-						break;
-					case MCPUInstruction::SubOperation::ORDERED_INDEX:
-						memOp_orderedIndex(instr_to_schedule);
-						break;
-					case MCPUInstruction::SubOperation::UNORDERED_INDEX:
-						memOp_unorderedIndex(instr_to_schedule);
-						break;
-					default:
-						std::cerr << getClock()->currentCycle() << ": " << name << ": UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means. Ignoring it." << std::endl;
-				}
+				computeMemReqAddresses(instr_to_schedule);
+				
 			} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
-				std::shared_ptr<ScratchpadRequest> outgoing_request = std::make_shared<ScratchpadRequest>(
-							instr_to_schedule->getAddress(),
-							ScratchpadRequest::ScratchpadCommand::READ,
-							instr_to_schedule->getPC(),
-							getClock()->currentCycle(), 
-							true,								// there is only 1 ScratchpadRequest instructing the SP to read
-							instr_to_schedule->getCoreId(),
-							instr_to_schedule->getID(),
-							instr_to_schedule->getDestinationRegId()
-				);
-				outgoing_request->setID(instr_to_schedule->getID());
-
-				std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
-				sched_outgoing.push(outgoing_noc_message);
+				sendScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::READ, false, true, transaction_id->second.mcpu_instruction->getSourceTile());
 			}
 		
 		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task. In this case it
@@ -154,22 +127,8 @@ namespace spike_model {
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(sp_instr_to_schedule->getID());
 			std::shared_ptr<spike_model::MCPUInstruction> instr_to_schedule = transaction_id->second.mcpu_instruction;
 
-			switch(instr_to_schedule->get_suboperation()) {
-				case MCPUInstruction::SubOperation::UNIT:
-					memOp_unit(instr_to_schedule);
-					break;
-				case MCPUInstruction::SubOperation::NON_UNIT:
-					memOp_nonUnit(instr_to_schedule);
-					break;
-				case MCPUInstruction::SubOperation::ORDERED_INDEX:
-					memOp_orderedIndex(instr_to_schedule);
-					break;
-				case MCPUInstruction::SubOperation::UNORDERED_INDEX:
-					memOp_unorderedIndex(instr_to_schedule);
-					break;
-				default:
-					std::cerr << getClock()->currentCycle() << ": " << name << ": UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means. Ignoring it." << std::endl;
-			}
+			computeMemReqAddresses(instr_to_schedule);
+			
 		} else {
 			sparta_assert(false, "The incoming packet type is unknown!");
 		}
@@ -246,8 +205,7 @@ namespace spike_model {
 		
 		std::vector<uint64_t> indices = instr->get_index();
 		uint64_t address = instr->getAddress();
-		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) 
-		{
+		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
 			std::shared_ptr<CacheRequest> mem_op = std::make_shared<CacheRequest>(
 						(address + *it),
 						(instr->get_operation() == MCPUInstruction::Operation::LOAD) ? 
@@ -318,34 +276,22 @@ namespace spike_model {
 					
 					if(scratchpadRequest_to_fill == 0) {
 						transaction_id->second.counter_scratchpadRequests--;
-							
-						std::shared_ptr<ScratchpadRequest> outgoing_request = std::make_shared<ScratchpadRequest>(
-								mes->getAddress(),
-								ScratchpadRequest::ScratchpadCommand::WRITE,
-								mes->getPC(),
-								getClock()->currentCycle(), 
-								transaction_id->second.counter_scratchpadRequests == 0,
-								mes->getCoreId(),
-								getID(),
-								mes->getDestinationRegId()
-						);
-									
-						std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(outgoing_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
-						sched_outgoing.push(outgoing_noc_message);
+						
+						sendScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE, true, transaction_id->second.counter_scratchpadRequests == 0, transaction_id->second.mcpu_instruction->getSourceTile());
 						
 						if(transaction_id->second.counter_scratchpadRequests == 0) {
 							// delete from hash table
 							transaction_table.erase(transaction_id);
 							std::cout << " - complete";
 						}
-					};
+					}
 					break;
 				case CacheRequest::AccessType::WRITEBACK:
 				case CacheRequest::AccessType::STORE:
 					if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
 						transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
 						std::cout << " - complete";
-					};
+					}
 					break;
 			}
 			std::cout << ", SP to fill: " << scratchpadRequest_to_fill << ", CRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests;
@@ -353,6 +299,50 @@ namespace spike_model {
 		}
 	}
 
+
+
+	/////////////////////////////////////
+	//-- Helper functions
+	/////////////////////////////////////
+	void MemoryCPUWrapper::sendScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command, bool serviced, bool last_transaction, uint16_t dest) {
+		std::shared_ptr<ScratchpadRequest> sp_request = std::make_shared<ScratchpadRequest>(
+						mes->getAddress(),
+						command,
+						mes->getPC(),
+						getClock()->currentCycle(), 
+						last_transaction,
+						mes->getCoreId(),
+						getID(),
+						mes->getDestinationRegId()
+		);
+		sp_request->setID(mes->getID());
+		if(serviced) {
+			sp_request->setServiced();
+		}
+		
+		std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), dest);
+		sched_outgoing.push(noc_message);
+	}
+	
+	
+	void MemoryCPUWrapper::computeMemReqAddresses(std::shared_ptr<MCPUInstruction> instr) {
+		switch(instr->get_suboperation()) {
+			case MCPUInstruction::SubOperation::UNIT:
+				memOp_unit(instr);
+				break;
+			case MCPUInstruction::SubOperation::NON_UNIT:
+				memOp_nonUnit(instr);
+				break;
+			case MCPUInstruction::SubOperation::ORDERED_INDEX:
+				memOp_orderedIndex(instr);
+				break;
+			case MCPUInstruction::SubOperation::UNORDERED_INDEX:
+				memOp_unorderedIndex(instr);
+				break;
+			default:
+				sparta_assert(false, "UNKNOWN MCPUInstruction SubOperation. The MCPU does not understand, what that instruction means.");
+		}
+	}
 
 
 	void MemoryCPUWrapper::notifyCompletion_() {}

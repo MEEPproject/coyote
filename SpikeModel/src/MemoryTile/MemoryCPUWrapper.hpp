@@ -168,6 +168,8 @@ namespace spike_model {
 			void memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
+			void sendScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command, bool serviced, bool last_transaction, uint16_t dest);
+			void computeMemReqAddresses(std::shared_ptr<MCPUInstruction> instr);
 			
 
 
