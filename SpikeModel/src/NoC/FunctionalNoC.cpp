@@ -11,6 +11,8 @@ namespace spike_model
         sparta_assert(noc_model_ == "functional");
     }
 
+    bool FunctionalNoC::checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess){return true;}
+
     void FunctionalNoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Call to parent class to fill the statistics

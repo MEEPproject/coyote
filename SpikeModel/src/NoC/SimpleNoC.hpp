@@ -49,6 +49,14 @@ namespace spike_model
 
         ~SimpleNoC();
 
+        /*!
+         * \brief Check the injection queue space in NoC for a packet
+         * \param injectedByTile Indicates that the source of the messages is a VAS tile
+         * \param mess The packet
+         * \return If there is space for the packet on its corresponding injection queue
+         */
+        virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) override;
+
     private:
 
         /*! \brief Forwards a message from TILE to the actual destination defining the latency based on the calculated number of hops

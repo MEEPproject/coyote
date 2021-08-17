@@ -51,6 +51,15 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 sparta::TreeNode::GROUP_IDX_NONE,
                 &factories->memory_bank_rf
             },
+            {
+                "arbiter@",
+                "cpu.tile*",
+                "Arbiter @",
+                sparta::TreeNode::GROUP_NAME_NONE,
+                sparta::TreeNode::GROUP_IDX_NONE,
+                &factories->arbiter_rf
+            },
+
     };
     //! Instantiating ports of this topology
     port_connections = {
@@ -76,7 +85,7 @@ spike_model::CoreTopology_4::CoreTopology_4(){
         },
         {
             "cpu.noc.ports.in_tile*",
-            "cpu.tile*.ports.out_noc"
+            "cpu.tile*.arbiter@.ports.out_noc"
         },
         {
             "cpu.noc.ports.in_memory_cpu&",

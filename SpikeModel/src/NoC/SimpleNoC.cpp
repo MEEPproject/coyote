@@ -64,6 +64,8 @@ namespace spike_model
         debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
     }
 
+    bool SimpleNoC::checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess){return true;}
+
     void SimpleNoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Call to parent class to fill base statistics

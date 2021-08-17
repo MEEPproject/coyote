@@ -52,6 +52,14 @@ namespace spike_model
         ~DetailedNoC();
 
         /*!
+         * \brief Check the injection queue space in NoC for a packet
+         * \param injectedByTile Indicates that the source of the messages is a VAS tile
+         * \param mess The packet
+         * \return If there is space for the packet on its corresponding injection queue
+         */
+        virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) override;
+
+        /*!
          * \brief Simulate a cycle of BookSim and update the simulation time of BookSim if multiple cycles are required to simulate.
          * 
          * Executes a cycle of BookSim simulator. After that, it tries to retire a packet from the NoC and return if there are packets in NoC.

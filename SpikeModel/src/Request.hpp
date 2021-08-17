@@ -35,10 +35,11 @@ namespace spike_model
 
             /*!
              * \brief Constructor for Request
-             * \param  a The requested address
-             * \param  pc The program counter of the requesting instruction
+             * \param a The requested address
+             * \param pc The program counter of the requesting instruction
+             * \param c The requesting core
              */
-            Request(uint64_t a, uint64_t pc): Event(pc), address(a), id(0) {}
+            Request(uint64_t a, uint64_t pc, uint16_t c): Event(pc, c), address(a){}
 
             /*!
              * \brief Constructor for Request

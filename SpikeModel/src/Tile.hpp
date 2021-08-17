@@ -29,11 +29,13 @@
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 #include "InsnLatencyEvent.hpp"
+#include "Arbiter.hpp"
 
 namespace spike_model
 {
     class EventManager; //Forward declarations
     class NoCMessage;
+    class Arbiter;
 
     class Tile : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
@@ -98,6 +100,7 @@ namespace spike_model
 
             void insnLatencyCallback(const std::shared_ptr<InsnLatencyEvent>& r);
 
+            Arbiter* getArbiter();
             /*!
              * \brief Set the request manager for the tile
              * \param r The request manager
@@ -109,6 +112,26 @@ namespace spike_model
              * \param id The id
              */
             void setId(uint16_t id);
+
+            void setCoresPerTile(uint16_t num_cores)
+            {
+                num_cores_ = num_cores;
+            }
+
+            uint16_t getCoresPerTile()
+            {
+                return num_cores_;
+            }
+
+            void setNumTiles(uint16_t num_tiles)
+            {
+                num_tiles_ = num_tiles;
+            }
+
+            uint16_t getNumTiles()
+            {
+                return num_tiles_;
+            }
 
             /*!
              * \brief Enqueue an L2 request to the tile
@@ -158,7 +181,7 @@ namespace spike_model
              * \param address_mapping_policy The address mapping policy of the memory controllers
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
-                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy);
+                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores);
 
         private:
             uint16_t id_;
@@ -179,11 +202,13 @@ namespace spike_model
 
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_acks_;
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
-            sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
-            {&unit_port_set_, "out_noc"};
+            //sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
+            //{&unit_port_set_, "out_noc"};
 
             sparta::PayloadEvent<std::shared_ptr<InsnLatencyEvent>, sparta::SchedulingPhase::PostTick> insn_latency_event_ {&unit_event_set_, "insn_latency_event_", CREATE_SPARTA_HANDLER_WITH_DATA(Tile, insnLatencyCallback, std::shared_ptr<InsnLatencyEvent>)};
 
+
+            uint64_t cntr;
             uint64_t l2_bank_size_kbs;
             uint64_t l2_assoc;
             uint64_t l2_line_size;
@@ -192,8 +217,10 @@ namespace spike_model
             uint8_t bank_bits;
             uint8_t set_bits; 
             uint8_t tag_bits;
-
-       
+            uint16_t num_cores_;
+            uint16_t num_tiles_;
+    
+            Arbiter *arbiter;
 
             std::shared_ptr<EventManager> request_manager_;
 
@@ -228,6 +255,7 @@ namespace spike_model
             void handleNoCMessage_(const std::shared_ptr<NoCMessage> & mes);
 
             AccessDirector * access_director;
+            sparta::TreeNode *node_;
 
     };
 }

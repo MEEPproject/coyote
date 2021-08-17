@@ -345,12 +345,12 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             can_run=spike->ackRegister(r->getCoreId(), r->getDestinationRegType(),
                                        r->getDestinationRegId(), current_cycle);
         }
-        
+
         if(is_load || is_store)
         {
             prev_in_flight=spike->checkNumInFlightL1Misses(core);
         }
-        
+
 
         can_run = can_run && !waiting_on_fetch[core];
 

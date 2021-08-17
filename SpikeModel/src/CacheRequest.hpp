@@ -42,8 +42,7 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc), type(t), memory_ack(false) {}
-            
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t){memory_ack=false;}
 
             /*!
              * \brief Constructor for CacheRequest
@@ -137,11 +136,22 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            
+            void set_l2_bank_id(uint16_t l2_bank_id)
+            {
+                 l2_bank_id_ = l2_bank_id;
+            }
+
+            uint16_t get_l2_bank_id()
+            {
+                 return l2_bank_id_;
+            }
+
         private:
             AccessType type;
 
             uint16_t home_tile;
+            uint16_t l2_bank_id_;
+
             uint64_t memory_controller_;
             uint64_t rank_;
             uint64_t memory_bank_;

@@ -8,6 +8,8 @@
 
 #define INJECTION_TIME 0
 #define INVALID_PKT_ID -1
+#define INJECTED_BY_TILE true
+#define INJECTED_BY_MCPU false
 
 namespace spike_model
 {
@@ -143,19 +145,37 @@ namespace spike_model
         debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
     }
 
+    bool DetailedNoC::checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess)
+    {
+        uint8_t network = mess->getNoCNetwork();
+        bool spaceForPacket = true;
+        // Packet size
+        int pkt_size = (int) ceil(1.0*mess->getSize()/network_width_[network]); // message size and network_width are in bits
+        sparta_assert(pkt_size >= 1);
+        // Injection queue size
+        int inj_queue_size;
+        if(injectedByTile)
+            inj_queue_size = booksim_wrappers_[network]->CheckInjectionQueue(tile_to_network_[mess->getSrcPort()], mess->getClass());
+        else
+            inj_queue_size = booksim_wrappers_[network]->CheckInjectionQueue(mcpu_to_network_[mess->getSrcPort()], mess->getClass());
+        // Check space
+        if(SPARTA_EXPECT_FALSE(pkt_size > inj_queue_size))
+            spaceForPacket = false;
+        // Save the min space available at injection queues
+        if(inj_queue_size < (int) min_space_in_inj_queue_)
+            min_space_in_inj_queue_ = inj_queue_size;
+
+        return spaceForPacket;
+    }
+
     void DetailedNoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
         // Call to parent class to fill the global statistics
         NoC::handleMessageFromTile_(mess);
         // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
-        sparta_assert(size >= 1);
-        int inj_queue_size = booksim_wrappers_[mess->getNoCNetwork()]->CheckInjectionQueue(tile_to_network_[mess->getSrcPort()], mess->getClass());
-        sparta_assert(inj_queue_size >= size,
+        sparta_assert(checkSpaceForPacket(INJECTED_BY_TILE, mess), 
                "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
-        // Save the min space available at injection queues
-        if(inj_queue_size < (int) min_space_in_inj_queue_)
-            min_space_in_inj_queue_ = inj_queue_size;
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -217,13 +237,8 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
-        sparta_assert(size >= 1);
-        int inj_queue_size = booksim_wrappers_[mess->getNoCNetwork()]->CheckInjectionQueue(mcpu_to_network_[mess->getSrcPort()], mess->getClass());
-        sparta_assert(inj_queue_size >= size,
+        sparta_assert(checkSpaceForPacket(INJECTED_BY_MCPU, mess),
                "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
-        // Save the min space available at injection queues
-        if(inj_queue_size < (int) min_space_in_inj_queue_)
-            min_space_in_inj_queue_ = inj_queue_size;
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {

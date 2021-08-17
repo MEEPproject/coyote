@@ -28,19 +28,19 @@ namespace spike_model
              * \brief Constructor for Event
              * \param  pc The program counter of the requesting instruction
              */
-            Event(uint64_t pc): pc(pc){}
+            Event(uint64_t pc, uint16_t c): pc(pc), coreId(c){}
 
             /*!
              * \brief Constructor for Event
              * \param pc The program counter of the requesting instruction
              * \param time The timestamp for the request
-             * \param c The producinging core
+             * \param c The producing core
              */
             Event(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
 
             /*!
              * \brief Constructor for Event
-             * \param c The producinging core
+             * \param c The producing core
              */
             Event(uint16_t c): coreId(c){}
 

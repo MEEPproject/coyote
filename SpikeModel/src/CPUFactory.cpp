@@ -187,6 +187,31 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 }
             }
         }
+        else if(node_name.find(to_replace_arbiter_)!=std::string::npos)
+        {
+            for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
+                parent_name = unit.parent_name;
+                node_name = unit.name;
+                human_name = unit.human_name;
+                replace_with = std::to_string(num_of_tiles);
+                replace(parent_name, to_replace_tiles_, replace_with);
+                replace(node_name, to_replace_arbiter_, replace_with);
+                replace(human_name, to_replace_arbiter_, replace_with);
+                auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                      node_name,
+                                                      unit.group_name,
+                                                      unit.group_id,
+                                                      human_name,
+                                                      unit.factory);
+                if(unit.is_private_subtree){
+                    rtn->makeSubtreePrivate();
+                    private_nodes_.emplace_back(rtn);
+                }
+                to_delete_.emplace_back(rtn);
+                resource_names_.emplace_back(node_name);
+            }
+        }
     }
 }
 
@@ -254,6 +279,36 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
     if(topology_->trace)
     {
         noc->setLogger(topology_->logger);
+    }
+
+    for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
+    {
+        bool bind = false;
+        replace_with = std::to_string(num_of_tiles);
+        for(const auto& port : ports)
+        {
+            out_port_name = port.output_port_name;
+            in_port_name = port.input_port_name;
+
+            if (in_port_name.find("arbiter") != std::string::npos)
+            {
+                replace(in_port_name, to_replace_arbiter_, replace_with);
+                replace(in_port_name, to_replace_tiles_, replace_with);
+                bind=true;
+            }
+            if (out_port_name.find("cpu.noc.ports.in_tile") != std::string::npos)
+            {
+                replace(out_port_name, to_replace_tiles_, replace_with);
+                bind=true;
+            }
+            if(bind && !root_node->getChildAs<sparta::Port>(in_port_name)->isBound())
+            {
+                std::cout << "Binding " << out_port_name << " and " << in_port_name << "\n";
+                sparta::bind(root_node->getChildAs<sparta::Port>(in_port_name),
+                root_node->getChildAs<sparta::Port>(out_port_name));
+                break;
+            }
+        }
     }
 
     for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
