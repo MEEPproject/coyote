@@ -19,6 +19,7 @@ namespace spike_model {
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
 				setID(0);
+				sp_regs = 0;
 				
 				auto root_node = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
 				this->enabled = root_node.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
@@ -115,13 +116,18 @@ namespace spike_model {
 			//-- If it is a load
 			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
 				
-				//-- We have to send an ALLOCATE to the VAS Tile, so it reserves space for the data to be written to the SP
-				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
-				sp_request->setSize(vvl_ * (uint)instr_to_schedule->get_width());	// reserve the space in the VAS Tile
-				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
-				sched_outgoing.push(noc_message);
-				
-				std::cout << ", sending SP ALLOC: " << *sp_request << std::endl;
+				//-- If we have not done before, an ALLOCATE has to be sent to the VAS Tile, so it reserves space for the data to be written to the SP
+				if((sp_regs & (1 << instr_to_schedule->getDestinationRegId())) == 0) {
+					sp_regs |= (1 << instr_to_schedule->getDestinationRegId());
+					
+					std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
+					sp_request->setSize(vvl_ * (uint)instr_to_schedule->get_width());	// reserve the space in the VAS Tile
+					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
+					sched_outgoing.push(noc_message);
+					
+					std::cout << ", sending SP ALLOC: " << *sp_request;
+				}
+				std::cout << std::endl;
 				
 				//-- Send the request to the Vector Address Generators (VAG)
 				computeMemReqAddresses(instr_to_schedule);

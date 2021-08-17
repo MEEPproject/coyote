@@ -91,6 +91,7 @@ namespace spike_model {
 			uint16_t id;
 			uint32_t line_size_;
 			uint32_t vvl_;
+			uint32_t sp_regs;
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
@@ -103,6 +104,7 @@ namespace spike_model {
 				uint32_t number_of_elements_per_response;
 			};
 			std::unordered_map<std::uint32_t, transaction> transaction_table;
+			
 			
 
 			//-- message handling 
