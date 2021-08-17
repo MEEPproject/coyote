@@ -76,7 +76,7 @@ namespace spike_model
             }
 
             in_flight_reads_.erase(req);
-        
+
         }
         if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
         {
@@ -91,7 +91,7 @@ namespace spike_model
         {
             busy_=false;
         }
-    }   
+    }
 
 
     void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
@@ -176,7 +176,7 @@ namespace spike_model
         {
             // Access cache, and check cache hit or miss
             CACHE_HIT = cacheLookup_(mem_access_info_ptr);
-        }	
+        }
 
         if (CACHE_HIT) {
                 mem_access_info_ptr->getReq()->setServiced();
@@ -218,7 +218,9 @@ namespace spike_model
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
                 if(!(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::FETCH) || !already_pending)
                 {
-                    out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
+                    std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
+                    cache_req->set_l2_bank_id(get_l2_bank_id());
+                    out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
 
                     //NO FURTHER ACTION IS NEEDED
                     if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
@@ -295,7 +297,9 @@ namespace spike_model
         //If the line is dirty, send a writeback to the memory
         if(l2_cache_line->isModified())
         {
-            out_biu_req_.send(std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0), 1);
+            std::shared_ptr<CacheRequest> cache_req = std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0);
+            cache_req->set_l2_bank_id(get_l2_bank_id());
+            out_biu_req_.send(cache_req, 1);
             count_wbs_+=1;
             if(trace_)
             {
@@ -303,7 +307,7 @@ namespace spike_model
                 eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
             }
         }
-        
+
         if(trace_ && l2_cache_line->isValid())
         {
             eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
@@ -322,7 +326,7 @@ namespace spike_model
     {
         return (r->getAddress() >> l2_line_size_) << l2_line_size_;
     }
-        
+
     void CacheBank::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
         count_cache_requests_+=1;
@@ -372,9 +376,8 @@ namespace spike_model
                 issue_access_event_.schedule(sparta::Clock::Cycle(0));
             }
         }
-
     }
-    
+
     void CacheBank::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
     {
         count_scratchpad_requests_+=1;

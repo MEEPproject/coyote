@@ -1,5 +1,6 @@
 
 #include "sparta/utils/SpartaAssert.hpp"
+#include "sparta/app/Simulation.hpp"
 #include "Tile.hpp"
 #include "PrivateL2Director.hpp"
 #include "SharedL2Director.hpp"
@@ -32,6 +33,8 @@ namespace spike_model
             "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
         sparta_assert(scratchpad_policy_ == "page_to_bank" || scratchpad_policy_ == "set_interleaving",
             "The top.cpu.tile*.params.scratchpad_policy must be page_to_bank or set_interleaving");
+        node_ = node;
+        arbiter = NULL;
         for(uint16_t i=0; i<num_l2_banks_; i++)
         {
             std::string out_name=std::string("out_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
@@ -106,16 +109,30 @@ namespace spike_model
         }
     }
 
+    Arbiter* Tile::getArbiter()
+    {
+        if(arbiter != NULL)
+            return arbiter;
+        
+        auto core_node = node_->getChild(std::string("arbiter") + sparta::utils::uint32_to_str(id_));
+        sparta_assert(core_node != nullptr);
+
+        arbiter=core_node->getResourceAs<spike_model::Arbiter>();
+        arbiter->setNumInputs(getCoresPerTile(), num_l2_banks_);
+        return arbiter;
+    }
+
     void Tile::issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req)
     {
-            //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
-            std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
-            out_port_noc_.send(mes);
+        //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
+        std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
+        getArbiter()->submit(mes, false, req->get_l2_bank_id());
     }
 
     void Tile::issueRemoteRequest_(const std::shared_ptr<CacheRequest> & req, uint64_t lapse)
     {
-            out_port_noc_.send(access_director->getRemoteL2RequestMessage(req), lapse);
+        std::shared_ptr<NoCMessage> msg = access_director->getRemoteL2RequestMessage(req);
+        getArbiter()->submit(msg, true, req->getCoreId());
     }
 
     void Tile::issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
@@ -225,7 +242,8 @@ namespace spike_model
             std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
 
             //TODO: The actual MCPU that will handle the request needs to be defined
-            out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0), 0);
+	    std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+            getArbiter()->submit(msg, true, r->getCoreId());
         }
         else
         {
@@ -233,11 +251,12 @@ namespace spike_model
             request_manager_->notifyAck(r);
         }
     }
-            
+
     void Tile::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
     {
         //TODO: The actual MCPU that will handle the request needs to be defined
-        out_port_noc_.send(std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0), 0);
+	std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+        getArbiter()->submit(msg, true, r->getCoreId());
     }
 
     void Tile::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
@@ -247,8 +266,10 @@ namespace spike_model
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
                uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-               uint64_t num_mcs, AddressMappingPolicy address_mapping_policy)
+               uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores)
     {
+        setNumTiles(num_tiles);
+        setCoresPerTile(num_cores/num_tiles);
         access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, address_mapping_policy);
     }
 

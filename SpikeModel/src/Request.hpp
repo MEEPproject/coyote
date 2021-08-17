@@ -38,7 +38,7 @@ namespace spike_model
              * \param  a The requested address
              * \param  pc The program counter of the requesting instruction
              */
-            Request(uint64_t a, uint64_t pc): Event(pc), address(a){}
+            Request(uint64_t a, uint64_t pc, uint16_t c): Event(pc, c), address(a){}
 
             /*!
              * \brief Constructor for Request

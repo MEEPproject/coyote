@@ -35,6 +35,7 @@ constexpr char VERSION_VARNAME[] = "version"; // Name of option to show version
 constexpr char DATA_FILE_VARNAME[] = "data-file"; // Name of data file given at the end of command line
 constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which are flag independent
 
+//Arbiter arbiter;
 int main(int argc, char **argv)
 {
     std::vector<std::string> datafiles;

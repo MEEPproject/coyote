@@ -88,7 +88,7 @@ namespace spike_model
                     {
                         tile->logger_.logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
                     }
-                    tile->out_port_noc_.send(getDataForwardMessage(r)); 
+                    tile->getArbiter()->submit(getDataForwardMessage(r), true, r->getCoreId());
                 }
             }
         }
@@ -127,7 +127,7 @@ namespace spike_model
                     else //If ways have been disabled the ACK will be sent when all banks finish disabling
                     {
                         //SEND ACK TO MCPU
-                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
+                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                     }
                     scratchpad_available_size=scratchpad_available_size-request_size;
 
@@ -139,7 +139,7 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
-                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
+                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -179,7 +179,7 @@ namespace spike_model
                     else //If ways have been enabled the ACK will be sent when all banks finish enabling
                     {
                         //SEND ACK TO MCPU
-                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
+                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                     }
                 }
                 else
@@ -189,7 +189,7 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
-                        tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
+                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -206,7 +206,7 @@ namespace spike_model
                 else
                 {
                     //Send ACK to MCPU
-                    tile->out_port_noc_.send(getScratchpadAckMessage(r)); 
+                    tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                 }
                 break;
             }

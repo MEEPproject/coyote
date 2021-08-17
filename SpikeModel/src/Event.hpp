@@ -28,7 +28,7 @@ namespace spike_model
              * \brief Constructor for Event
              * \param  pc The program counter of the requesting instruction
              */
-            Event(uint64_t pc): pc(pc){}
+            Event(uint64_t pc, uint16_t c ): pc(pc), coreId(c){}
 
             /*!
              * \brief Constructor for Event

@@ -229,6 +229,19 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     uint64_t bank_line=c_b->getLineSize();
     uint64_t bank_associativity=c_b->getAssoc();
 
+    for(std::size_t i = 0; i < num_tiles; ++i)
+    {
+        for(std::size_t j = 0; j < num_l2_banks_in_tile; ++j)
+        {
+             auto cache_bank_node = getRoot()->getChild(std::string("cpu.tile") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
+                                    sparta::utils::uint32_to_str(j));
+             sparta_assert(cache_bank_node != nullptr);
+             spike_model::CacheBank * c_b=cache_bank_node->getResourceAs<spike_model::CacheBank>();
+             c_b->set_l2_bank_id(j);
+        }
+    }
+
     auto memory_bank_node = getRoot()->getChild(std::string("cpu.memory_controller0.memory_bank0"));
     sparta_assert(memory_bank_node != nullptr);
 
@@ -256,7 +269,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping);
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping, num_cores);
     }
 
     for(std::size_t i = 0; i < num_memory_cpus; ++i)

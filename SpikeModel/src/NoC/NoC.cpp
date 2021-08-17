@@ -26,7 +26,7 @@ namespace spike_model
             out_ports_tiles_[i]=std::move(out);
 
             std::string in_name=std::string("in_tile") + sparta::utils::uint32_to_str(i);
-            std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, in_name);
+            std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>> in=std::make_unique<sparta::DataInPort<std::shared_ptr<NoCMessage>>> (&unit_port_set_, in_name, sparta::SchedulingPhase::PostTick, 0);
             in_ports_tiles_[i]=std::move(in);
             in_ports_tiles_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, handleMessageFromTile_, std::shared_ptr<NoCMessage>));
         }

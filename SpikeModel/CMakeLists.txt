@@ -161,6 +161,7 @@ add_executable(spike_model
   src/NoC/SimpleNoC.cpp
   src/NoC/DetailedNoC.cpp
   src/Logger.cpp
+  src/Arbiter.cpp
   src/Tile.cpp
   src/AccessDirector.cpp
   src/PrivateL2Director.cpp

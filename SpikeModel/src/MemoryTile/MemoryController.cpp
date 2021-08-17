@@ -35,7 +35,7 @@ namespace spike_model
             std::cout << "Unsupported reordering policy. Falling back to the default policy.\n";
             sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
         }
-        
+
         address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
         if(p->address_policy=="open_page")
         {

@@ -86,6 +86,7 @@ private:
     std::string to_replace_memory_cpus_ {"&"};
     std::string to_replace_memory_controllers_ {"#"};
     std::string to_replace_memory_banks_ {"!"};
+    std::string to_replace_arbiter_ {"@"};
 
     /**
      * @brief The user-defined topology unit

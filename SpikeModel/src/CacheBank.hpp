@@ -31,6 +31,7 @@
 
 namespace spike_model
 {
+    //extern Arbiter arbiter;
     class CacheBank : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
@@ -185,6 +186,16 @@ namespace spike_model
         uint64_t getLineSize()
         {
             return l2_line_size_;
+        }
+
+        void set_l2_bank_id(uint16_t l2_bank_id)
+        {
+            l2_bank_id_ = l2_bank_id;
+        }
+
+        uint16_t get_l2_bank_id()
+        {
+            return l2_bank_id_;
         }
             
         /*!
@@ -377,6 +388,8 @@ namespace spike_model
         uint8_t bank_and_tile_offset_;
 
         long long d;
+
+        uint16_t l2_bank_id_;
     };
 
 
