@@ -171,7 +171,7 @@ namespace spike_model
     
     inline std::ostream& operator<<(std::ostream &str, CacheRequest const &req)
     {
-        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: " << req.getCoreId();
+        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: 0x" << req.getCoreId();
         return str;
     }
 }

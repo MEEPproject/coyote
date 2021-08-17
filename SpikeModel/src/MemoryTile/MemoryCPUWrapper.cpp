@@ -143,7 +143,7 @@ namespace spike_model {
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(sp_instr_to_schedule->getID());
 			std::shared_ptr<spike_model::MCPUInstruction> instr_to_schedule = transaction_id->second.mcpu_instruction;
 			
-			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *sp_instr_to_schedule << ", parent instr: " << instr_to_schedule << std::endl;
+			std::cout << getClock()->currentCycle() << ": " << name << ": controllerCycle_incoming_transaction: " << *sp_instr_to_schedule << ", parent instr: " << *instr_to_schedule << std::endl;
 
 			switch(sp_instr_to_schedule->getCommand()) {
 				case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
