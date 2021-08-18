@@ -1,102 +1,96 @@
 #ifndef __MCPU_INSTRUCTION_HH__
 #define __MCPU_INSTRUCTION_HH__
 
-#include "EventVisitor.hpp"
+#include "Request.hpp"
 #include <iostream>
 #include <vector>
 
+
 namespace spike_model {
-    class MCPUInstruction : public Event, public std::enable_shared_from_this<MCPUInstruction> {
-        /**
-         * \class spike_model::Fence
-         *
-         * \brief Fence signals that the Spike simulation has been completed.
-         *
-         */
+	class MCPUInstruction : public Request, public std::enable_shared_from_this<MCPUInstruction> {
+		/**
+		 * \class spike_model::Fence
+		 *
+		 * \brief Fence signals that the Spike simulation has been completed.
+		 *
+		 */
 
 
-        public:
+		public:
 
-            enum class Width {
-                BIT8, BIT16, BIT32, BIT64 //The change of this enums should not be changed. The correct assignation of the width in riscv-isa-sim depends on it
-            };
+			enum class Width {
+				BIT8=1, BIT16=2, BIT32=4, BIT64=8 //The order of this enum should not be changed. The correct assignation of the width in riscv-isa-sim depends on it
+			};
 
-            enum class Stride {
-                UNIT, NON_UNIT, INDEXED
-            };
+			enum class Operation {
+				LOAD,
+				STORE
+			};
+			
+			enum class SubOperation {
+				UNIT,
+				NON_UNIT,
+				ORDERED_INDEX,
+				UNORDERED_INDEX
+			};
+			
+			//Fence(){}
+			MCPUInstruction() = delete;
+			MCPUInstruction(MCPUInstruction const&) = delete;
+			MCPUInstruction& operator=(MCPUInstruction const&) = delete;
+			
+			/*!
+			 * \brief Constructor for memory instruction that will be handled by the MCPU
+			 * \param pc The program counter of the instruction that finished the simulation
+			 * \param addr The base address for the memory instruction
+			 * \param o The type of operation
+			 * \param w The width of the vector element
+			 */
+			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Request(addr, pc), operation(o), width(w) {}
 
-            enum class Operation {
-                LOAD, STORE
-            };
+			/*!
+			 * \brief Constructor for memory instruction that will be handled by the MCPU
+			 * \param pc The program counter of the instruction that finished the simulation
+			 * \param time The timestamp for the finish
+			 * \param c The core generating the instruction
+			 * \param addr The base address for the memory instruction
+			 * \param o The type of operation
+			 * \param w The width of the vector element
+			 */
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Request(addr, pc, time, c), operation(o), width(w) {}
+
+			/*!
+			 * \brief Handle the event
+			 * \param v The visitor to handle the event
+			 */
+			void handle(EventVisitor * v) override {
+				v->handle(shared_from_this());
+			}
 
 
-            //Fence(){}
-            MCPUInstruction() = delete;
-            MCPUInstruction(MCPUInstruction const&) = delete;
-            MCPUInstruction& operator=(MCPUInstruction const&) = delete;
+			void setIndexed(std::vector<uint64_t> indices_) {indices=indices_; sub_operation = SubOperation::UNORDERED_INDEX;}
+			void setOrdered(std::vector<uint64_t> indices_) {indices=indices_; sub_operation = SubOperation::ORDERED_INDEX;}
+			void setStride(std::vector<uint64_t> indices_)  {indices=indices_; sub_operation = SubOperation::NON_UNIT;}
+			std::vector<uint64_t> get_index() {return indices;}
+						
+			Width get_width() {return width;}
+			void set_width(Width width_) {width = width_;}
 
-            /*!
-             * \brief Constructor for memory instruction that will be handled by the MCPU
-             * \param pc The program counter of the instruction that finished the simulation
-             * \param addr The base address for the memory instruction
-             * \param o The type of operation
-             * \param w The width of the vector element
-             */
-            MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Event(pc), base_address(addr), operation(o), width(w){}
+			Operation get_operation() {return operation;}
+			SubOperation get_suboperation() {return sub_operation;}
 
-            /*!
-             * \brief Constructor for memory instruction that will be handled by the MCPU
-             * \param pc The program counter of the instruction that finished the simulation
-             * \param time The timestamp for the finish
-             * \param c The core generating the instruction
-             * \param addr The base address for the memory instruction
-             * \param o The type of operation
-             * \param w The width of the vector element
-             */
-            MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Event(pc, time, c), base_address(addr), operation(o), width(w){}
 
-            /*!
-             * \brief Handle the event
-             * \param v The visitor to handle the event
-             */
-            void handle(EventVisitor * v) override {
-                v->handle(shared_from_this());
-            }
 
-            uint64_t getBaseAddress() {return base_address;}
-
-            std::vector<uint64_t> getIndex() {
-                return indices;
-            }
-
-            //-- setters and getters
-            bool getIndexed() {return indexed;}
-            void setIndexed(std::vector<uint64_t> i) {indices=i; stride = Stride::INDEXED; indexed=true;}
-
-            bool getSegmented() {return segmented;}
-            void setSegmented(bool segmented_) {segmented = segmented_;}
-
-            bool getOrdered() {return ordered;}
-            void setOrdered(bool ordered_) {ordered = ordered_;}
-
-            Stride getStride() {return stride;}
-            void setStride(std::vector<uint64_t> i) {indices=i; stride = Stride::NON_UNIT;}
-
-            Width getWidth() {return width;}
-            void setWidth(Width width_) {width = width_;}
-
-            Operation getOperation() {return operation;}
-            void setOperation(Operation operation_) {operation = operation_;}
-
-        private:
-            uint64_t base_address;
-            std::vector<uint64_t> indices;
-            Operation operation;    // load = true, store = false
-            Width width;            // 8, 16, 32, or 64 bit memory operation
-            bool ordered=false;           // are the indices in a particular order (or can they be in any order?)
-            bool segmented=false;         // segmented load/store
-            bool indexed=false;           // indexed load/store
-            Stride stride=Stride::UNIT;   // stride
-    };
+		private:
+			std::vector<uint64_t> indices;
+			Operation operation;
+			SubOperation sub_operation = SubOperation::UNIT;
+			Width width;		 // 8, 16, 32, or 64 bit memory operation
+	};
+	
+	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
+		str << "0x" << std::hex << instr.getAddress() << " @ " << instr.getTimestamp() << " Op: 0x" << (uint)instr.get_operation() << " SubOp: 0x" << (uint)instr.get_suboperation() << ", width: 0x" << (uint)instr.get_width() << ", coreID: 0x" << instr.getCoreId() << ", destReg: 0x" << instr.getDestinationRegId();
+		return str;
+	}
 }
 #endif

@@ -55,9 +55,8 @@ namespace spike_model {
 
 	//-- An instruction for the MCPU
     void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
-        std::cout << "MCPU: Memory instruction received. Core: " << r->getCoreId() << ", BaseAddress: " << r->getBaseAddress() << ", Size: "
-                                                                            << (int) r->getWidth() << ", Is indexed? " << r->getIndexed()<< std::endl;
-        switch(r->getOperation()) {
+        std::cout << "MCPU: Memory instruction received. Core: " << r->getCoreId() << ", BaseAddress: " << r->getAddress() << ", Size: " << (int)r->get_width() << ", sub op? " << (int)r->get_suboperation() << std::endl;
+        switch(r->get_operation()) {
         	case MCPUInstruction::Operation::LOAD:
         		std::cout << "\tIt is a load" << std::endl;
         		break;
