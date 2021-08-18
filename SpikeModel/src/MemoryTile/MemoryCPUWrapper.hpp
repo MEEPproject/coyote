@@ -1,7 +1,6 @@
 #ifndef __MEMORY_CPU_WRAPPER_H__
 #define __MEMORY_CPU_WRAPPER_H__
 
-#include <queue>
 
 //#include "sparta/ports/PortSet.hpp"
 //#include "sparta/ports/SignalPort.hpp"
@@ -30,6 +29,7 @@
 #include "ScratchpadRequest.hpp"
 #include "Bus.hpp"
 #include <unordered_map>
+#include <queue>
 
 namespace spike_model {
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {

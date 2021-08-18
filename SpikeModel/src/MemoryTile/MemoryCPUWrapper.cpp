@@ -60,9 +60,9 @@ namespace spike_model {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUSetVVL instruction!");
 
-		//-- TODO: Compute AVL using some more reasonable value.
-		//		   Thread ID is not required currently
-		vvl_ = mes->getAVL()/2;
+		//-- Assume that each register can allocate at maximum 16KB in the SP. If the vector elements are 8B = 64b in size, then
+		//   16384 / 8B = 2048 elements can be stored.
+		vvl_ = std::min((uint64_t)2048, mes->getAVL());
 		mes->setVVL(vvl_);
 			
 		mes->setServiced();
@@ -201,12 +201,12 @@ namespace spike_model {
 				
 		//-- get the number of elements loaded by 1 memory request
 		uint number_of_elements_per_request = line_size_ / (uint32_t)instr->get_width();
-		uint32_t remaining_elements = vvl_;
+		int32_t remaining_elements = vvl_;
 		uint64_t address = instr->getAddress();
 		
 		
 		while(remaining_elements > 0) {
-			std::cout << getClock()->currentCycle() << ": " << name << "memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << std::endl;
+			std::cout << getClock()->currentCycle() << ": " << name << ": memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address << std::endl;
 			
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
@@ -281,6 +281,8 @@ namespace spike_model {
 			std::cout << " - Handled in the MCPU: ";
 
 			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getID());
+				
+			sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
 			
 			uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
 			
@@ -304,23 +306,20 @@ namespace spike_model {
 						sched_outgoing.push(noc_message);
 						
 						std::cout << "Returning SP: " << *outgoing_message;
-						
-						if(transaction_id->second.counter_scratchpadRequests == 0) {
-							// delete from hash table
-							transaction_table.erase(transaction_id);
-							std::cout << " - complete";
-						}
 					}
 					break;
 				case CacheRequest::AccessType::WRITEBACK:
 				case CacheRequest::AccessType::STORE:
-					if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
-						transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
-						std::cout << " - complete";
-					}
+					//-- TODO: Does an ACK(?) be sent back, once the operation is complete?
 					break;
 			}
+			
 			std::cout << ", SP to fill: " << scratchpadRequest_to_fill << ", CRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests;
+			
+			if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
+					transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
+					std::cout << " - complete";
+			}
 			std::cout << std::endl;
 		}
 	}
