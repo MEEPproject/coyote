@@ -88,7 +88,11 @@ namespace spike_model
                     {
                         tile->logger_.logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
                     }
-                    tile->getArbiter()->submit(getDataForwardMessage(r), true, r->getCoreId());
+	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                    msg->nocmsg = getDataForwardMessage(r);
+                    msg->is_core = true;
+                    msg->id = r->getCoreId();
+                    tile->out_port_arbiter_.send(msg, 0);
                 }
             }
         }
@@ -127,7 +131,11 @@ namespace spike_model
                     else //If ways have been disabled the ACK will be sent when all banks finish disabling
                     {
                         //SEND ACK TO MCPU
-                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->is_core = true;
+                        msg->id = r->getCoreId();
+                        tile->out_port_arbiter_.send(msg, 0);
                     }
                     scratchpad_available_size=scratchpad_available_size-request_size;
 
@@ -139,7 +147,11 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
-                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->is_core = true;
+                        msg->id = r->getCoreId();
+                        tile->out_port_arbiter_.send(msg, 0);
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -179,7 +191,11 @@ namespace spike_model
                     else //If ways have been enabled the ACK will be sent when all banks finish enabling
                     {
                         //SEND ACK TO MCPU
-                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->is_core = true;
+                        msg->id = r->getCoreId();
+                        tile->out_port_arbiter_.send(msg, 0);
                     }
                 }
                 else
@@ -189,7 +205,11 @@ namespace spike_model
                     if(pending_scratchpad_management_ops[r]==0)
                     {
                         //SEND ACK TO MCPU
-                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->is_core = true;
+                        msg->id = r->getCoreId();
+                        tile->out_port_arbiter_.send(msg, 0);
                         pending_scratchpad_management_ops.erase(r);
                     }
                 }
@@ -206,7 +226,11 @@ namespace spike_model
                 else
                 {
                     //Send ACK to MCPU
-                    tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+                    msg->nocmsg = getScratchpadAckMessage(r);
+                    msg->is_core = true;
+                    msg->id = r->getCoreId();
+                    tile->out_port_arbiter_.send(msg, 0);
                 }
                 break;
             }

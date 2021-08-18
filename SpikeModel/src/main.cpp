@@ -108,7 +108,7 @@ int main(int argc, char **argv)
         std::string num_mcs_p ("top.cpu.params.num_memory_controllers");
         cls.getSimulationConfiguration().processParameter(num_mcs_p, sparta::utils::uint32_to_str(num_memory_cpus));
 
-        uint8_t bank_and_tile_bits=1;
+        uint32_t bank_and_tile_bits=1;
 
         if(bank_policy=="set_interleaving")
         {
@@ -119,6 +119,7 @@ int main(int argc, char **argv)
             bank_and_tile_bits *= num_tiles;
         }
         cls.getSimulationConfiguration().processParameter("top.cpu.tile*.l2_bank*.params.bank_and_tile_offset", sparta::utils::uint32_to_str(bank_and_tile_bits));
+
 
         // Some general parameters checks
         std::string dcache_line_size=dcache_config.substr(dcache_config.rfind(":") + 1);

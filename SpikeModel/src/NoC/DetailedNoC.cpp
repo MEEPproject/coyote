@@ -226,6 +226,7 @@ namespace spike_model
         NoC::handleMessageFromTile_(mess);
         // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
+        //std::cout << "DETAILED NOC AT " << getClock()->currentCycle() << std::endl;
         sparta_assert(checkSpaceForPacket(INJECTED_BY_TILE, mess), 
                "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
         long packet_id = INVALID_PKT_ID;

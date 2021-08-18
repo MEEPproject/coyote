@@ -187,7 +187,8 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 }
             }
         }
-        else if(node_name.find(to_replace_arbiter_)!=std::string::npos)
+        //else if(node_name.find(to_replace_arbiter_)!=std::string::npos)
+        else if(node_name.find("arbiter")!=std::string::npos)
         {
             for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
                 parent_name = unit.parent_name;
@@ -195,7 +196,7 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 human_name = unit.human_name;
                 replace_with = std::to_string(num_of_tiles);
                 replace(parent_name, to_replace_tiles_, replace_with);
-                replace(node_name, to_replace_arbiter_, replace_with);
+                replace(node_name, to_replace_arbiter_, "");
                 replace(human_name, to_replace_arbiter_, replace_with);
                 auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
                 auto rtn = new sparta::ResourceTreeNode(parent_node,
@@ -281,6 +282,15 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
         noc->setLogger(topology_->logger);
     }
 
+    /*for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
+    {
+        auto a_node = root_node->getChild(std::string("cpu.tile") +
+                sparta::utils::uint32_to_str(num_of_tiles) + std::string(".arbiter"));
+        sparta_assert(a_node != nullptr);
+        Arbiter *a = a_node->getResourceAs<spike_model::Arbiter>();
+        a->out_port_noc_.registerProducingEvent(a->pending_arbiter_event_);
+    }*/
+
     for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
     {
         bool bind = false;
@@ -292,13 +302,14 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
             if (in_port_name.find("arbiter") != std::string::npos)
             {
-                replace(in_port_name, to_replace_arbiter_, replace_with);
+                replace(in_port_name, to_replace_arbiter_, "");
                 replace(in_port_name, to_replace_tiles_, replace_with);
                 bind=true;
             }
-            if (out_port_name.find("cpu.noc.ports.in_tile") != std::string::npos)
+            if (out_port_name.find("arbiter") != std::string::npos)
             {
                 replace(out_port_name, to_replace_tiles_, replace_with);
+                replace(out_port_name, to_replace_arbiter_, "");
                 bind=true;
             }
             if(bind && !root_node->getChildAs<sparta::Port>(in_port_name)->isBound())
@@ -416,20 +427,37 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 		}
 	}
 
+  std::cout << "Binding done " << std::endl;
 
     for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
-            auto core_node = root_node->getChild(std::string("cpu.tile") +
+        auto core_node = root_node->getChild(std::string("cpu.tile") +
                 sparta::utils::uint32_to_str(num_of_tiles));
-            sparta_assert(core_node != nullptr);
+        sparta_assert(core_node != nullptr);
 
-            Tile * tile=core_node->getResourceAs<spike_model::Tile>();
+        Tile * tile=core_node->getResourceAs<spike_model::Tile>();
 
-            tile->setId(num_of_tiles);
+        tile->setId(num_of_tiles);
 
-            /*if(topology_->trace)
-            {
-                core->setLogger(topology_->logger);
-            }*/
+        auto arbiter_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles)
+                                      + std::string(".arbiter"));
+        sparta_assert(arbiter_node != nullptr);
+        Arbiter *arbiter = arbiter_node->getResourceAs<spike_model::Arbiter>();
+        tile->setArbiter(arbiter);
+        arbiter->setNoC(noc);
+
+         for(int i = 0; i < tile->getL2Banks();i++)
+        {
+            auto l2_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
+                        std::string(".l2_bank") + sparta::utils::uint32_to_str(i));
+            sparta_assert(l2_node != nullptr);
+            CacheBank* bank  = l2_node->getResourceAs<spike_model::CacheBank>();
+            arbiter->addBank(bank);
+        }
+
+        /*if(topology_->trace)
+        {
+            core->setLogger(topology_->logger);
+        }*/
     }
 
     if(topology_->trace)

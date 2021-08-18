@@ -61,7 +61,7 @@ namespace spike_model
             PARAMETER(uint64_t, line_size, 128, "DL1 line size (power of 2)")
             PARAMETER(uint64_t, size_kb, 2048, "Size of DL1 in KB (power of 2)")
             PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
-            PARAMETER(uint64_t, bank_and_tile_offset, 1, "The stride for banks and tiles. It is log2'd to get the bits that need to be shifted to identify the set")
+            PARAMETER(uint32_t, bank_and_tile_offset, 1, "The stride for banks and tiles. It is log2'd to get the bits that need to be shifted to identify the set")
             PARAMETER(bool, always_hit, false, "DL1 will always hit")
             // Parameters for event scheduling
             PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
@@ -271,7 +271,6 @@ namespace spike_model
         void sendAck_(const std::shared_ptr<CacheRequest> & req);
 
 
-
         ////////////////////////////////////////////////////////////////////////////////
         // Regular Function/Subroutine Call
         ////////////////////////////////////////////////////////////////////////////////
@@ -360,7 +359,8 @@ namespace spike_model
                 {
                     return misses_.size()==max_;
                 }
-                
+
+
             private:
                 std::unordered_multimap<uint64_t, std::shared_ptr<CacheRequest>> misses_;
                 uint64_t line_size_;
@@ -385,11 +385,12 @@ namespace spike_model
         uint64_t l2_associativity_;
         uint64_t l2_line_size_;
 
-        uint8_t bank_and_tile_offset_;
+        uint32_t bank_and_tile_offset_;
 
         long long d;
 
         uint16_t l2_bank_id_;
+
     };
 
 

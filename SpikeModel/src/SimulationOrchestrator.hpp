@@ -15,6 +15,7 @@
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 #include "NoC/DetailedNoC.hpp"
+#include "NoCQueueStatus.hpp"
 
 class SimulationOrchestrator : public spike_model::LogCapable, public spike_model::EventVisitor
 {
@@ -87,6 +88,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         
         void handle(std::shared_ptr<spike_model::InsnLatencyEvent> r) override;
 
+        void handle(std::shared_ptr<spike_model::NoCQueueStatus> r) override;
+
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
@@ -107,6 +110,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         std::vector<std::list<std::shared_ptr<spike_model::CacheRequest>>> pending_misses_per_core; //(num_cores);
         std::vector<std::shared_ptr<spike_model::MCPUSetVVL>> pending_get_vec_len; //(num_cores);
+        std::vector<std::shared_ptr<spike_model::MCPUInstruction>> pending_mcpu_insn; //(num_cores);
         std::vector<std::shared_ptr<spike_model::Fence>> pending_simfence; //(num_cores);
         std::vector<uint64_t> simulated_instructions_per_core; //(num_cores);
         std::vector<std::list<std::shared_ptr<spike_model::InsnLatencyEvent>>> pending_insn_latency_event; //(num_cores);
@@ -176,5 +180,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          */
         void runPendingSimfence(uint64_t core);
 
+        void scheduleArbiter();
+
+        bool hasNoCMsgInNetwork();
 };
 #endif

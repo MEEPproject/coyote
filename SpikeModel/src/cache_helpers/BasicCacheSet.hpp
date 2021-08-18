@@ -204,7 +204,7 @@ namespace sparta
             {
                 num_ways_=num_ways_-ways_to_disable;
             }
-            
+
             void enableWays(uint64_t ways_to_enable)
             {
                 num_ways_=num_ways_+ways_to_enable;

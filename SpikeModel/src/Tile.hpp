@@ -30,6 +30,7 @@
 #include "CacheRequest.hpp"
 #include "InsnLatencyEvent.hpp"
 #include "Arbiter.hpp"
+#include "ArbiterMsg.hpp"
 
 namespace spike_model
 {
@@ -101,6 +102,8 @@ namespace spike_model
             void insnLatencyCallback(const std::shared_ptr<InsnLatencyEvent>& r);
 
             Arbiter* getArbiter();
+            
+            void setArbiter(Arbiter *arbiter);
             /*!
              * \brief Set the request manager for the tile
              * \param r The request manager
@@ -182,6 +185,9 @@ namespace spike_model
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
                                 uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores);
+            
+            uint16_t getL2Banks();
+            std::shared_ptr<EventManager> getRequestManager();
 
         private:
             uint16_t id_;
@@ -202,8 +208,8 @@ namespace spike_model
 
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_l2_acks_;
             std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_l2_reqs_;
-            //sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_
-            //{&unit_port_set_, "out_noc"};
+            sparta::DataOutPort<std::shared_ptr<ArbiterMessage>> out_port_arbiter_
+            {&unit_port_set_, "out_arbiter"};
 
             sparta::PayloadEvent<std::shared_ptr<InsnLatencyEvent>, sparta::SchedulingPhase::PostTick> insn_latency_event_ {&unit_event_set_, "insn_latency_event_", CREATE_SPARTA_HANDLER_WITH_DATA(Tile, insnLatencyCallback, std::shared_ptr<InsnLatencyEvent>)};
 

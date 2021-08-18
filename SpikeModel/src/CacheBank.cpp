@@ -49,12 +49,10 @@ namespace spike_model
 
     }
 
-
     ////////////////////////////////////////////////////////////////////////////////
     // Callbacks
     ////////////////////////////////////////////////////////////////////////////////
 
-    // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAck_(const std::shared_ptr<CacheRequest> & req)
     {
         bool was_stalled=in_flight_reads_.is_full();
@@ -76,8 +74,8 @@ namespace spike_model
             }
 
             in_flight_reads_.erase(req);
-
         }
+
         if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
         {
             //ISSUE EVENT
@@ -89,8 +87,8 @@ namespace spike_model
         }
         else
         {
-            busy_=false;
-        }
+            busy_ = false;
+        }    
     }
 
 
@@ -136,19 +134,14 @@ namespace spike_model
                 m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
                 pending_store_requests_.pop_front();
             }
-            
-            //if(m!=NULL) // m might be null if two events get scheduled for the same cycle, due to an event with hit_latency delay and a miss response mathing
-            //{
 
-                handleCacheLookupReq_(m);
-//                std::cout << "Access to 0x" << std::hex << m->getReq()->getAddress() << ", bank, " << std::dec << m->getReq()->getCacheBank() << ", set " << ((m->getReq()->getAddress() << 46) >> 56)  << " hit=" << b << "\n";
+            handleCacheLookupReq_(m);
 
-                if(in_flight_reads_.is_full())
-                {
-                    stall=true;
-                    count_stall_++;
-                }
-            //}
+            if(in_flight_reads_.is_full())
+            {
+                stall=true;
+                count_stall_++;
+            }
         }
 
         if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
@@ -159,8 +152,7 @@ namespace spike_model
         {
             busy_=false;
         }
-
-    }
+    } 
 
     // Handle cache access request
     bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
@@ -321,7 +313,7 @@ namespace spike_model
             info_logger_ << "Cache reload complete!";
         }
     }
-            
+
     uint64_t CacheBank::calculateLineAddress(std::shared_ptr<CacheRequest> r)
     {
         return (r->getAddress() >> l2_line_size_) << l2_line_size_;

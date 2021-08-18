@@ -10,6 +10,7 @@
 #include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "InsnLatencyEvent.hpp"
+#include "NoCQueueStatus.hpp"
 
 namespace spike_model
 {
@@ -59,6 +60,11 @@ namespace spike_model
     }
             
     void EventVisitor::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Event>(i));
+    }
+
+    void EventVisitor::handle(std::shared_ptr<spike_model::NoCQueueStatus> i)
     {
         handle(std::dynamic_pointer_cast<spike_model::Event>(i));
     }

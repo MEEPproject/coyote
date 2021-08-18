@@ -33,6 +33,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     thread_barrier_cnt = 0;
     threads_in_barrier.resize(num_cores,false);
     pending_get_vec_len.resize(num_cores,NULL);
+    pending_mcpu_insn.resize(num_cores,NULL);
     pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
     waiting_on_mshrs.resize(num_cores,false);
@@ -126,7 +127,7 @@ void SimulationOrchestrator::handleSpartaEvents()
     {
         next_event_tick=spike_model->getScheduler()->nextEventTick();
     }
-   
+
     //HANDLE ALL THE EVENTS FOR THE CURRENT CYCLE
     if(next_event_tick==current_cycle)
     {
@@ -141,7 +142,7 @@ void SimulationOrchestrator::handleSpartaEvents()
         {
             eptr = std::current_exception();
         }
-        
+
         if(eptr != std::exception_ptr())
         {
             std::cerr << SPARTA_CMDLINE_COLOR_ERROR "Exception while running" SPARTA_CMDLINE_COLOR_NORMAL
@@ -175,6 +176,16 @@ void SimulationOrchestrator::handleSpartaEvents()
     }
 }
 
+void SimulationOrchestrator::scheduleArbiter()
+{
+    request_manager->scheduleArbiter(current_cycle);
+}
+
+bool SimulationOrchestrator::hasNoCMsgInNetwork()
+{
+    return request_manager->hasNoCMsgInNetwork();
+}
+
 void SimulationOrchestrator::run()
 {
     //Each iteration of the loop handles a cycle
@@ -182,20 +193,28 @@ void SimulationOrchestrator::run()
     while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
     {
         //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
-
+        //std::cout << current_cycle << std::endl;
         simulateInstInActiveCores();
         handleSpartaEvents();
+        auto t1 = std::chrono::high_resolution_clock::now();
+        scheduleArbiter();
+        auto t2 = std::chrono::high_resolution_clock::now();
+        timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
+        //next_event_tick=spike_model->getScheduler()->nextEventTick();
+        //std::cout << current_cycle << std::endl;
+
         // Execute one cycle of BookSim
         if(detailed_noc_ != NULL)
         {
             booksim_has_packets_in_flight_ = detailed_noc_->runBookSimCycles(1, current_cycle);
             // BookSim can retire a packet and introduce an event that must be executed before the cycle saved in next_event_tick
             next_event_tick=spike_model->getScheduler()->nextEventTick();
+            //std::cout << booksim_has_packets_in_flight_ << " at " << current_cycle << std::endl;
         }
         selectRunnableThreads();
-    
+
         //If there are no active cores, booksim must not be executed at next cycle and there is a pending event
-        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1)
+        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1 && !hasNoCMsgInNetwork())
         {
             // Advance BookSim clock
             if(detailed_noc_ != NULL)
@@ -209,7 +228,7 @@ void SimulationOrchestrator::run()
             current_cycle++;
         }
     }
-    
+
     //PRINTS THE SPARTA STATISTICS
     spike_model->saveReports();
 
@@ -220,7 +239,7 @@ void SimulationOrchestrator::run()
         tot+=simulated_instructions_per_core[i];
     }
     printf("Total simulated instructions %lu\n", tot);
-    printf("The monitored section took %lu nanoseconds\n", timer);
+    std::cout << "The monitored section took " << timer <<" nanoseconds\n";
 }
 
 void SimulationOrchestrator::selectRunnableThreads()
@@ -539,10 +558,15 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadReque
         }
     }
 }
-        
+
 void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
 {
-    submitToSparta(i);
+    if(is_fetch == true)
+    {
+        pending_mcpu_insn[current_core] = i;
+    }
+    else
+        submitToSparta(i);
 }
 
 //latency and fetch
@@ -577,6 +601,50 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
     }
 }
 
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::NoCQueueStatus> r)
+{
+    uint16_t core_id = r->getCoreId();
+    if(!r->isServiced())
+    {
+        std::vector<uint16_t>::iterator itr;
+        itr = std::find(active_cores.begin(), active_cores.end(), core_id);
+        if(itr != active_cores.end())
+        {
+            active_cores.erase(itr);
+        }
+
+        itr = std::find(runnable_cores.begin(), runnable_cores.end(), core_id);
+        if(itr != runnable_cores.end())
+        {
+            runnable_cores.erase(itr);
+        }
+        cur_cycle_suspended_threads.push_back(core_id);
+        runnable_after[core_id/num_threads_per_core] = current_cycle + thread_switch_latency;
+    }
+    else
+    {
+        bool waiting_on_mshr = false;
+        size_t prev_in_flight=spike->checkNumInFlightL1Misses(core_id);
+        if(prev_in_flight>=max_in_flight_l1_misses && spike->checkNumInFlightL1Misses(core_id)<max_in_flight_l1_misses)
+        {
+            uint16_t core_group_start=(core_id/num_threads_per_core)*num_threads_per_core;
+            uint16_t core_group_end=core_group_start+num_threads_per_core;
+            for(uint16_t i = core_group_start; i < core_group_end; i++)
+            {
+                if(waiting_on_mshrs[i])
+                {
+                    waiting_on_mshr = true;
+                }
+            }
+        }
+
+        if(!waiting_on_mshr && !waiting_on_fetch[core_id] && !spike->isRawDependency(core_id))
+        {
+            resumeCore(core_id);
+        }
+    }
+}
+
 void SimulationOrchestrator::submitPendingOps(uint64_t core)
 {
     if(pending_simfence[core] != NULL)
@@ -601,5 +669,13 @@ void SimulationOrchestrator::submitPendingOps(uint64_t core)
         pending_get_vec_len[core]->setTimestamp(current_cycle);
         submitToSparta(pending_get_vec_len[core]);
         pending_get_vec_len[core] = NULL;
+    }
+
+    if(pending_mcpu_insn[core] != NULL)
+    {
+        //Update the timestamp to the current cycle, which is when the request actually happens
+        pending_mcpu_insn[core]->setTimestamp(current_cycle);
+        submitToSparta(pending_mcpu_insn[core]);
+        pending_mcpu_insn[core] = NULL;
     }
 }

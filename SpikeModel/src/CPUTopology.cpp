@@ -52,7 +52,7 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 &factories->memory_bank_rf
             },
             {
-                "arbiter@",
+                "arbiter",
                 "cpu.tile*",
                 "Arbiter @",
                 sparta::TreeNode::GROUP_NAME_NONE,
@@ -84,8 +84,8 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.tile*.ports.in_noc"
         },
         {
-            "cpu.noc.ports.in_tile*",
-            "cpu.tile*.arbiter@.ports.out_noc"
+            "cpu.tile*.arbiter.ports.in_tile",
+            "cpu.tile*.ports.out_arbiter"
         },
         {
             "cpu.noc.ports.in_memory_cpu&",

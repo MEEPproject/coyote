@@ -93,13 +93,13 @@ namespace spike_model
          * \return If there is space for the packet on its corresponding injection queue
          */
         virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) = 0;
+        virtual void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
 
     protected:
 
         /*! \brief Forward a message sent from a tile to the correct destination
         *   \param mes The meesage to handle
         */
-        virtual void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
 
         /*! \brief Forward a message sent from a memory CPU to the correct destination
         * \param mes The message

@@ -5,7 +5,6 @@
 #include <memory>
 #include "NoCMessageType.hpp"
 #include "../Event.hpp"
-#include "../EventManager.hpp"
 
 namespace spike_model
 {
