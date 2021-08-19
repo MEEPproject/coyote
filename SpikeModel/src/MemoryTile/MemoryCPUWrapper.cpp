@@ -136,7 +136,7 @@ namespace spike_model {
 				
 				std::shared_ptr outgoing_message = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::READ);
 				outgoing_message->setSize(line_size_);
-				outgoing_message->setOperandReady();
+				outgoing_message->setOperandReady(true);
 				
 				
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
@@ -301,9 +301,7 @@ namespace spike_model {
 						std::shared_ptr outgoing_message = createScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE);
 						outgoing_message->setSize(line_size_);
 						outgoing_message->setServiced();
-						if(transaction_id->second.counter_scratchpadRequests == 0) {
-							outgoing_message->setOperandReady();
-						}
+						outgoing_message->setOperandReady(transaction_id->second.counter_scratchpadRequests == 0);
 						
 						std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
 						sched_outgoing.push(noc_message);

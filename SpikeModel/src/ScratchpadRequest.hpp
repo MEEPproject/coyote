@@ -46,8 +46,10 @@ namespace spike_model
              * \param destReg The destination register
              */
             ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, uint16_t c, uint16_t src, uint16_t destReg): Request(a, pc, time, c), command(comm) {
-            setDestinationReg(destReg, RegType::VECTOR);
-            setSourceTile(src);
+                setDestinationReg(destReg, RegType::VECTOR);
+                setSourceTile(src);
+                operand_ready = false;
+            
             //This constructor will have an extra parameter: The memory instruction that triggered the request. The pc would then be redundant, but we need it for the Event class hierarchy
             }
             
@@ -59,8 +61,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param ready True if the this request completes an operand and the associated instruction may proceed
              */
-            ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, bool ready): Request(a, pc), command(comm), operand_ready(ready)
-            {
+            ScratchpadRequest(uint64_t a, ScratchpadCommand comm, uint64_t pc, uint64_t time, bool ready): Request(a, pc), command(comm), operand_ready(ready) {
                 setTimestamp(time);
                 //This constructor will have an extra parameter: The memory instruction that triggered the request. The pc would then be redundant, but we need it for the Event class hierarchy
             }
@@ -96,7 +97,7 @@ namespace spike_model
              * \return True if an operand will become ready after servicing this request
              */
             bool isOperandReady() const {return operand_ready;}
-            void setOperandReady() {operand_ready = true;}
+            void setOperandReady(bool operand_ready) {this->operand_ready = operand_ready;}
 
         private:
             ScratchpadCommand command;
