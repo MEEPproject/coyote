@@ -31,8 +31,8 @@ namespace spike_model {
 	//-- Message handling from the NoC
 	/////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes) {
+		std::cout << getClock()->currentCycle() << ": " << name << ": receiveMessage_noc_: Received from NoC: " << *mes << std::endl;
 		if(enabled) {
-			std::cout << getClock()->currentCycle() << ": " << name << ": receiveMessage_noc_: Received from NoC: " << *mes << std::endl;
 			count_requests_noc_++;
 		}
 		
@@ -43,10 +43,10 @@ namespace spike_model {
 	//-- Bypass for a scalar memory operation
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
 		
+		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle CacheRequest: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		if(enabled) {
 			//-- Schedule memory request for the MC
 			sched_mem_req.push(mes);
-			std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle CacheRequest: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		} else {
 			//-- whatever comes into the Memory Tile, just send it out to the MC
 			out_port_mc_.send(mes, 0);
@@ -67,7 +67,7 @@ namespace spike_model {
 			
 		mes->setServiced();
 		
-		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN << getClock()->currentCycle() << ": " << name << ": handle MCPUSetVVL: " << *mes << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 			
 		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
@@ -79,7 +79,7 @@ namespace spike_model {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
 		
-		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN << getClock()->currentCycle() << ": " << name << ": handle: Memory instruction received: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		
 		r->setID(this->instructionID_counter);
 		
@@ -98,7 +98,7 @@ namespace spike_model {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
 		
-		std::cout << SPARTA_UNMANAGED_COLOR_CYAN << getClock()->currentCycle() << ": " << name << ": handle: ScratchpadRequest: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		std::cout << SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN << getClock()->currentCycle() << ": " << name << ": handle: ScratchpadRequest: " << *r << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		
 		sched_incoming.push(r);
 	}
@@ -142,6 +142,8 @@ namespace spike_model {
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
 				sched_outgoing.push(noc_message);
 				std::cout << std::endl;
+				
+				std::cout << ", sending SP READ: " << *outgoing_message << std::endl;
 			}
 		
 		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task.
@@ -173,7 +175,7 @@ namespace spike_model {
 	}
 	
 	
-	//-- Schedule the memory operations going to mc
+	//-- Schedule the memory operations going to the MC
 	void MemoryCPUWrapper::controllerCycle_mem_requests() {
 
 		//-- Get the oldest Cache Request from the queue
@@ -262,6 +264,7 @@ namespace spike_model {
 		
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
+			std::cout << getClock()->currentCycle() << ": " << name << ": Returned from MC: " << *mes << std::endl;
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 			
 			return;

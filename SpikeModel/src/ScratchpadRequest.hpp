@@ -105,7 +105,7 @@ namespace spike_model
     
     inline std::ostream & operator<<(std::ostream &str, ScratchpadRequest &req)
     {
-        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", type: 0x" << (int)req.getCommand() << ", serviced: " << (int)req.isServiced() << ", destCoreID: 0x" << req.getCoreId() << ", destRegID: 0x" << req.getDestinationRegId() << ", size: 0x" << req.getSize();
+        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", type: 0x" << (int)req.getCommand() << ", serviced: " << (int)req.isServiced() << ", destCoreID: 0x" << req.getCoreId() << ", destRegID: 0x" << req.getDestinationRegId() << ", size: 0x" << req.getSize() << ", opRDY: " << (int)req.isOperandReady();
         return str;
     }
 }
