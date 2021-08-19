@@ -62,7 +62,8 @@ namespace spike_model {
 
 		//-- Assume that each register can allocate at maximum 16KB in the SP. If the vector elements are 8B = 64b in size, then
 		//   16384 / 8B = 2048 elements can be stored.
-		vvl_ = std::min((uint64_t)2048, mes->getAVL());
+		//vvl_ = std::min((uint64_t)2048, mes->getAVL());
+		vvl_ = std::min((uint64_t)8, mes->getAVL());
 		mes->setVVL(vvl_);
 			
 		mes->setServiced();
@@ -140,8 +141,9 @@ namespace spike_model {
 				
 				
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
-				sched_outgoing.push(noc_message);
-				std::cout << std::endl;
+				
+				//-- TODO issue #94 needs to be fixed first
+				//sched_outgoing.push(noc_message);
 				
 				std::cout << ", sending SP READ: " << *outgoing_message << std::endl;
 			}
