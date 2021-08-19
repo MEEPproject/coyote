@@ -2,6 +2,8 @@
 #define __MCPU_INSTRUCTION_HH__
 
 #include "Request.hpp"
+#include "VectorElementType.hpp"
+
 #include <iostream>
 #include <vector>
 
@@ -17,11 +19,6 @@ namespace spike_model {
 
 
 		public:
-
-			enum class Width {
-				BIT8=1, BIT16=2, BIT32=4, BIT64=8 //The order of this enum should not be changed. The correct assignation of the width in riscv-isa-sim depends on it
-			};
-
 			enum class Operation {
 				LOAD,
 				STORE
@@ -46,7 +43,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, Width w):Request(addr, pc), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, VectorElementType w):Request(addr, pc), operation(o), width(w) {}
 
 			/*!
 			 * \brief Constructor for memory instruction that will be handled by the MCPU
@@ -57,7 +54,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, Width w): Request(addr, pc, time, c), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w): Request(addr, pc, time, c), operation(o), width(w) {}
 
 			/*!
 			 * \brief Handle the event
@@ -73,8 +70,8 @@ namespace spike_model {
 			void setStride(std::vector<uint64_t> indices_)  {indices=indices_; sub_operation = SubOperation::NON_UNIT;}
 			std::vector<uint64_t> get_index() {return indices;}
 						
-			Width get_width() {return width;}
-			void set_width(Width width_) {width = width_;}
+			VectorElementType get_width() {return width;}
+			void set_width(VectorElementType width_) {width = width_;}
 
 			Operation get_operation() {return operation;}
 			SubOperation get_suboperation() {return sub_operation;}
@@ -85,7 +82,7 @@ namespace spike_model {
 			std::vector<uint64_t> indices;
 			Operation operation;
 			SubOperation sub_operation = SubOperation::UNIT;
-			Width width;		 // 8, 16, 32, or 64 bit memory operation
+			VectorElementType width;		 // 8, 16, 32, or 64 bit memory operation
 	};
 	
 	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
