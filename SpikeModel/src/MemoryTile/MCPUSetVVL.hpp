@@ -2,12 +2,13 @@
 #define __MCPU_SetVVL_HH__
 
 #include "EventVisitor.hpp"
+#include "Request.hpp"
 #include "VectorElementType.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class MCPUSetVVL : public Event, public std::enable_shared_from_this<MCPUSetVVL>
+    class MCPUSetVVL : public Request, public std::enable_shared_from_this<MCPUSetVVL>
     {
         /**
          * \class spike_model::MCPUSetVVL
@@ -26,19 +27,21 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Event(pc) {}
+            MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {}
 
             /*!
              * \brief Constructor for MCPUSetVVL
-             * \param VVL The virtual vector length set by scalar core
+             * \param avl The application vector length set by scalar core
+             * \param regId Destination register
              * \param pc The program counter of the instruction that finished the simulation
              * \param time The timestamp when the event is submitted to sparta
              * \param c The core which submitted the event
              */
-            MCPUSetVVL(uint64_t AVL, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c)
-                          , AVL(AVL), regId(regId) {
+            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(pc, time, c)
+                          , avl(avl) {
                 setLMUL(1);
-                set_width(VectorElementType::BIT64);
+                setDestinationReg(regId);
+                setWidth(VectorElementType::BIT64);
             }
 
             /*!
@@ -49,26 +52,22 @@ namespace spike_model
                 v->handle(shared_from_this());
             }
 
-            uint64_t getVVL() {return VVL;}
+            uint64_t getVVL() {return vvl;}
 
-            void setVVL(uint64_t VVL) {this->VVL = VVL;}
+            void setVVL(uint64_t vvl) {this->vvl = vvl;}
 
-            uint64_t getAVL() {return AVL;}
+            uint64_t getAVL() {return avl;}
 
-            void setAVL(uint64_t AVL) {this->AVL = AVL;}
+            void setAVL(uint64_t avl) {this->avl = avl;}
 
             /*!
              * \brief Set the id and type of the destination register for the SetVVL request
              * \param r The id of the register
-             * \param t The type of the register
              */
-            void setDestinationReg(size_t r) {regId=r;}
+            void setDestinationReg(size_t r) {
+                Request::setDestinationReg(r, RegType::INTEGER);
+            }
 
-            /*!
-             * \brief Get the destination register id for the SetVVL request
-             * \return The id of the register
-             */
-            size_t getDestinationRegId() {return regId;}
             
             /*!
              * \brief Set the LMUL setting for the current VVL request.
@@ -86,24 +85,23 @@ namespace spike_model
              * \brief Set the vector element width.
              * \param The width of the vector elements.
              */
-            void set_width(VectorElementType width) {this->width = width;}
+            void setWidth(VectorElementType width) {this->width = width;}
             
             /*!
              * \brief Get the vector element width
              * \return The element width of the current VVL request.
              */
-            VectorElementType get_width() {return width;}
+            VectorElementType getWidth() {return width;}
 
         private:
             uint8_t lmul;
             VectorElementType width;
-            uint64_t AVL, VVL;
-            size_t regId;
+            uint64_t avl, vvl;
     };
     
     
     inline std::ostream& operator<<(std::ostream &str, MCPUSetVVL &instr) {
-        str << "AVL: " << instr.getAVL() << ", VVL: " << instr.getVVL() << ", coreID: " << instr.getCoreId();
+        str << "AVL: " << instr.getAVL() << ", VVL: " << instr.getVVL() << ", lmul: " << instr.getLMUL() << "w: " << (uint)instr.getWidth() << ", coreID: " << instr.getCoreId();
         return str;
     }
 }
