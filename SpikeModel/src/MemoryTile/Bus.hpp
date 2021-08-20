@@ -6,7 +6,7 @@
 
 
 namespace spike_model {
-	template <class T> class Bus {
+	template <typename T> class Bus {
 		public:
 			//-- delete standard constructors
 			Bus() = delete;
@@ -56,12 +56,12 @@ namespace spike_model {
 	
 	
 	
-	template <class T> T Bus<T>::front() {
+	template <typename T> T Bus<T>::front() {
 		sparta_assert(!bus.empty(), "Bus<T>::front: There is no element in the queue.\n");
 		return bus.front();
 	}
 
-	template <class T> void Bus<T>::pop() {
+	template <typename T> void Bus<T>::pop() {
 		sparta_assert(!bus.empty(), "Bus<T>::pop: No element in the queue to be removed.\n");
 		
 		bus.pop();
@@ -73,13 +73,61 @@ namespace spike_model {
 		}
 	}
 
-	template <class T> void Bus<T>::push(T element) {
+	template <typename T> void Bus<T>::push(T element) {
 		bus.push(element);
 		
 		if(idle) {
 			idle = false;
 			controller_cycle_event->schedule(latency);
 		}
+	}
+	
+	
+	/*!
+	 * \brief A bus class which has an additional queue to "park" elements
+	 * temporarily
+	 */
+	template <typename T> class BusDelay : public Bus<T> {
+		public:
+			//-- delete standard constructors
+			BusDelay() = delete;
+			BusDelay(BusDelay const&) = delete;
+			BusDelay& operator=(BusDelay const&) = delete;
+			
+			/**
+			 * The bus system accepts elements from multiple sources and stores them in a queue.
+			 * To schedule the queue, the Sparta scheduler is used.
+			 * @controller_cycle_event: A pointer to the the scheduler for this queue
+			 */
+			BusDelay(sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event, const uint64_t latency_): Bus<T>(controller_cycle_event, latency_) { }
+						
+			~BusDelay() {
+				std::queue<T> empty;
+				for(uint8_t i=0; i<32; ++i) {
+					empty.swap(delay[i]);	//-- create a new and empty queue and swap it with the queue "bus".
+				}
+			}
+			
+			
+			void notify(uint8_t reg);
+			void add_delay_queue(T element, uint8_t reg);
+			
+						
+		private:
+			std::queue<T> delay[32];
+	};
+	
+	
+	
+	template <typename T> void BusDelay<T>::notify(uint8_t reg) {
+		while(!delay[reg].empty()) {
+			Bus<T>::push(delay[reg].front());
+			delay[reg].pop();
+		}
+	}
+	
+	template <typename T> void BusDelay<T>::add_delay_queue(T element, uint8_t reg) {
+		delay[reg].push(element);
 	}
 }
 

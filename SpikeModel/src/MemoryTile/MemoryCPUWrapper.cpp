@@ -19,8 +19,11 @@ namespace spike_model {
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
 				setID(0);
-				sp_regs = 0;
 				
+				sp_status = (SPStatus *)calloc(num_of_registers, sizeof(SPStatus));
+				sparta_assert(sp_status != nullptr, "SP status array could not be allocated!");
+								
+				//-- read the configuration
 				auto root_node = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
 				this->enabled = root_node.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
 				std::cout << "Memory Tile is " << (this->enabled ? "enabled" : "disabled") << "." << std::endl;
@@ -62,6 +65,7 @@ namespace spike_model {
 
 		//-- Assume that each register can allocate at maximum 16KB in the SP. If the vector elements are 8B = 64b in size, then
 		//   16384 / 8B = 2048 elements can be stored.
+		//-- TODO: refer to issue riscv-isa-sim#1
 		//vvl_ = std::min((uint64_t)2048, mes->getAVL());
 		vvl_ = std::min((uint64_t)8, mes->getAVL());
 		mes->setVVL(vvl_);
@@ -118,8 +122,8 @@ namespace spike_model {
 			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
 				
 				//-- If we have not done before, an ALLOCATE has to be sent to the VAS Tile, so it reserves space for the data to be written to the SP
-				if((sp_regs & (1 << instr_to_schedule->getDestinationRegId())) == 0) {
-					sp_regs |= (1 << instr_to_schedule->getDestinationRegId());
+				if(sp_status[instr_to_schedule->getDestinationRegId()] == SPStatus::IS_L2) {
+					sp_status[instr_to_schedule->getDestinationRegId()] = SPStatus::ALLOC_SENT;
 					
 					std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
 					sp_request->setSize(vvl_ * (uint)instr_to_schedule->get_width());	// reserve the space in the VAS Tile
@@ -157,6 +161,9 @@ namespace spike_model {
 
 			switch(sp_instr_to_schedule->getCommand()) {
 				case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
+					sched_outgoing.notify(instr_to_schedule->getDestinationRegId());
+					sp_status[instr_to_schedule->getDestinationRegId()] = SPStatus::READY;
+					break;
 				case ScratchpadRequest::ScratchpadCommand::FREE:
 					break;
 				case ScratchpadRequest::ScratchpadCommand::READ:
@@ -306,7 +313,15 @@ namespace spike_model {
 						outgoing_message->setOperandReady(transaction_id->second.counter_scratchpadRequests == 0);
 						
 						std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
-						sched_outgoing.push(noc_message);
+						
+						
+						//-- Check if the SP is already allocated. If not, store the msg in a delaying queue
+						size_t destReg = transaction_id->second.mcpu_instruction->getDestinationRegId();
+						if(sp_status[destReg] == SPStatus::READY) {
+							sched_outgoing.push(noc_message);
+						} else {
+							sched_outgoing.add_delay_queue(noc_message, destReg);
+						}
 						
 						std::cout << "Returning SP: " << *outgoing_message;
 					}
