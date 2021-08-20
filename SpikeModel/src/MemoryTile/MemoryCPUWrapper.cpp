@@ -24,10 +24,17 @@ namespace spike_model {
 				sparta_assert(sp_status != nullptr, "SP status array could not be allocated!");
 								
 				//-- read the configuration
-				root_node		= node->getRoot()->getAs<sparta::RootTreeNode>();
-				auto config		= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
-				this->enabled	= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
+				root_node			= node->getRoot()->getAs<sparta::RootTreeNode>();
+				auto config			= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
+				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
 				std::cout << "Memory Tile is " << (this->enabled ? "enabled" : "disabled") << "." << std::endl;
+				
+				this->sp_reg_size	= (uint64_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
+									  config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() /
+									  (uint64_t)num_of_registers * (uint64_t)1024;
+				if(enabled) {
+					std::cout << "Each register entry in the SP is " << sp_reg_size << " Bytes." << std::endl;
+				}
 				
 				//-- TODO This nullptr should not be here. The problem is, that if the constructor of MemoryCPUWrapper is called, 
 				//        NoC is not yet initialized and hence the NoC leaf in the tree cannot be accessed. Ideally the 
@@ -66,18 +73,17 @@ namespace spike_model {
 		}
 	}
 
+
+
 	//-- A memory transaction to be handled by the MCPU
-	//   Note that VVL of 0 is received when the simulation is setting up
-	//   and the processor objects are created.
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUSetVVL instruction!");
-
-		//-- Assume that each register can allocate at maximum 16KB in the SP. If the vector elements are 8B = 64b in size, then
-		//   16384 / 8B = 2048 elements can be stored.
-		//-- TODO: refer to issue riscv-isa-sim#1
-		//vvl_ = std::min((uint64_t)2048, mes->getAVL());
-		vvl_ = std::min((uint64_t)8, mes->getAVL());
+		
+		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth() * (uint64_t)mes->getLMUL();
+		vvl_ = std::min(elements_per_sp, mes->getAVL());
+		//vvl_ = std::min((uint64_t)8, mes->getAVL());
+		
 		mes->setVVL(vvl_);
 			
 		mes->setServiced();
@@ -87,6 +93,7 @@ namespace spike_model {
 		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
 	}
+
 
 
 	//-- A vector instruction for the MCPU
