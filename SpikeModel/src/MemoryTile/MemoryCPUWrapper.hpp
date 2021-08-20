@@ -58,9 +58,7 @@ namespace spike_model {
 			MemoryCPUWrapper(sparta::TreeNode* node, const MemoryCPUWrapperParameterSet* p);
 
 			~MemoryCPUWrapper() {
-				debug_logger_ << getContainer()->getLocation()
-					<< ": "
-					<< std::endl;
+				debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
 			}
 
 			//! name of this resource.
@@ -87,11 +85,19 @@ namespace spike_model {
 
 
 		private:
+			const uint8_t num_of_registers = 32;
 
+			enum class SPStatus {
+				IS_L2 = 0,
+				ALLOC_SENT,
+				READY
+			};
+			
+			SPStatus *sp_status;
+			
 			uint16_t id;
 			uint32_t line_size_;
 			uint32_t vvl_;
-			uint32_t sp_regs;
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
@@ -136,7 +142,7 @@ namespace spike_model {
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_outgoing_transaction {
 					&unit_event_set_, "controller_cycle_outgoing_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_outgoing_transaction)
 			};
-			Bus<std::shared_ptr<NoCMessage>> sched_outgoing;
+			BusDelay<std::shared_ptr<NoCMessage>> sched_outgoing;
 
 			
 			//-- Bus for incoming transactions
