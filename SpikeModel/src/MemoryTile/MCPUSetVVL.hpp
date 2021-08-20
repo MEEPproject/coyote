@@ -27,7 +27,10 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {}
+            MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {
+                setLMUL((uint8_t)1);
+                setWidth(VectorElementType::BIT64);
+            }
 
             /*!
              * \brief Constructor for MCPUSetVVL
@@ -39,7 +42,7 @@ namespace spike_model
              */
             MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(pc, time, c)
                           , avl(avl) {
-                setLMUL(1);
+                setLMUL((uint8_t)1);
                 setDestinationReg(regId);
                 setWidth(VectorElementType::BIT64);
             }
