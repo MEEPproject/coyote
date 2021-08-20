@@ -24,10 +24,20 @@ namespace spike_model {
 				sparta_assert(sp_status != nullptr, "SP status array could not be allocated!");
 								
 				//-- read the configuration
-				auto root_node = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
-				this->enabled = root_node.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
+				root_node		= node->getRoot()->getAs<sparta::RootTreeNode>();
+				auto config		= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
+				this->enabled	= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
 				std::cout << "Memory Tile is " << (this->enabled ? "enabled" : "disabled") << "." << std::endl;
-			}
+				
+				//-- TODO This nullptr should not be here. The problem is, that if the constructor of MemoryCPUWrapper is called, 
+				//        NoC is not yet initialized and hence the NoC leaf in the tree cannot be accessed. Ideally the 
+				//        sequence of initialization is changed.
+				//		  The root_node does not need to be a field in the class any longer either, once #98 is fixed.
+				//		  @see issue #98
+				//		  @see MemoryCPUWrapper::controllerCycle_outgoing_transaction
+				//this->noc = root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();	
+				this->noc      = nullptr;
+	}
 
 
 	/////////////////////////////////////
@@ -199,11 +209,24 @@ namespace spike_model {
 	}
 	
 	
-	void MemoryCPUWrapper::controllerCycle_outgoing_transaction(){
+	void MemoryCPUWrapper::controllerCycle_outgoing_transaction() {
+		//-- TODO This if should not be here. The problem is, that if the constructor of MemoryCPUWrapper is called, 
+		//        NoC is not yet initialized and hence the NoC leaf in the tree cannot be accessed. Ideally the 
+		//        sequence of initialization is changed,
+		//		  @see issue #98
+		//		  @see MemoryCPUWrapper
+		if(noc == nullptr) {
+			this->noc = root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();	
+		}
+		
 		std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
-		out_port_noc_.send(response, 0);
-		sched_outgoing.pop();
-		std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		if(noc->checkSpaceForPacket(false, response)) {
+			out_port_noc_.send(response, 0);
+			sched_outgoing.pop();
+			std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		} else {
+			std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: NoC does not accept message: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+		}
 	}
 	
 	

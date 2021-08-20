@@ -21,6 +21,7 @@
 
 #include "LogCapable.hpp"
 #include "NoC/NoCMessage.hpp"
+#include "NoC/NoC.hpp"
 #include "Event.hpp"
 #include "EventManager.hpp"
 #include "MCPUSetVVL.hpp"
@@ -29,7 +30,6 @@
 #include "ScratchpadRequest.hpp"
 #include "Bus.hpp"
 #include <unordered_map>
-#include <queue>
 
 namespace spike_model {
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {
@@ -155,6 +155,8 @@ namespace spike_model {
 
 
 			std::shared_ptr<EventManager> request_manager_;
+			spike_model::NoC *noc;
+			sparta::RootTreeNode *root_node;
 			
 			
 			void receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes);
