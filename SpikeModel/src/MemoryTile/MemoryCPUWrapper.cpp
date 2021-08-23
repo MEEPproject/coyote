@@ -29,9 +29,14 @@ namespace spike_model {
 				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
 				std::cout << "Memory Tile is " << (this->enabled ? "enabled" : "disabled") << "." << std::endl;
 				
-				this->sp_reg_size	= (uint64_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
-									  config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() /
-									  (uint64_t)num_of_registers * (uint64_t)1024;
+				this->sp_reg_size	= (size_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
+									  (size_t)config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
+									  (size_t)1024 / (
+									  	(size_t)config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>() /
+									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
+									  ) /
+									  (uint64_t)num_of_registers;
+									  
 				if(enabled) {
 					std::cout << "Each register entry in the SP is " << sp_reg_size << " Bytes." << std::endl;
 				}

@@ -93,7 +93,7 @@ namespace spike_model {
 
 		private:
 			const uint8_t num_of_registers = 32;
-			uint64_t sp_reg_size;
+			size_t sp_reg_size;
 
 			enum class SPStatus {
 				IS_L2 = 0,
