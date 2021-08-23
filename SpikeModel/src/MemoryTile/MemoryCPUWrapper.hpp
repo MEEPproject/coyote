@@ -83,6 +83,13 @@ namespace spike_model {
 			 */
 			uint16_t getID() {return this->id;}
 
+			/*!
+			 * \brief Set the pointer to the NoC, which is then used
+			 * in the MCPUWrapper to access methods (such as checking
+			 * if a Transaction can be accepted) inside the NoC.
+			 * \param noc A pointer to the NoC
+			 */
+			void setNoC(spike_model::NoC *noc) {this->noc = noc;}
 
 		private:
 			const uint8_t num_of_registers = 32;

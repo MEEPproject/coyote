@@ -36,13 +36,6 @@ namespace spike_model {
 					std::cout << "Each register entry in the SP is " << sp_reg_size << " Bytes." << std::endl;
 				}
 				
-				//-- TODO This nullptr should not be here. The problem is, that if the constructor of MemoryCPUWrapper is called, 
-				//        NoC is not yet initialized and hence the NoC leaf in the tree cannot be accessed. Ideally the 
-				//        sequence of initialization is changed.
-				//		  The root_node does not need to be a field in the class any longer either, once #98 is fixed.
-				//		  @see issue #98
-				//		  @see MemoryCPUWrapper::controllerCycle_outgoing_transaction
-				//this->noc = root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();	
 				this->noc      = nullptr;
 	}
 
@@ -217,14 +210,8 @@ namespace spike_model {
 	
 	
 	void MemoryCPUWrapper::controllerCycle_outgoing_transaction() {
-		//-- TODO This if should not be here. The problem is, that if the constructor of MemoryCPUWrapper is called, 
-		//        NoC is not yet initialized and hence the NoC leaf in the tree cannot be accessed. Ideally the 
-		//        sequence of initialization is changed,
-		//		  @see issue #98
-		//		  @see MemoryCPUWrapper
-		if(noc == nullptr) {
-			this->noc = root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>();	
-		}
+
+		sparta_assert(noc, "The MCPU does not have access to methods of the NoC, since MemoryCPUWrapper::setNoC(spike_model::NoC) was not called.");
 		
 		std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
 		if(noc->checkSpaceForPacket(false, response)) {
