@@ -225,6 +225,9 @@ namespace spike_model {
 			std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: Sending to NoC: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
 		} else {
 			std::cout << SPARTA_UNMANAGED_COLOR_GREEN << getClock()->currentCycle() << ": " << name << ": controllerCycle_outgoing_transaction: NoC does not accept message: " << *response << SPARTA_UNMANAGED_COLOR_NORMAL << std::endl;
+
+			//-- reschedule for the next cycle
+			sched_outgoing.reschedule();
 		}
 	}
 	

@@ -13,8 +13,8 @@ namespace spike_model {
 			Bus(Bus const&) = delete;
 			Bus& operator=(Bus const&) = delete;
 			
-			/**
-			 * The bus system accepts elements from multiple sources and stores them in a queue.
+			/*!
+			 * \brief The bus system accepts elements from multiple sources and stores them in a queue.
 			 * To schedule the queue, the Sparta scheduler is used.
 			 * @controller_cycle_event: A pointer to the the scheduler for this queue
 			 */
@@ -27,24 +27,30 @@ namespace spike_model {
 				std::queue<T>().swap(bus);	//-- create a new and empty queue and swap it with the queue "bus".
 			}
 			
-			/**
-			 * Peeks into the oldest element in the queue without removing it.
+			/*!
+			 * \brief Peeks into the oldest element in the queue without removing it.
 			 * \throw Out of Range Exception: There are no elements in the queue.
 			 * \return the oldest element in the queue
 			 */
 			T front();
 			
-			/**
-			 * Removes the oldest element in the queue
+			/*!
+			 * \brief Removes the oldest element in the queue
 			 * \throw Out of Range Exception: There are no elements in the queue.
 			 */
 			void pop();
 			
-			/**
-			 * Adds a new element to the beginning of the queue.
+			/*!
+			 * \brief Adds a new element to the beginning of the queue.
 			 * \param element: The element to be added.
 			 */
 			void push(T element);
+			
+			/*!
+			 * \brief Reschedule the controller_cycle depending on the configured
+			 * latency.
+			 */
+			void reschedule();
 						
 		private:
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event;
@@ -65,12 +71,7 @@ namespace spike_model {
 		sparta_assert(!bus.empty(), "Bus<T>::pop: No element in the queue to be removed.\n");
 		
 		bus.pop();
-		
-		if(bus.empty()) {
-			idle = true;
-		} else {
-			controller_cycle_event->schedule(latency);
-		}
+		reschedule();
 	}
 
 	template <typename T> void Bus<T>::push(T element) {
@@ -81,6 +82,15 @@ namespace spike_model {
 			controller_cycle_event->schedule(latency);
 		}
 	}
+	
+	template <typename T> void Bus<T>::reschedule() {
+		if(bus.empty()) {
+			idle = true;
+		} else {
+			controller_cycle_event->schedule(latency);
+		}
+	}
+	
 	
 	
 	/*!
