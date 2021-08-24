@@ -38,7 +38,6 @@ constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which ar
 //Arbiter arbiter;
 int main(int argc, char **argv)
 {
-    std::vector<std::string> datafiles;
 
     sparta::app::DefaultValues DEFAULTS;
     DEFAULTS.auto_summary_default = "on";
@@ -142,7 +141,7 @@ int main(int argc, char **argv)
         cls.populateSimulation(&(*sim));
         std::shared_ptr<spike_model::EventManager> request_manager=sim->createRequestManager();
 
-        size_t scratchpad_size = ((num_banks * l2bank_size * 1024) / (num_cores / num_tiles)) / 32;
+        size_t scratchpad_size = ((num_banks * l2bank_size * 1024 * 8) / (num_cores / num_tiles)) / 32;
         std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(
             std::to_string(num_cores),              // Number of cores to simulate
             std::to_string(num_threads_per_core),   // Number of cores in each core

@@ -52,8 +52,8 @@ namespace spike_model {
 
 			/*!
 			 * \brief Constructor for MemoryCPUWrapper
-			 * \note  node parameter is the node that represent the MemoryCPUWrapper and
-			 *        p is the MemoryCPUWrapper parameter set
+			 * \param  node parameter is the node that represents the MemoryCPUWrapper
+			 * \param p is the MemoryCPUWrapper parameter set
 			 */
 			MemoryCPUWrapper(sparta::TreeNode* node, const MemoryCPUWrapperParameterSet* p);
 
