@@ -2,20 +2,10 @@
 #define __MEMORY_CPU_WRAPPER_H__
 
 
-//#include "sparta/ports/PortSet.hpp"
-//#include "sparta/ports/SignalPort.hpp"
 #include "sparta/ports/DataPort.hpp"
-//#include "sparta/events/EventSet.hpp"
 #include "sparta/events/UniqueEvent.hpp"
-//#include "sparta/simulation/Unit.hpp"
 #include "sparta/simulation/ParameterSet.hpp"
 #include "sparta/simulation/TreeNode.hpp"
-//#include "sparta/collection/Collectable.hpp"
-//#include "sparta/events/StartupEvent.hpp"
-//#include "sparta/resources/Pipeline.hpp"
-//#include "sparta/resources/Buffer.hpp"
-//#include "sparta/pairs/SpartaKeyPairs.hpp"
-//#include "sparta/simulation/State.hpp"
 #include "sparta/utils/SpartaSharedPointer.hpp"
 #include "sparta/app/Simulation.hpp"
 
