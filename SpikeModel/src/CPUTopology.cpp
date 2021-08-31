@@ -36,6 +36,14 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 &factories->memory_cpu_rf
             },
             {
+                "llc^",
+                "cpu",
+                "LLC ^",
+                sparta::TreeNode::GROUP_NAME_NONE,
+                sparta::TreeNode::GROUP_IDX_NONE,
+                &factories->cache_bank_llc_rf
+            },
+            {
                 "memory_controller#",
                 "cpu",
                 "Memory Controller #",
@@ -96,13 +104,21 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.memory_cpu&.ports.in_noc"
         },
         {
-            "cpu.memory_controller#.ports.in_mcpu",
+            "cpu.llc^.ports.in_tile_req",
             "cpu.memory_cpu&.ports.out_mc"
         },
         {
-            "cpu.memory_controller#.ports.out_mcpu",
+            "cpu.llc^.ports.out_tile_ack",
             "cpu.memory_cpu&.ports.in_mc"
         },
+        {
+            "cpu.llc^.ports.out_tile_req",
+            "cpu.memory_controller#.ports.in_mcpu"
+        },
+        {
+            "cpu.llc^.ports.in_tile_ack",
+            "cpu.memory_controller#.ports.out_mcpu"
+        }
     };
     
     shared_units = {

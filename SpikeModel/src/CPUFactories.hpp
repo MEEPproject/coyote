@@ -53,6 +53,10 @@ struct CPUFactories{
     sparta::ResourceFactory<spike_model::MemoryBank,
                           spike_model::MemoryBank::MemoryBankParameterSet> memory_bank_rf;
 
+    //! \brief Resource Factory to build a MemoryBank Unit
+    sparta::ResourceFactory<spike_model::CacheBank,
+                          spike_model::CacheBank::CacheBankParameterSet> cache_bank_llc_rf;
+                          
     //! \brief Resource Factory to build a Arbiter Unit
     sparta::ResourceFactory<spike_model::Arbiter,
                           spike_model::Arbiter::ArbiterParameterSet> arbiter_rf;

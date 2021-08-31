@@ -120,11 +120,11 @@ namespace spike_model {
 				&unit_port_set_, "in_noc"
 			};
 
-			sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_mc_ {
+			sparta::DataOutPort<std::shared_ptr<Request>> out_port_mc_ {
 				&unit_port_set_, "out_mc"
 			};
 
-			sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_mc_ {
+			sparta::DataInPort<std::shared_ptr<Request>> in_port_mc_ {
 				&unit_port_set_, "in_mc"
 			};
 			

@@ -123,6 +123,7 @@ void SpikeModel::buildTree_()
     // architectural parameters
     auto    num_tiles               = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
     auto    num_memory_cpus         = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
+    auto    num_llcs                = upt.get("top.cpu.params.num_llcs").getAs<uint16_t>();
     auto    num_memory_controllers  = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto    num_memory_banks        = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
     auto    num_l2_banks_in_tile    = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
@@ -131,7 +132,7 @@ void SpikeModel::buildTree_()
     auto cpu_factory = getCPUFactory_();
 
     // Set the ACME topology that will be built
-    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_memory_controllers, num_memory_banks, trace);
+    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_llcs, num_memory_controllers, num_memory_banks, trace);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
