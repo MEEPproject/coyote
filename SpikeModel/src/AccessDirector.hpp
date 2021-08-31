@@ -74,27 +74,27 @@ namespace spike_model
             
             /*!
              * \brief Get a NoCMessage representing a remote L2 Request
-             * \param req The request assocaited to the message
+             * \param req The request associated to the message
              * \return The NoCMessage
              */
             std::shared_ptr<NoCMessage> getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req);
             /*!
              * \brief Get a NoCMessage representing a memory Request
-             * \param req The request assocaited to the message
+             * \param req The request associated to the message
              * \return The NoCMessage
              */
             std::shared_ptr<NoCMessage> getMemoryRequestMessage(std::shared_ptr<CacheRequest> req);
             
             /*!
              * \brief Get a NoCMessage representing a data forward
-             * \param req The request assocaited to the message
+             * \param req The request associated to the message
              * \return The NoCMessage
              */
             std::shared_ptr<NoCMessage> getDataForwardMessage(std::shared_ptr<CacheRequest> req);
 
             /*!
              * \brief Get a NoCMessage representing a data forward
-             * \param req The request assocaited to the message
+             * \param req The request associated to the message
              * \return The NoCMessage
              */
             std::shared_ptr<NoCMessage> getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req);
