@@ -440,6 +440,11 @@ namespace spike_model {
 	void MemoryCPUWrapper::setRequestManager(std::shared_ptr<EventManager> r) {
 		request_manager_ = r;
 	}
+            
+    void MemoryCPUWrapper::setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask){
+        mc_shift=memory_controller_shift;
+        mc_mask=memory_controller_mask;
+    }
 }
 
 

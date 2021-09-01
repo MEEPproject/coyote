@@ -25,6 +25,7 @@
 
 #include "PrivateL2Director.hpp"
 #include "SharedL2Director.hpp"
+#include "utils.hpp"
 #include <thread>
 
 double calculateAverageOfInternalCounters(
@@ -266,10 +267,25 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 
     m->setServicedRequestsStorage(s);
 
+    uint64_t mc_shift=0;
+    uint64_t mc_mask=0;
+    switch(address_mapping)
+    {
+        case spike_model::AddressMappingPolicy::OPEN_PAGE:
+            mc_shift=ceil(log2(bank_line));
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+
+            
+        case spike_model::AddressMappingPolicy::CLOSE_PAGE:
+            mc_shift=ceil(log2(bank_line));
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+    }
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping, num_cores);
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, mc_shift, mc_mask, num_cores);
     }
 
     for(std::size_t i = 0; i < num_memory_cpus; ++i)
@@ -281,6 +297,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         spike_model::MemoryCPUWrapper *mcpu=tile_node->getResourceAs<spike_model::MemoryCPUWrapper>();
 
         mcpu->setRequestManager(m);
+        mcpu->setAddressMappingInfo(mc_shift, mc_mask);
     }
 
      

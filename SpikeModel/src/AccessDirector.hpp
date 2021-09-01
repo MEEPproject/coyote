@@ -67,10 +67,11 @@ namespace spike_model
              * \param banks_per_tile The number of banks per Tile
              * \param the number of tiles in the system
              * \param num_mcs The number of memory controllers
-             * \param address_mapping_policy The address mapping policy in the memory controllers
+             * \param memory_controller_shift The number of bits to shift to get the memory controller that handles an address
+             * \param memory_controller_mask The mask for the AND to extract the memory controller id
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile,  uint16_t num_tiles, 
-                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy);
+                                uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask);
             
             /*!
              * \brief Get a NoCMessage representing a remote L2 Request
@@ -144,9 +145,6 @@ namespace spike_model
             */
             uint16_t calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r);
             
-            uint8_t nextPowerOf2(uint64_t v);
-
-
         protected:
             CacheDataMappingPolicy bank_data_mapping_policy_;
             CacheDataMappingPolicy scratchpad_data_mapping_policy_;

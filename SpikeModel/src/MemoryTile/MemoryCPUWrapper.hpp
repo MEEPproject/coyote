@@ -81,6 +81,13 @@ namespace spike_model {
 			 */
 			void setNoC(spike_model::NoC *noc) {this->noc = noc;}
 
+            /*!
+             * \brief Set the information on the address mapping
+             * \param memory_controller_shift The number of bits to shift to get the memory controller that handles an address
+             * \param memory_controller_mask The mask for the AND to extract the memory controller id
+             */
+            void setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask);
+
 		private:
 			const uint8_t num_of_registers = 32;
 			size_t sp_reg_size;
@@ -99,7 +106,9 @@ namespace spike_model {
 			uint64_t latency_;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
-			
+		
+            uint64_t mc_shift;
+            uint64_t mc_mask;
 			
 			struct transaction {
 				std::shared_ptr<MCPUInstruction> mcpu_instruction;

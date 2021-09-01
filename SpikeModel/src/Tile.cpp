@@ -271,11 +271,11 @@ namespace spike_model
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
                uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-               uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores)
+               uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores)
     {
         setNumTiles(num_tiles);
         setCoresPerTile(num_cores/num_tiles);
-        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, address_mapping_policy);
+        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, mc_shift, mc_mask);
     }
 
     void Tile::insnLatencyCallback(const std::shared_ptr<spike_model::InsnLatencyEvent>& r)

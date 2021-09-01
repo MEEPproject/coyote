@@ -3,6 +3,7 @@
 #include "FifoRrMemoryAccessScheduler.hpp"
 #include "FifoRrMemoryAccessSchedulerAccessTypePriority.hpp"
 #include "FifoCommandScheduler.hpp"
+#include "utils.hpp"
 
 namespace spike_model
 {
@@ -250,19 +251,6 @@ namespace spike_model
         return address_mapping_policy_;
     }
     
-    uint8_t MemoryController::nextPowerOf2(uint64_t v)
-    {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v |= v >> 32;
-        v++;
-        return v;
-    }
-
     void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size)
     {
         this->line_size=line_size;
@@ -288,9 +276,9 @@ namespace spike_model
         }
         
         rank_mask=0;
-        bank_mask=nextPowerOf2(num_banks_)-1;
-        row_mask=nextPowerOf2(num_rows_per_bank)-1;
-        col_mask=nextPowerOf2(num_cols_per_bank)-1;
+        bank_mask=utils::nextPowerOf2(num_banks_)-1;
+        row_mask=utils::nextPowerOf2(num_rows_per_bank)-1;
+        col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
     }    
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

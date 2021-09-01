@@ -178,10 +178,12 @@ namespace spike_model
              * \param banks_per_tile The number of banks per Tile
              * \param num_tiles The number of tiles in the system
              * \param num_mcs The number of memory controllers
-             * \param address_mapping_policy The address mapping policy of the memory controllers
+             * \param mc_shift The number of bits to shift to get the memory controller that handles an address
+             * \param mc_mask The mask for the AND to extract the memory controller id
+             * \param num_cores The number of cores
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
-                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores);
+                                uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores);
 
         private:
             uint16_t id_;

@@ -227,21 +227,8 @@ namespace spike_model
             }
         }
     }
-    
-    uint8_t AccessDirector::nextPowerOf2(uint64_t v)
-    {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v |= v >> 32;
-        v++;
-        return v;
-    }
-    
-    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, AddressMappingPolicy address_mapping_policy)
+     
+    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask)
     {
         this->line_size=line_size;
 
@@ -256,20 +243,8 @@ namespace spike_model
         num_ways=assoc;
         way_size=(size_kbs/num_ways)*1024;
 
-        switch(address_mapping_policy)
-        {
-            case AddressMappingPolicy::OPEN_PAGE:
-                mc_shift=ceil(log2(line_size));
-                mc_mask=nextPowerOf2(num_mcs)-1;
-                break;
-
-                
-            case AddressMappingPolicy::CLOSE_PAGE:
-                mc_shift=ceil(log2(line_size));
-                mc_mask=nextPowerOf2(num_mcs)-1;
-                break;
-        }
-
+        mc_shift=memory_controller_shift;
+        mc_mask=memory_controller_mask;
 
     }
 

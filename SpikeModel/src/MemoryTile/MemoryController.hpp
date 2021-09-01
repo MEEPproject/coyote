@@ -177,8 +177,6 @@ namespace spike_model
              * \return A command for the write allocate
              */
             std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
-    
-            uint8_t nextPowerOf2(uint64_t v);
     };
 }
 #endif
