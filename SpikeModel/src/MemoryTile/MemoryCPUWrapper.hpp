@@ -121,7 +121,7 @@ namespace spike_model {
 			};
 
 			sparta::DataOutPort<std::shared_ptr<Request>> out_port_mc_ {
-				&unit_port_set_, "out_mc"
+				&unit_port_set_, "out_mc", false 
 			};
 
 			sparta::DataInPort<std::shared_ptr<Request>> in_port_mc_ {
