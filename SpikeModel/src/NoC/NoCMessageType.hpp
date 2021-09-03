@@ -59,7 +59,12 @@ namespace spike_model
          */
         MEM_TILE_REQUEST        =10,
         
-        count                   =11 // Number of message types
+        /**
+         * Replies/Acknowledgements for the MEM_TILE_REQUEST
+         */
+        MEM_TILE_REPLY          =11,
+        
+        count                   =12 // Number of message types
     };
 }
 #endif

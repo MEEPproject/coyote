@@ -242,7 +242,7 @@ namespace spike_model
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
-            // MCPU -> VAS messages
+            // MemoryTile -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
@@ -255,6 +255,9 @@ namespace spike_model
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
+                
+            //-- MemoryTile -> MemoryTile communication
+            case NoCMessageType::MEM_TILE_REPLY:
             case NoCMessageType::MEM_TILE_REQUEST:
                 packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
                     mcpu_to_network_[mess->getSrcPort()],   // Source

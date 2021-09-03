@@ -46,12 +46,17 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         switch(mess->getType())
         {
-            // MCPU -> VAS messages
+            // MemoryTile -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
-            case NoCMessageType::MEM_TILE_REQUEST:
                 out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
+                break;
+            
+            // MemoryTile -> Memory Tile Communication
+            case NoCMessageType::MEM_TILE_REQUEST:
+            case NoCMessageType::MEM_TILE_REPLY:
+                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 
             default:
