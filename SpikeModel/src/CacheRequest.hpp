@@ -42,7 +42,7 @@ namespace spike_model
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t){memory_ack=false;}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t), mem_tile((uint16_t)-1), memory_ack(false) {}
 
             /*!
              * \brief Constructor for CacheRequest
@@ -52,7 +52,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t), memory_ack(false) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t), mem_tile((uint16_t)-1), memory_ack(false) {}
 
             /*!
              * \brief Get the type of the request
@@ -65,17 +65,32 @@ namespace spike_model
              * \bref Set the home tile of the request
              * \param home The home tile
              */
-            void setHomeTile(uint16_t home)
-            {
-                home_tile=home;
-            }
-
+            void setHomeTile(uint16_t home) {home_tile=home;}
 
             /*!
              * \brief Get the home tile for the request
              * \return The home tile
              */
             uint16_t getHomeTile(){return home_tile;}
+            
+            /*!
+             * \brief Set the source memory tile. This field is used to differentiate
+             * incoming transaction in the memory tile. The source could not only be
+             * a home tile (see home_tile), but also another memory tile. If a
+             * Memory Tile determines, that the address range is not served by it, then
+             * this message is forwarded to the Memory Tile which owns that address
+             * range. However, that Memory Tile has to know, that the results have to
+             * be returned to the original Memory Tile, that was contacted first by
+             * the VAS Tile.
+             * \param mem_tile The memory tile where the request originated.
+             */
+            void setMemTile(uint16_t mem_tile) {this->mem_tile = mem_tile;}
+            
+            /*!
+             * \brief Returning the memory tile, where the request originated.
+             * \return The ID of the originate Memory Tile
+             */
+            uint16_t getMemTile() {return mem_tile;}
             
             /*!
              * \brief Get the memory controller that will be accessed
@@ -150,6 +165,7 @@ namespace spike_model
             AccessType type;
 
             uint16_t home_tile;
+            uint16_t mem_tile;
             uint16_t l2_bank_id_;
 
             uint64_t memory_controller_;

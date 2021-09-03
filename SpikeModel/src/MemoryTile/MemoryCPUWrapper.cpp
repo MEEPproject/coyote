@@ -46,7 +46,7 @@ namespace spike_model {
 									  	(size_t)config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>() /
 									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
 									  ) /
-									  (uint64_t)num_of_registers;
+									  (size_t)num_of_registers;
 									  
 				if(enabled) {
 					DEBUG_MSG("Each register entry in the SP is " << sp_reg_size << " Bytes.");
@@ -74,8 +74,29 @@ namespace spike_model {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_CYAN, "CacheRequest: " << *mes);
 		if(enabled) {
-			//-- Schedule memory request for the MC
-			sched_mem_req.push(mes);
+			
+			if(mes->getMemTile() == (uint16_t)-1) {			//-- a transaction from the VAS Tile
+				
+				uint16_t destMemTile = calcDestMemTile(mes->getAddress());
+				if(destMemTile == getID()) {	//-- the address range is served by the current memory tile
+					//-- Schedule memory request for the MC
+					sched_mem_req.push(mes);
+				} else {						//-- the address range is not served by the current memory tile
+					mes->setMemTile(getID());
+					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(
+							mes,
+							NoCMessageType::MEM_TILE_REQUEST,
+							line_size_,
+							destMemTile,
+							getID()
+					);
+					sched_outgoing.push(noc_message);
+					DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
+				}
+			} else {								//-- this transaction has been received by a different memory tile, but it is served here.
+				DEBUG_MSG("\tSource is a different Memory Tile: " << mes->getMemTile());
+				sched_mem_req.push(mes);
+			}
 		} else {
 			//-- whatever comes into the Memory Tile, just send it out to the MC
 			out_port_mc_.send(mes, 0);
@@ -106,7 +127,7 @@ namespace spike_model {
 
 
 	//-- A vector instruction for the MCPU
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r){
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
 		
@@ -124,7 +145,7 @@ namespace spike_model {
 
 
 	//-- Handle for Scratchpad requests
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> r){
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> r) {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
 		
@@ -215,7 +236,7 @@ namespace spike_model {
 		std::shared_ptr<CacheRequest> instr_for_mc = sched_mem_req.front();
 		
 		//-- Send to the MC
-		out_port_mc_.send(instr_for_mc, 0);
+		out_port_mc_.send(instr_for_mc, 1);
 
 		//-- consume the memory request from the scheduler
 		sched_mem_req.pop();
@@ -441,10 +462,14 @@ namespace spike_model {
 		request_manager_ = r;
 	}
             
-    void MemoryCPUWrapper::setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask){
-        mc_shift=memory_controller_shift;
-        mc_mask=memory_controller_mask;
-    }
+	void MemoryCPUWrapper::setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask) {
+		mc_shift = memory_controller_shift;
+		mc_mask  = memory_controller_mask;
+	}
+
+	uint16_t MemoryCPUWrapper::calcDestMemTile(uint64_t address) {
+		return (uint16_t)((address >> mc_shift) & mc_mask);
+	}
 }
 
 

@@ -177,6 +177,7 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
 			virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> r) override;
 			virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
+			
 
 			void controllerCycle_incoming_transaction();	// for incoming MCPUInstructions (NoC -> MemTile)
 			void controllerCycle_outgoing_transaction();	// Outgoing transaction queue (MemTile -> NoC)
@@ -188,6 +189,7 @@ namespace spike_model {
 			std::shared_ptr<ScratchpadRequest> createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command);
 			std::shared_ptr<CacheRequest> createCacheRequest(uint64_t address, std::shared_ptr<MCPUInstruction> instr);
 			void computeMemReqAddresses(std::shared_ptr<MCPUInstruction> instr);
+			uint16_t calcDestMemTile(uint64_t address);
 			
 
 

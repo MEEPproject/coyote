@@ -79,7 +79,7 @@ namespace spike_model {
 		
 		if(idle) {
 			idle = false;
-			controller_cycle_event->schedule(latency);
+			controller_cycle_event->schedule(sparta::Clock::Cycle(latency));
 		}
 	}
 	
@@ -87,7 +87,7 @@ namespace spike_model {
 		if(bus.empty()) {
 			idle = true;
 		} else {
-			controller_cycle_event->schedule(latency);
+			controller_cycle_event->schedule(sparta::Clock::Cycle(latency));
 		}
 	}
 	
