@@ -53,7 +53,13 @@ namespace spike_model
          * The command the Memory Tile, it wants the Scratchpad execute, such as ALLOC, DEALLOC, READ, or WRITE.
          */
         SCRATCHPAD_COMMAND      = 9,
-        count                   =10 // Number of message types
+        
+        /**
+         * The Requests that are sent among the Memory Tiles.
+         */
+        MEM_TILE_REQUEST        =10,
+        
+        count                   =11 // Number of message types
     };
 }
 #endif

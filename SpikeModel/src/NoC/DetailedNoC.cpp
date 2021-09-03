@@ -255,6 +255,16 @@ namespace spike_model
                 );
                 sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
+            case NoCMessageType::MEM_TILE_REQUEST:
+                packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
+                    mcpu_to_network_[mess->getSrcPort()],   // Source
+                    mcpu_to_network_[mess->getDstPort()],   // Destination
+                    size,                                   // Number of flits
+                    mess->getClass(),                       // Class of traffic -> Priority / VN / VC
+                    INJECTION_TIME                          // Injection time to add
+                );
+                sparta_assert(packet_id != INVALID_PKT_ID);
+                break;
 
             default:
                 sparta_assert(false);

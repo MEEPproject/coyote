@@ -50,6 +50,7 @@ namespace spike_model
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
+            case NoCMessageType::MEM_TILE_REQUEST:
                 out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
                 break;
 

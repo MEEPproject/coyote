@@ -303,6 +303,13 @@ namespace spike_model
             "Number of Scratchpad_Command",     // description
             sparta::Counter::COUNT_NORMAL       // behavior
         );                                                      //! The number of Scratchpad_Commands forwarded by NoC
+        sparta::Counter count_mcpu_to_mcpu_requests_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "mcpu_to_mcpu_commands",            // name
+            "Number of MemTile2MemTile Request",// description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory Tile requests sent
         
         /*! \brief Trace the source a destination for a message
         * \param mes The message
