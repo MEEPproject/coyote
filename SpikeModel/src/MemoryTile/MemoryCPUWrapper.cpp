@@ -308,7 +308,9 @@ namespace spike_model {
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
 			DEBUG_MSG("Returned from MC: " << *mes);
+            mes->setMemoryAck(true);
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+
 			
 			return;
 		}
@@ -324,6 +326,7 @@ namespace spike_model {
 		//   If the ID is > 0, the CacheRequest is to be handled in this Memory Tile
 		if(mes->getID() == 0) {
 			DEBUG_MSG("\tCacheRequest using the Bypass: " << *mes);
+            mes->setMemoryAck(true);
 			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
 			sched_outgoing.push(outgoing_noc_message);
 		} else {

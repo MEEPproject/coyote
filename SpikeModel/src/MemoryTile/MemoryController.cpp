@@ -104,7 +104,6 @@ namespace spike_model
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        req->setMemoryAck(true);
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
         out_port_mcpu_.send(req, 0);
     }
