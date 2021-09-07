@@ -114,10 +114,10 @@ namespace spike_model {
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUSetVVL instruction!");
 		
 		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth() * (uint64_t)mes->getLMUL();
-		vvl_ = std::min(elements_per_sp, mes->getAVL());
-		//vvl_ = std::min((uint64_t)8, mes->getAVL());
+		vvl = std::min(elements_per_sp, mes->getAVL());
+		//vvl = std::min((uint64_t)8, mes->getAVL());
 		
-		mes->setVVL(vvl_);
+		mes->setVVL(vvl);
 			
 		mes->setServiced();
 		
@@ -163,7 +163,7 @@ namespace spike_model {
 		} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
 			
 			std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
-				outgoing_message->setSize(line_size_);
+			outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
 			outgoing_message->setOperandReady(true);
 			
 			
@@ -247,7 +247,7 @@ namespace spike_model {
 				
 		//-- get the number of elements loaded by 1 memory request
 		uint number_of_elements_per_request = line_size_ / (uint32_t)instr->get_width();
-		int32_t remaining_elements = vvl_;
+		int32_t remaining_elements = vvl;
 		uint64_t address = instr->getAddress();
 		
 		
@@ -262,7 +262,7 @@ namespace spike_model {
 			remaining_elements -= number_of_elements_per_request;
 			address += line_size_;
 		}
-		uint32_t number_of_replies = vvl_ / number_of_elements_per_request; // the number of expected CacheRequests returned from the memory controller
+		uint32_t number_of_replies = vvl / number_of_elements_per_request; // the number of expected CacheRequests returned from the memory controller
 		
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
@@ -284,8 +284,8 @@ namespace spike_model {
 		
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
-		transaction_id->second.counter_cacheRequests = vvl_;										// How many responses are expected from the MC?
-		transaction_id->second.counter_scratchpadRequests = vvl_/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile?
+		transaction_id->second.counter_cacheRequests = vvl;										// How many responses are expected from the MC?
+		transaction_id->second.counter_scratchpadRequests = vvl/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile?
 		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 	// How many elements fit into 1 line_size (64 Bytes)?
 	}
 	
