@@ -53,7 +53,17 @@ namespace spike_model
             PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
             PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
             PARAMETER(std::string, noc_model, "functional", "The noc model to use (functional, simple, detailed)")
-            PARAMETER(uint8_t, header_size, 8, "The header size of the messages (in bits)")
+            PARAMETER(std::vector<std::string>, message_header_size, std::vector<std::string>(
+                {"REMOTE_L2_REQUEST:8",
+                 "MEMORY_REQUEST_LOAD:8",
+                 "MEMORY_REQUEST_STORE:8",
+                 "MEMORY_REQUEST_WB:8",
+                 "REMOTE_L2_ACK:8",
+                 "MEMORY_ACK:8",
+                 "MCPU_REQUEST:8",
+                 "SCRATCHPAD_ACK:8",
+                 "SCRATCHPAD_DATA_REPLY:8",
+                 "SCRATCHPAD_COMMAND:8"}), "The header size of each message including CRC (in bits)")
             PARAMETER(std::vector<std::string>, message_to_network_and_class, std::vector<std::string>(
                 {"REMOTE_L2_REQUEST:ADDRESS_ONLY.1",
                  "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1",

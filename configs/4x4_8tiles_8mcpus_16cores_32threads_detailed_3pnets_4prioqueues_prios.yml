@@ -74,7 +74,17 @@ top:
     noc:
       params:
         noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
-        header_size: 27                     # (uint8_t)         The size of messages' header including ECC
+        message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
+          - "REMOTE_L2_REQUEST:27"
+          - "MEMORY_REQUEST_LOAD:27"
+          - "MEMORY_REQUEST_STORE:27"
+          - "MEMORY_REQUEST_WB:27"
+          - "REMOTE_L2_ACK:27"
+          - "MEMORY_ACK:27"
+          - "MCPU_REQUEST:27"
+          - "SCRATCHPAD_ACK:27"
+          - "SCRATCHPAD_DATA_REPLY:27"
+          - "SCRATCHPAD_COMMAND:27"
         message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
           - "REMOTE_L2_REQUEST:ADDRESS_ONLY.1"
           - "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1"

@@ -44,7 +44,17 @@ namespace spike_model
         }
 
         // Set the messages' header size
-        NoCMessage::header_size = params->header_size;
+        sparta_assert(params->message_header_size.getNumValues() == static_cast<int>(NoCMessageType::count),
+                        "The number of messages defined in message_header_size param is not correct.");
+        int name_length;
+        int size;
+        for(auto mess_header_size : params->message_header_size){
+            name_length = mess_header_size.find(":");
+            size = stoi(mess_header_size.substr(name_length+1));
+            sparta_assert(size < std::numeric_limits<uint8_t>::max(),
+                            "The header size should be lower than " + std::to_string(std::numeric_limits<uint8_t>::max()));
+            NoCMessage::header_size[static_cast<int>(getMessageTypeFromString_(mess_header_size.substr(0,name_length)))] = size;
+        }
 
         // Define the mapping of NoC Messages to Networks and classes
         sparta_assert(params->message_to_network_and_class.getNumValues() == static_cast<int>(NoCMessageType::count),

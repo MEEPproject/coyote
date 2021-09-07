@@ -88,7 +88,7 @@ namespace spike_model
              */
             uint8_t getClass(){return class_;}
 
-            static uint8_t header_size; //! The size of the header in bits
+            static uint8_t header_size[static_cast<int>(NoCMessageType::count)]; //! The size of the header for each message in bits
 
         private:
 

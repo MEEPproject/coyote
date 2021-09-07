@@ -9,6 +9,7 @@ build/
 trace
 err_*
 out_*
+simulation_scripts/results_*/
 # Apps files
 apps/**/dataset.h
 apps/**/matmul
