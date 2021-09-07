@@ -24,8 +24,7 @@ namespace spike_model {
 			line_size_(p->line_size),
 			latency_(p->latency),
 			sched_mem_req(&controller_cycle_event_mem_req, p->latency),
-			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency),
-			sched_incoming(&controller_cycle_event_incoming_transaction, p->latency) {
+			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency) {
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
@@ -100,7 +99,7 @@ namespace spike_model {
 		} else {
 			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
 				handleReplyMessage(mes);
-			} else {								//-- this transaction has been received by a different memory tile, but it is served here.
+			} else {								//-- the parent transaction has been received by a different memory tile, but it is served here.
 				DEBUG_MSG("\tSource is a different Memory Tile: " << mes->getMemTile());
 				sched_mem_req.push(mes);
 			}
@@ -131,106 +130,83 @@ namespace spike_model {
 
 
 	//-- A vector instruction for the MCPU
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> r) {
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> instr) {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
 		
-		r->setID(this->instructionID_counter);
-		struct transaction instruction_attributes = {r, 0, 0, 1};
+		instr->setID(this->instructionID_counter);
+		struct transaction instruction_attributes = {instr, 0, 0, 1};
 		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // keep track of the transaction
 		this->instructionID_counter++; // increment ID
 		if(this->instructionID_counter == 0) {this->instructionID_counter = 1;}	// handle the overflow. 0 is reserved for cache requests that use the bypass
 		
-		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "Memory instruction received: " << *r);
+		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "Memory instruction received: " << *instr);
+
 		
-		//-- schedule the incoming message
-		sched_incoming.push(r);
+		if(instr->get_operation() == MCPUInstruction::Operation::LOAD) {
+			
+			//-- If we have not done before, an ALLOCATE has to be sent to the VAS Tile, so it reserves space for the data to be written to the SP
+			if(sp_status[instr->getDestinationRegId()] == SPStatus::IS_L2) {
+				sp_status[instr->getDestinationRegId()] = SPStatus::ALLOC_SENT;
+				
+				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
+				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr->getSourceTile());
+				sched_outgoing.push(noc_message);
+				
+				DEBUG_MSG("sending SP ALLOC: " << *sp_request);
+			}
+			
+			//-- Send the request to the Vector Address Generators (VAG)
+			computeMemReqAddresses(instr);
+			
+		} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
+			
+			std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
+				outgoing_message->setSize(line_size_);
+			outgoing_message->setOperandReady(true);
+			
+			
+			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr->getSourceTile());
+			
+			//-- TODO issue #94 needs to be fixed first
+			//sched_outgoing.push(noc_message);
+			
+			DEBUG_MSG(", sending SP READ: " << *outgoing_message);
+		}
 	}
 
 
 	//-- Handle for Scratchpad requests
-	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> r) {
+	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> instr) {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
 		
-		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *r);
+		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *instr);
 		
-		sched_incoming.push(r);
-	}
-
-
-
-
-
-	void MemoryCPUWrapper::controllerCycle_incoming_transaction() {
+		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
+		std::shared_ptr<spike_model::MCPUInstruction> parent_instr = transaction_id->second.mcpu_instruction;
 		
-		//-- If the incoming transaction is a MCPU instruction, that means, that the VAS Tile instructs the MCPU to perform an operation.
-		if(std::shared_ptr<MCPUInstruction> instr_to_schedule = std::dynamic_pointer_cast<MCPUInstruction>(sched_incoming.front())) {
-			DEBUG_MSG("controllerCycle_incoming_transaction: " << *instr_to_schedule);
-			
-			//-- If it is a load
-			if(instr_to_schedule->get_operation() == MCPUInstruction::Operation::LOAD) {
-				
-				//-- If we have not done before, an ALLOCATE has to be sent to the VAS Tile, so it reserves space for the data to be written to the SP
-				if(sp_status[instr_to_schedule->getDestinationRegId()] == SPStatus::IS_L2) {
-					sp_status[instr_to_schedule->getDestinationRegId()] = SPStatus::ALLOC_SENT;
-					
-					std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
-					sp_request->setSize(vvl_ * (uint)instr_to_schedule->get_width());	// reserve the space in the VAS Tile
-					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
-					sched_outgoing.push(noc_message);
-					
-					DEBUG_MSG("sending SP ALLOC: " << *sp_request);
-				}
-				
-				//-- Send the request to the Vector Address Generators (VAG)
-				computeMemReqAddresses(instr_to_schedule);
-				
-			} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
-				
-				std::shared_ptr outgoing_message = createScratchpadRequest(instr_to_schedule, ScratchpadRequest::ScratchpadCommand::READ);
-				outgoing_message->setSize(line_size_);
-				outgoing_message->setOperandReady(true);
-				
-				
-				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr_to_schedule->getSourceTile());
-				
-				//-- TODO issue #94 needs to be fixed first
-				//sched_outgoing.push(noc_message);
-				
-				DEBUG_MSG(", sending SP READ: " << *outgoing_message);
-			}
-		
-		//-- If the incoming transaction is a ScratchpadRequest, that means, that this MCPU instructed the VAS Tile to perform a task.
-		} else if(std::shared_ptr<ScratchpadRequest> sp_instr_to_schedule = std::dynamic_pointer_cast<ScratchpadRequest>(sched_incoming.front())) {
-			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(sp_instr_to_schedule->getID());
-			std::shared_ptr<spike_model::MCPUInstruction> instr_to_schedule = transaction_id->second.mcpu_instruction;
-			
-			DEBUG_MSG(*sp_instr_to_schedule << ", parent instr: " << *instr_to_schedule);
+		DEBUG_MSG(*instr << ", parent instr: " << *parent_instr);
 
-			switch(sp_instr_to_schedule->getCommand()) {
-				case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
-					sched_outgoing.notify(instr_to_schedule->getDestinationRegId());
-					sp_status[instr_to_schedule->getDestinationRegId()] = SPStatus::READY;
-					break;
-				case ScratchpadRequest::ScratchpadCommand::FREE:
-					break;
-				case ScratchpadRequest::ScratchpadCommand::READ:
-				case ScratchpadRequest::ScratchpadCommand::WRITE:
-					computeMemReqAddresses(instr_to_schedule);
-					break;
-				default:
-					sparta_assert(false, "The Memory Tile does not understand this Scratchpad command!");
-			}
-			
-		} else {
-			sparta_assert(false, "The incoming packet type is unknown!");
+		switch(instr->getCommand()) {
+			case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
+				sched_outgoing.notify(parent_instr->getDestinationRegId());
+				sp_status[parent_instr->getDestinationRegId()] = SPStatus::READY;
+				break;
+			case ScratchpadRequest::ScratchpadCommand::FREE:
+				break;
+			case ScratchpadRequest::ScratchpadCommand::READ:
+				std::cout << "Got a read. NOT YET IMPLEMENTED";
+				break;
+			case ScratchpadRequest::ScratchpadCommand::WRITE:
+				computeMemReqAddresses(parent_instr);
+				break;
+			default:
+				sparta_assert(false, "The Memory Tile does not understand this Scratchpad command!");
 		}
-		
-		
-		//-- consume the instruction from the scheduler
-		sched_incoming.pop();
 	}
+
 	
 	
 	//-- Schedule the memory operations going to the MC

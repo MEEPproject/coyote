@@ -152,12 +152,6 @@ namespace spike_model {
 			BusDelay<std::shared_ptr<NoCMessage>> sched_outgoing;
 
 			
-			//-- Bus for incoming transactions
-			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_incoming_transaction {
-					&unit_event_set_, "controller_cycle_incoming_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_incoming_transaction)
-			};
-			Bus<std::shared_ptr<Request>> sched_incoming;
-			
 			
 
 
@@ -179,7 +173,6 @@ namespace spike_model {
 			virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
 			
 
-			void controllerCycle_incoming_transaction();	// for incoming MCPUInstructions (NoC -> MemTile)
 			void controllerCycle_outgoing_transaction();	// Outgoing transaction queue (MemTile -> NoC)
 			void controllerCycle_mem_requests(); 			// Bus for MemTile -> MC)
 			void memOp_unit(std::shared_ptr<MCPUInstruction> instr);
