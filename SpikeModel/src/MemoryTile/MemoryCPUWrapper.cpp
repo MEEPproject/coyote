@@ -78,7 +78,7 @@ namespace spike_model {
 			sched_mem_req.push(mes);
 		} else {
 			//-- whatever comes into the Memory Tile, just send it out to the MC
-			out_port_mc_.send(mes, 0);
+			out_port_mc_.send(mes, 1);
 		}
 	}
 
@@ -215,7 +215,8 @@ namespace spike_model {
 		std::shared_ptr<CacheRequest> instr_for_mc = sched_mem_req.front();
 		
 		//-- Send to the MC
-		out_port_mc_.send(instr_for_mc, 0);
+		out_port_mc_.send(instr_for_mc, 1); //This latency needs to be >0. Otherwise, a lower priority event would trigger a higher priority one for the same cycle, 
+                                            //being the scheduling phase for the higher one already finished.
 
 		//-- consume the memory request from the scheduler
 		sched_mem_req.pop();
