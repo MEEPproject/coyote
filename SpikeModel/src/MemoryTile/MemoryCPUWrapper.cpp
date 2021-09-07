@@ -77,25 +77,9 @@ namespace spike_model {
 			out_port_mc_.send(mes, 0);
 			return;
 		}
-			
-			if(mes->getMemTile() == (uint16_t)-1) {			//-- a transaction from the VAS Tile
-				
-				uint16_t destMemTile = calcDestMemTile(mes->getAddress());
-				if(destMemTile == getID()) {	//-- the address range is served by the current memory tile
-					//-- Schedule memory request for the MC
-					sched_mem_req.push(mes);
-				} else {						//-- the address range is not served by the current memory tile
-					mes->setMemTile(getID());
-					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(
-							mes,
-							NoCMessageType::MEM_TILE_REQUEST,
-							line_size_,
-							destMemTile,
-							getID()
-					);
-					sched_outgoing.push(noc_message);
-					DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
-			}
+		
+		if(mes->getMemTile() == (uint16_t)-1) {		//-- a transaction from the VAS Tile
+			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile		
 		} else {
 			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
 				handleReplyMessage(mes);
@@ -136,9 +120,11 @@ namespace spike_model {
 		
 		instr->setID(this->instructionID_counter);
 		struct transaction instruction_attributes = {instr, 0, 0, 1};
-		transaction_table.insert({this->instructionID_counter, instruction_attributes}); // keep track of the transaction
-		this->instructionID_counter++; // increment ID
-		if(this->instructionID_counter == 0) {this->instructionID_counter = 1;}	// handle the overflow. 0 is reserved for cache requests that use the bypass
+		transaction_table.insert({
+						this->instructionID_counter,
+						instruction_attributes
+		}); // keep track of the transaction
+		
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "Memory instruction received: " << *instr);
 
@@ -162,9 +148,16 @@ namespace spike_model {
 			
 		} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
 			
-			std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
-			outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
-			outgoing_message->setOperandReady(true);
+			instruction_attributes.counter_scratchpadRequests = 1;
+			if(instr->get_suboperation() == MCPUInstruction::SubOperation::ORDERED_INDEX || instr->get_suboperation() == MCPUInstruction::SubOperation::UNORDERED_INDEX) {
+					instruction_attributes.counter_scratchpadRequests = 2;	// one to read indices, the other one to read the data
+			}
+			transaction_table.at(this->instructionID_counter) = instruction_attributes;
+			
+			for(uint32_t i=0; i<instruction_attributes.counter_scratchpadRequests; ++i) {
+				std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
+				outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
+				outgoing_message->setOperandReady(true);
 			
 			
 			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr->getSourceTile());
@@ -173,7 +166,11 @@ namespace spike_model {
 			//sched_outgoing.push(noc_message);
 			
 			DEBUG_MSG(", sending SP READ: " << *outgoing_message);
+			}
 		}
+		
+		this->instructionID_counter++; // increment ID
+		if(this->instructionID_counter == 0) {this->instructionID_counter = 1;}	// handle the overflow. 0 is reserved for cache requests that use the bypass
 	}
 
 
@@ -196,8 +193,21 @@ namespace spike_model {
 				break;
 			case ScratchpadRequest::ScratchpadCommand::FREE:
 				break;
-			case ScratchpadRequest::ScratchpadCommand::READ:
-				std::cout << "Got a read. NOT YET IMPLEMENTED";
+			case ScratchpadRequest::ScratchpadCommand::READ: // this READ is a reply to the READ command. It contains the data to be stored in memory
+				if(instr->isOperandReady()) {
+					//-- send the data to the MC only once. In case of indexed vector stores 2 READ requests are sent to the VAS Tile:
+					//   1) read the indices
+					//   2) read the data
+					//   However, only the data should be stored.
+					if(transaction_id->second.counter_scratchpadRequests == 1) {
+						computeMemReqAddresses(parent_instr);
+					}
+				
+					transaction_id->second.counter_scratchpadRequests--;
+					if(transaction_id->second.counter_scratchpadRequests == 0) {
+						transaction_table.erase(transaction_id);
+					}
+				}
 				break;
 			case ScratchpadRequest::ScratchpadCommand::WRITE:
 				computeMemReqAddresses(parent_instr);
@@ -258,7 +268,8 @@ namespace spike_model {
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
 									
 			//-- schedule this request for the MC
-			sched_mem_req.push(memory_request);	
+			sendToDestination(memory_request);
+			
 			remaining_elements -= number_of_elements_per_request;
 			address += line_size_;
 		}
@@ -279,7 +290,7 @@ namespace spike_model {
 			
 			//-- create and schedule request for the MC
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr); 
-			sched_mem_req.push(memory_request);
+			sendToDestination(memory_request);
 		}
 		
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
@@ -460,6 +471,27 @@ namespace spike_model {
 				DEBUG_MSG("\t\t\tcomplete");
 		}
 	}
+	
+	
+	void MemoryCPUWrapper::sendToDestination(std::shared_ptr<CacheRequest> mes) {
+		uint16_t destMemTile = calcDestMemTile(mes->getAddress());
+		if(destMemTile == getID()) {				//-- the address range is served by the current memory tile
+			//-- Schedule memory request for the MC
+			sched_mem_req.push(mes);
+		} else {									//-- the address range is not served by the current memory tile
+			mes->setMemTile(getID());
+			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(
+					mes,
+					NoCMessageType::MEM_TILE_REQUEST,
+					line_size_,
+					destMemTile,
+					getID()
+			);
+			sched_outgoing.push(noc_message);
+			DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
+		}
+	}
+	
 	
 	void MemoryCPUWrapper::setID(uint16_t new_id) {
 		auto config	= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
