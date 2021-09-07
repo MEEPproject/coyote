@@ -29,8 +29,8 @@ namespace spike_model {
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
-				setID(0);
-				
+				this->id = 0;
+								
 				sp_status = (SPStatus *)calloc(num_of_registers, sizeof(SPStatus));
 				sparta_assert(sp_status != nullptr, "SP status array could not be allocated!");
 								
@@ -38,8 +38,6 @@ namespace spike_model {
 				root_node			= node->getRoot()->getAs<sparta::RootTreeNode>();
 				auto config			= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
 				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
-				DEBUG_MSG("Memory Tile is " << (this->enabled ? "enabled" : "disabled") << ".");
-				
 				this->sp_reg_size	= (size_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
 									  (size_t)config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
 									  (size_t)1024 / (
@@ -47,7 +45,9 @@ namespace spike_model {
 									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
 									  ) /
 									  (size_t)num_of_registers;
-									  
+				
+				
+				DEBUG_MSG("Memory Tile is " << (this->enabled ? "enabled" : "disabled") << ".");					  
 				if(enabled) {
 					DEBUG_MSG("Each register entry in the SP is " << sp_reg_size << " Bytes.");
 				}
@@ -73,7 +73,11 @@ namespace spike_model {
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_CYAN, "CacheRequest: " << *mes);
-		if(enabled) {
+		if(!enabled) {
+			//-- whatever comes into the Memory Tile, just send it out to the MC
+			out_port_mc_.send(mes, 0);
+			return;
+		}
 			
 			if(mes->getMemTile() == (uint16_t)-1) {			//-- a transaction from the VAS Tile
 				
@@ -92,14 +96,14 @@ namespace spike_model {
 					);
 					sched_outgoing.push(noc_message);
 					DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
-				}
+			}
+		} else {
+			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
+				handleReplyMessage(mes);
 			} else {								//-- this transaction has been received by a different memory tile, but it is served here.
 				DEBUG_MSG("\tSource is a different Memory Tile: " << mes->getMemTile());
 				sched_mem_req.push(mes);
 			}
-		} else {
-			//-- whatever comes into the Memory Tile, just send it out to the MC
-			out_port_mc_.send(mes, 0);
 		}
 	}
 
@@ -345,57 +349,16 @@ namespace spike_model {
 		//   If the ID is > 0, the CacheRequest is to be handled in this Memory Tile
 		if(mes->getID() == 0) {
 			DEBUG_MSG("\tCacheRequest using the Bypass: " << *mes);
-			std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
+			std::shared_ptr<NoCMessage> outgoing_noc_message;
+			if(mes->getMemTile() == (uint16_t)-1) {
+				outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());	
+			} else {
+				outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEM_TILE_REPLY, line_size_, getID(), mes->getMemTile());
+			}
+			
 			sched_outgoing.push(outgoing_noc_message);
 		} else {
-			DEBUG_MSG("\tHandled in the MCPU:");
-
-			std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getID());
-				
-			sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
-			
-			uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
-			
-			transaction_id->second.counter_cacheRequests--;
-			
-			switch(mes->getType())	{
-				case CacheRequest::AccessType::FETCH:
-				case CacheRequest::AccessType::LOAD:
-					
-					if(scratchpadRequest_to_fill == 0) {
-						transaction_id->second.counter_scratchpadRequests--;
-						
-						std::shared_ptr outgoing_message = createScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE);
-						outgoing_message->setSize(line_size_);
-						outgoing_message->setServiced();
-						outgoing_message->setOperandReady(transaction_id->second.counter_scratchpadRequests == 0);
-						
-						std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
-						
-						
-						//-- Check if the SP is already allocated. If not, store the msg in a delaying queue
-						size_t destReg = transaction_id->second.mcpu_instruction->getDestinationRegId();
-						if(sp_status[destReg] == SPStatus::READY) {
-							sched_outgoing.push(noc_message);
-						} else {
-							sched_outgoing.add_delay_queue(noc_message, destReg);
-						}
-						
-						DEBUG_MSG("\t\tReturning SP: " << *outgoing_message);
-					}
-					break;
-				case CacheRequest::AccessType::WRITEBACK:
-				case CacheRequest::AccessType::STORE:
-					//-- TODO: Does an ACK(?) be sent back, once the operation is complete?
-					break;
-			}
-			
-			DEBUG_MSG("\t\tSP to fill: " << scratchpadRequest_to_fill << ", CRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
-			
-			if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
-					transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
-					DEBUG_MSG("\t\t\tcomplete");
-			}
+			handleReplyMessage(mes);
 		}
 	}
 
@@ -470,7 +433,72 @@ namespace spike_model {
 	uint16_t MemoryCPUWrapper::calcDestMemTile(uint64_t address) {
 		return (uint16_t)((address >> mc_shift) & mc_mask);
 	}
+	
+	void MemoryCPUWrapper::handleReplyMessage(std::shared_ptr<CacheRequest> mes) {
+		DEBUG_MSG("\tHandled in the MCPU:");
+
+		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getID());
+			
+		sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
+		
+		uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
+		
+		transaction_id->second.counter_cacheRequests--;
+		
+		switch(mes->getType())	{
+			case CacheRequest::AccessType::FETCH:
+			case CacheRequest::AccessType::LOAD:
+				
+				if(scratchpadRequest_to_fill == 0) {
+					transaction_id->second.counter_scratchpadRequests--;
+					
+					std::shared_ptr outgoing_message = createScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE);
+					outgoing_message->setSize(line_size_);
+					outgoing_message->setServiced();
+					outgoing_message->setOperandReady(transaction_id->second.counter_scratchpadRequests == 0);
+					
+					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
+					
+					
+					//-- Check if the SP is already allocated. If not, store the msg in a delaying queue
+					size_t destReg = transaction_id->second.mcpu_instruction->getDestinationRegId();
+					if(sp_status[destReg] == SPStatus::READY) {
+						sched_outgoing.push(noc_message);
+					} else {
+						sched_outgoing.add_delay_queue(noc_message, destReg);
+					}
+					
+					DEBUG_MSG("\t\tReturning SP: " << *outgoing_message);
+				}
+				break;
+			case CacheRequest::AccessType::WRITEBACK:
+			case CacheRequest::AccessType::STORE:
+				//-- TODO: Does an ACK(?) be sent back, once the operation is complete?
+				break;
+		}
+		
+		DEBUG_MSG("\t\tSP to fill: " << scratchpadRequest_to_fill << ", CRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
+		
+		if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
+				transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
+				DEBUG_MSG("\t\t\tcomplete");
+		}
+	}
+	
+	void MemoryCPUWrapper::setID(uint16_t new_id) {
+		auto config	= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
+		uint16_t max_id = config.tryGet("top.cpu.params.num_memory_cpus")->getAs<uint16_t>();
+		
+		sparta_assert(new_id < max_id, "The given ID for the Memory Tile is out of range!");
+		
+		this->id = new_id;
+	}
+	
+	uint16_t MemoryCPUWrapper::getID() {
+		return this->id;
+	}
 }
+
 
 
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

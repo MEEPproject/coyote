@@ -65,13 +65,13 @@ namespace spike_model {
 			 * \brief Set the ID for the Memory Tile
 			 * \param The ID to be set
 			 */
-			void setID(uint16_t id) {this->id = id;}
+			void setID(uint16_t id);
 			
 			/*!
 			 * \brief Get the ID of the current Memory Tile
 			 * \return The ID of this Memory Tile
 			 */
-			uint16_t getID() {return this->id;}
+			uint16_t getID();
 
 			/*!
 			 * \brief Set the pointer to the NoC, which is then used
@@ -190,6 +190,7 @@ namespace spike_model {
 			std::shared_ptr<CacheRequest> createCacheRequest(uint64_t address, std::shared_ptr<MCPUInstruction> instr);
 			void computeMemReqAddresses(std::shared_ptr<MCPUInstruction> instr);
 			uint16_t calcDestMemTile(uint64_t address);
+			void handleReplyMessage(std::shared_ptr<CacheRequest> mes);
 			
 
 
