@@ -76,7 +76,7 @@ namespace spike_model
             size_t getDestinationRegId() const {return regId;}
 
             /*!
-             * \brief Set the size of the store
+             * \brief Set the size of the request in bytes
              * \param s The size
              */
             void setSize(uint16_t s) {size=s;}
