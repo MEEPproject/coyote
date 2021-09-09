@@ -15,9 +15,9 @@
 namespace spike_model {
 	const char MemoryCPUWrapper::name[] = "memory_cpu";
 
-	////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Constructor
-	////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 	MemoryCPUWrapper::MemoryCPUWrapper(sparta::TreeNode *node, const MemoryCPUWrapperParameterSet *p):
 			sparta::Unit(node),
@@ -55,9 +55,9 @@ namespace spike_model {
 	}
 
 
-	/////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//-- Message handling from the NoC
-	/////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes) {
 		DEBUG_MSG("Received from NoC: " << *mes);
 		if(enabled) {
@@ -82,7 +82,7 @@ namespace spike_model {
 			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile		
 		} else {
 			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
-				handleReplyMessage(mes);
+				handleReplyMessageFromMC(mes);
 			} else {								//-- the parent transaction has been received by a different memory tile, but it is served here.
 				DEBUG_MSG("\tSource is a different Memory Tile: " << mes->getMemTile());
 				sched_mem_req.push(mes);
@@ -157,15 +157,12 @@ namespace spike_model {
 			for(uint32_t i=0; i<instruction_attributes.counter_scratchpadRequests; ++i) {
 				std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
 				outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
-				outgoing_message->setOperandReady(true);
-			
 			
 			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr->getSourceTile());
 			
-			//-- TODO issue #94 needs to be fixed first
-			//sched_outgoing.push(noc_message);
+				sched_outgoing.push(noc_message);
 			
-			DEBUG_MSG(", sending SP READ: " << *outgoing_message);
+				DEBUG_MSG("sending SP READ: " << *outgoing_message);
 			}
 		}
 		
@@ -179,12 +176,10 @@ namespace spike_model {
 		
 		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
 		
-		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *instr);
-		
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		std::shared_ptr<spike_model::MCPUInstruction> parent_instr = transaction_id->second.mcpu_instruction;
 		
-		DEBUG_MSG(*instr << ", parent instr: " << *parent_instr);
+		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *instr << ", parent instr: " << *parent_instr);
 
 		switch(instr->getCommand()) {
 			case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
@@ -204,9 +199,6 @@ namespace spike_model {
 					}
 				
 					transaction_id->second.counter_scratchpadRequests--;
-					if(transaction_id->second.counter_scratchpadRequests == 0) {
-						transaction_table.erase(transaction_id);
-					}
 				}
 				break;
 			case ScratchpadRequest::ScratchpadCommand::WRITE:
@@ -252,6 +244,19 @@ namespace spike_model {
 	}
 	
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	//-- ADDRESS GENERATION
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	void MemoryCPUWrapper::memOp_unit(std::shared_ptr<MCPUInstruction> instr) {
 				
@@ -312,14 +317,14 @@ namespace spike_model {
 
 
 
-	/////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//-- Message handling from the MC
-	/////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
 		
+		DEBUG_MSG("Returned from MC: " << *mes);
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
-			DEBUG_MSG("Returned from MC: " << *mes);
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 			
 			return;
@@ -329,8 +334,6 @@ namespace spike_model {
 		mes->setServiced();
 		
 		
-		DEBUG_MSG("Returned from MC: instrID: " << mes->getID());
-
 		//-- If the ID of the reply is < 0, the cache line is for the MCPU and not for the VAS Tile
 		//   If the ID is = 0, the CacheRequest utilizes the Bypass (scalar operation)
 		//   If the ID is > 0, the CacheRequest is to be handled in this Memory Tile
@@ -345,15 +348,21 @@ namespace spike_model {
 			
 			sched_outgoing.push(outgoing_noc_message);
 		} else {
-			handleReplyMessage(mes);
+			handleReplyMessageFromMC(mes);
 		}
 	}
 
 
 
-	/////////////////////////////////////
+
+
+
+
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//-- Helper functions
-	/////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	std::shared_ptr<ScratchpadRequest> MemoryCPUWrapper::createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command) {
 		std::shared_ptr<ScratchpadRequest> sp_request = std::make_shared<ScratchpadRequest>(
 						mes->getAddress(),
@@ -421,15 +430,14 @@ namespace spike_model {
 		return (uint16_t)((address >> mc_shift) & mc_mask);
 	}
 	
-	void MemoryCPUWrapper::handleReplyMessage(std::shared_ptr<CacheRequest> mes) {
-		DEBUG_MSG("\tHandled in the MCPU:");
+	void MemoryCPUWrapper::handleReplyMessageFromMC(std::shared_ptr<CacheRequest> mes) {
 
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(mes->getID());
-			
 		sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
 		
-		uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
+		DEBUG_MSG("\tHandled in the MCPU: parent instr: " << *(transaction_id->second.mcpu_instruction));
 		
+		uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
 		transaction_id->second.counter_cacheRequests--;
 		
 		switch(mes->getType())	{

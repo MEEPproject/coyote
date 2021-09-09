@@ -221,9 +221,11 @@ namespace spike_model
 
                         // We need to generate a new identical pointer to be sent and then set is as ready. If we reused the old pointer and set it to ready, then 
                         // the MCPU might get visibility on ready==true from an earlier in flight packet that holds the same pointer
+                        uint32_t old_id = r->getID();
                         r=std::make_shared<ScratchpadRequest>(r->getAddress(), ScratchpadRequest::ScratchpadCommand::READ, r->getPC(), r->getTimestamp(), r->getCoreId(), r->getSourceTile(), r->getDestinationRegId());
 
                         r->setOperandReady(true);
+                        r->setID(old_id);
                     }
                     //Send ACK to MCPU
                     tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
