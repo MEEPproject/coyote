@@ -183,7 +183,7 @@ namespace spike_model {
 			std::shared_ptr<CacheRequest> createCacheRequest(uint64_t address, std::shared_ptr<MCPUInstruction> instr);
 			void computeMemReqAddresses(std::shared_ptr<MCPUInstruction> instr);
 			uint16_t calcDestMemTile(uint64_t address);
-			void handleReplyMessage(std::shared_ptr<CacheRequest> mes);
+			void handleReplyMessageFromMC(std::shared_ptr<CacheRequest> mes);
 			void sendToDestination(std::shared_ptr<CacheRequest> mes);
 			
 

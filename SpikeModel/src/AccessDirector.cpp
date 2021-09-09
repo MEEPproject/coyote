@@ -111,7 +111,7 @@ namespace spike_model
                     // obtain it
                     if(scratchpad_available_size<request_size)
                     {
-                        uint64_t ways_to_disable=ceil(request_size/way_size);
+                        uint64_t ways_to_disable=ceil(1.0*request_size/way_size);
                         r->setSize(ways_to_disable); //THIS IS A NASTY TRICK
 
                         //Ways are disabled in every bank
@@ -199,12 +199,34 @@ namespace spike_model
             {
                 if(!r->isServiced())
                 {
-                    uint16_t b=calculateBank(r);
-                    r->setCacheBank(b);
-                    tile->issueLocalRequest_(r, 1);
+                    int lines_to_read=ceil(1.0*r->getSize()/line_size);
+
+                    //Send as many reads to the bank as lines are necessary to fulfill the request
+                    for(int i=0;i<lines_to_read;i++)
+                    {
+                        uint16_t b=calculateBank(r);
+                        r->setCacheBank(b);
+                        tile->issueLocalRequest_(r, 1);
+                    }
+                    pending_scratchpad_management_ops[r]=lines_to_read;
                 }
                 else
                 {
+                    pending_scratchpad_management_ops[r]=pending_scratchpad_management_ops[r]-1;
+
+                    //If all the pending ops are done, mark as finished
+                    if(pending_scratchpad_management_ops[r]==0)
+                    {
+                        pending_scratchpad_management_ops.erase(r);
+
+                        // We need to generate a new identical pointer to be sent and then set is as ready. If we reused the old pointer and set it to ready, then 
+                        // the MCPU might get visibility on ready==true from an earlier in flight packet that holds the same pointer
+                        uint32_t old_id = r->getID();
+                        r=std::make_shared<ScratchpadRequest>(r->getAddress(), ScratchpadRequest::ScratchpadCommand::READ, r->getPC(), r->getTimestamp(), r->getCoreId(), r->getSourceTile(), r->getDestinationRegId());
+
+                        r->setOperandReady(true);
+                        r->setID(old_id);
+                    }
                     //Send ACK to MCPU
                     tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
                 }
