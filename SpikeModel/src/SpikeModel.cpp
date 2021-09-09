@@ -296,7 +296,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 
         spike_model::MemoryCPUWrapper *mcpu=tile_node->getResourceAs<spike_model::MemoryCPUWrapper>();
 
-        mcpu->setRequestManager(m);
+        //mcpu->setRequestManager(m);
         mcpu->setAddressMappingInfo(mc_shift, mc_mask);
     }
 

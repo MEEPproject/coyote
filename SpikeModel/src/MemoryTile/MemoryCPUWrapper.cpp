@@ -59,10 +59,16 @@ namespace spike_model {
 	//-- Message handling from the NoC
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes) {
-		DEBUG_MSG("Received from NoC: " << *mes);
-		if(enabled) {
-			count_requests_noc_++;
+		count_requests_noc++;
+		
+		if(!enabled) {
+			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
+			out_port_mc_.send(cr, 0);
+			count_requests_mc++;
+			return;
 		}
+		
+		DEBUG_MSG("Received from NoC: " << *mes);
 		
 		mes->getRequest()->handle(this);
 	}
@@ -72,15 +78,12 @@ namespace spike_model {
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::CacheRequest> mes) {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_CYAN, "CacheRequest: " << *mes);
-		if(!enabled) {
-			//-- whatever comes into the Memory Tile, just send it out to the MC
-			out_port_mc_.send(mes, 0);
-			return;
-		}
 		
 		if(mes->getMemTile() == (uint16_t)-1) {		//-- a transaction from the VAS Tile
-			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile		
+			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile
+			count_scalar++;
 		} else {
+			count_received_other_memtile++;
 			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
 				handleReplyMessageFromMC(mes);
 			} else {								//-- the parent transaction has been received by a different memory tile, but it is served here.
@@ -95,7 +98,7 @@ namespace spike_model {
 	//-- A memory transaction to be handled by the MCPU
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUSetVVL> mes) {
 		
-		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUSetVVL instruction!");
+		count_control++;
 		
 		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth() * (uint64_t)mes->getLMUL();
 		vvl = std::min(elements_per_sp, mes->getAVL());
@@ -116,7 +119,7 @@ namespace spike_model {
 	//-- A vector instruction for the MCPU
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::MCPUInstruction> instr) {
 		
-		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle an MCPUInstruction!");
+		count_vector++;
 		
 		instr->setID(this->instructionID_counter);
 		struct transaction instruction_attributes = {instr, 0, 0, 1};
@@ -174,7 +177,7 @@ namespace spike_model {
 	//-- Handle for Scratchpad requests
 	void MemoryCPUWrapper::handle(std::shared_ptr<spike_model::ScratchpadRequest> instr) {
 		
-		sparta_assert(enabled, "The Memory Tile needs to be enabled to handle a ScratchpadRequest!");
+		count_sp_requests++;
 		
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		std::shared_ptr<spike_model::MCPUInstruction> parent_instr = transaction_id->second.mcpu_instruction;
@@ -219,6 +222,7 @@ namespace spike_model {
 		
 		//-- Send to the MC
 		out_port_mc_.send(instr_for_mc, 1);
+		count_requests_mc++;
 
 		//-- consume the memory request from the scheduler
 		sched_mem_req.pop();
@@ -233,10 +237,13 @@ namespace spike_model {
 		std::shared_ptr<NoCMessage> response = sched_outgoing.front();	
 		if(noc->checkSpaceForPacket(false, response)) {
 			out_port_noc_.send(response, 0);
+			count_replies_noc++;
+			
 			sched_outgoing.pop();
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "Sending to NoC: " << *response);
 		} else {
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "NoC does not accept message: " << *response);
+			count_replies_wait_noc++;
 
 			//-- reschedule for the next cycle
 			sched_outgoing.reschedule();
@@ -300,7 +307,7 @@ namespace spike_model {
 		
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
 		std::unordered_map<std::uint32_t, transaction>::iterator transaction_id = transaction_table.find(instr->getID());
-		transaction_id->second.counter_cacheRequests = vvl;										// How many responses are expected from the MC?
+		transaction_id->second.counter_cacheRequests = vvl;											// How many responses are expected from the MC?
 		transaction_id->second.counter_scratchpadRequests = vvl/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile?
 		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 	// How many elements fit into 1 line_size (64 Bytes)?
 	}
@@ -326,13 +333,12 @@ namespace spike_model {
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+			count_replies_noc++;
 			
 			return;
 		}
 		
-		count_requests_mc_++;
 		mes->setServiced();
-		
 		
 		//-- If the ID of the reply is < 0, the cache line is for the MCPU and not for the VAS Tile
 		//   If the ID is = 0, the CacheRequest utilizes the Bypass (scalar operation)
@@ -414,13 +420,6 @@ namespace spike_model {
 	}
 
 
-	void MemoryCPUWrapper::notifyCompletion_() {}
-	
-
-	void MemoryCPUWrapper::setRequestManager(std::shared_ptr<EventManager> r) {
-		request_manager_ = r;
-	}
-            
 	void MemoryCPUWrapper::setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask) {
 		mc_shift = memory_controller_shift;
 		mc_mask  = memory_controller_mask;
@@ -495,6 +494,7 @@ namespace spike_model {
 					destMemTile,
 					getID()
 			);
+			count_send_other_memtile++;
 			sched_outgoing.push(noc_message);
 			DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
 		}

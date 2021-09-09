@@ -48,19 +48,12 @@ namespace spike_model {
 			MemoryCPUWrapper(sparta::TreeNode* node, const MemoryCPUWrapperParameterSet* p);
 
 			~MemoryCPUWrapper() {
-				debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
+				transaction_table.clear();
 			}
 
 			//! name of this resource.
 			static const char name[];
 
-			void notifyCompletion_();
-
-			/*!
-			 * \brief Sets the request manager for the tile
-			 */
-			void setRequestManager(std::shared_ptr<EventManager> r);
-			
 			/*!
 			 * \brief Set the ID for the Memory Tile
 			 * \param The ID to be set
@@ -189,10 +182,75 @@ namespace spike_model {
 
 
 			//-- reporting and logging
-			sparta::Counter count_requests_noc_=sparta::Counter(getStatisticSet(), "requests_noc", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
-			sparta::Counter count_load_=sparta::Counter(getStatisticSet(), "requests_noc_load", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
-			sparta::Counter count_store_=sparta::Counter(getStatisticSet(), "requests_noc_store", "Number of requests from NoC", sparta::Counter::COUNT_NORMAL);
-			sparta::Counter count_requests_mc_=sparta::Counter(getStatisticSet(), "requests_mc", "Number of requests from MC", sparta::Counter::COUNT_NORMAL);
+			sparta::Counter count_requests_noc 				= sparta::Counter(
+					getStatisticSet(),
+					"requests_noc",
+					"Number of requests from NoC",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_replies_noc 				= sparta::Counter(
+					getStatisticSet(),
+					"replies_noc",
+					"Number of replies given to the NoC",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_replies_wait_noc 			= sparta::Counter(
+					getStatisticSet(),
+					"replies_wait_noc",
+					"Number of replies not accepted by the NoC",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_vector  					= sparta::Counter(
+					getStatisticSet(),
+					"vector_operations",
+					"Number of vector operations",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_scalar 					= sparta::Counter(
+					getStatisticSet(),
+					"scalar_operations",
+					"Number of scalar operations",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_control 					= sparta::Counter(
+					getStatisticSet(),
+					"control_operations",
+					"Number of control operations (like vsetvl)",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_sp_requests				= sparta::Counter(
+					getStatisticSet(),
+					"sp_requests",
+					"Number of SP requests (e.g. containing data) to the MemTile",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_send_other_memtile		= sparta::Counter(
+					getStatisticSet(),
+					"send_other_memtile",
+					"Number of operations forwarded to another memory tile",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_received_other_memtile	= sparta::Counter(
+					getStatisticSet(),
+					"receive_other_memtile",
+					"Number of operations received from another memory tile",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_requests_mc				= sparta::Counter(
+					getStatisticSet(), 
+					"requests_mc", 
+					"Number of requests to MC",
+					sparta::Counter::COUNT_NORMAL
+			);
 	};
 }
 #endif
