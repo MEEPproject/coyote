@@ -20,10 +20,10 @@ namespace spike_model
         latency_per_hop_(params->latency_per_hop),
         x_size_(params->x_size),
         y_size_(params->y_size),
-        dst_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))),
-        src_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))),
+        dst_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(noc_networks_.size(), 0))),
+        src_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(noc_networks_.size(), 0))),
         dst_src_count_(y_size_, vector<vector<vector<vector<uint64_t>>>>(x_size_, vector<vector<vector<uint64_t>>>(
-                   y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(static_cast<int>(Networks::count), 0))))),
+                   y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(noc_networks_.size(), 0))))),
         pkt_count_prefix_(params->packet_count_file_prefix),
         pkt_count_period_(params->packet_count_periodicity),
         pkt_count_stage_(0),
@@ -54,6 +54,25 @@ namespace spike_model
         }
         sparta_assert(mcpus_coordinates_.size() == num_memory_cpus_);
         sparta_assert(tiles_coordinates_.size() == num_tiles_);
+
+        // Statistics
+        for(auto network : noc_networks_)
+        {
+            hop_count_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "hop_count_" + network,                                  // name
+                "Total number of packet hops in " + network + " NoC",    // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+
+            average_hop_count_.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                      // parent
+                "average_hop_count_" + network,                         // name
+                "Average hop count in  " + network + " NoC",            // description
+                getStatisticSet(),                                      // context
+                "hop_count_" + network + "/sent_packets_"+network       // Expression
+            ));
+        }
     }
 
     SimpleNoC::~SimpleNoC()
@@ -72,7 +91,7 @@ namespace spike_model
         NoC::handleMessageFromTile_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getNoCNetwork() < static_cast<int>(Networks::count));
+        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         switch(mess->getType())
         {
             // VAS -> VAS messages
@@ -109,20 +128,7 @@ namespace spike_model
         }
         sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
         // Hop count for each network
-        switch(static_cast<Networks>(mess->getNoCNetwork()))
-        {
-            case Networks::DATA_TRANSFER_NOC:
-                hop_count_data_transfer_ += hop_count;
-                break;
-            case Networks::ADDRESS_ONLY_NOC:
-                hop_count_address_only_ += hop_count;
-                break;
-            case Networks::CONTROL_NOC:
-                hop_count_control_ += hop_count;
-                break;
-            default:
-                sparta_assert(false);
-        }
+        hop_count_[mess->getNoCNetwork()] += hop_count;
     }
 
     void SimpleNoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
@@ -131,7 +137,7 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getNoCNetwork() < static_cast<int>(Networks::count));
+        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         switch(mess->getType())
         {
             // MCPU -> VAS messages
@@ -152,20 +158,7 @@ namespace spike_model
         }
         sparta_assert(hop_count >= 0 && hop_count <= x_size_ + y_size_ - 1);
         // Hop count for each network
-        switch(static_cast<Networks>(mess->getNoCNetwork()))
-        {
-            case Networks::DATA_TRANSFER_NOC:
-                hop_count_data_transfer_ += hop_count;
-                break;
-            case Networks::ADDRESS_ONLY_NOC:
-                hop_count_address_only_ += hop_count;
-                break;
-            case Networks::CONTROL_NOC:
-                hop_count_control_ += hop_count;
-                break;
-            default:
-                sparta_assert(false);
-        }
+        hop_count_[mess->getNoCNetwork()] += hop_count;
     }
 
     void SimpleNoC::writePacketCountMatrix_()
@@ -175,23 +168,22 @@ namespace spike_model
 
         pkt_count_stage_++;
 
-        std::ofstream dst_file_data_transfer;
-        std::ofstream dst_file_address_only;
-        std::ofstream dst_file_control;
+        std::vector<std::ofstream> dst_file;
         std::ofstream dst_file_aggregated;
-        std::ofstream src_file_data_transfer;
-        std::ofstream src_file_address_only;
-        std::ofstream src_file_control;
+        std::vector<std::ofstream> src_file;
         std::ofstream src_file_aggregated;
-        std::ofstream dst_src_file_data_transfer;
-        std::ofstream dst_src_file_address_only;
-        std::ofstream dst_src_file_control;
+        std::vector<std::ofstream> dst_src_file;
         std::ofstream dst_src_file_aggregated;
 
+        dst_file.resize(noc_networks_.size());
+        src_file.resize(noc_networks_.size());
+        dst_src_file.resize(noc_networks_.size());
+
         // DST files
-        dst_file_data_transfer.open(pkt_count_prefix_ + "dst_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        dst_file_address_only.open(pkt_count_prefix_ + "dst_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        dst_file_control.open(pkt_count_prefix_ + "dst_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        for(auto network : noc_networks_)
+        {
+            dst_file[getNetworkFromString(network)].open(pkt_count_prefix_ + "dst_" + network + "_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        }
         dst_file_aggregated.open(pkt_count_prefix_ + "dst_aggregated_" + std::to_string(getClock()->currentCycle()) + ".csv");
         uint64_t aggregated;
         for(int y=0; y < y_size_; ++y)
@@ -199,76 +191,74 @@ namespace spike_model
             for(int x=0; x < x_size_; ++x)
             {
                 aggregated = 0;
-                dst_file_data_transfer << dst_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] << ";";
-                aggregated += dst_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)];
-                dst_file_address_only << dst_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] << ";";
-                aggregated += dst_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)];
-                dst_file_control << dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] << ";";
-                aggregated += dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)];
-                dst_file_aggregated << aggregated << ";";
-                if(pkt_count_flush_)
+                for(auto network : noc_networks_)
                 {
-                    dst_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
-                    dst_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
-                    dst_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                    dst_file[getNetworkFromString(network)] << dst_count_[y][x][getNetworkFromString(network)] << ";";
+                    aggregated += dst_count_[y][x][getNetworkFromString(network)];
+                    if(pkt_count_flush_)
+                    {
+                        dst_count_[y][x][getNetworkFromString(network)] = 0;
+                    }
                 }
+                dst_file_aggregated << aggregated << ";";
                 if(trace_)
                 {
                     logger_.logNoCMessageDestinationCummulated(getClock()->currentCycle(), y*dst_count_[0].size()+x, 0, aggregated);
                 }
             }
-            dst_file_data_transfer << "\n";
-            dst_file_address_only << "\n";
-            dst_file_control << "\n";
+            for(auto network : noc_networks_)
+                dst_file[getNetworkFromString(network)] << "\n";
             dst_file_aggregated << "\n";
         }
-        dst_file_data_transfer.close();
-        dst_file_address_only.close();
-        dst_file_control.close();
+        for(auto network : noc_networks_)
+        {
+            dst_file[getNetworkFromString(network)].close();
+        }
         dst_file_aggregated.close();
 
         // SRC files
-        src_file_data_transfer.open(pkt_count_prefix_ + "src_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        src_file_address_only.open(pkt_count_prefix_ + "src_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        src_file_control.open(pkt_count_prefix_ + "src_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        for(auto network : noc_networks_)
+        {
+            src_file[getNetworkFromString(network)].open(pkt_count_prefix_ + "src_" + network + "_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        }
         src_file_aggregated.open(pkt_count_prefix_ + "src_aggregated_" + std::to_string(getClock()->currentCycle()) + ".csv");
         for(int y=0; y < y_size_; ++y)
         {
             for(int x=0; x < x_size_; ++x)
             {
                 aggregated = 0;
-                src_file_data_transfer << src_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] << ";";
-                aggregated += src_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)];
-                src_file_address_only << src_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] << ";";
-                aggregated += src_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)];
-                src_file_control << src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] << ";";
-                aggregated += src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)];
-                src_file_aggregated << aggregated << ";";
-                if(pkt_count_flush_)
+                for(auto network : noc_networks_)
                 {
-                    src_count_[y][x][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
-                    src_count_[y][x][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
-                    src_count_[y][x][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                    src_file[getNetworkFromString(network)] << src_count_[y][x][getNetworkFromString(network)] << ";";
+                    aggregated += src_count_[y][x][getNetworkFromString(network)];
+                    if(pkt_count_flush_)
+                    {
+                        src_count_[y][x][getNetworkFromString(network)] = 0;
+                    }
                 }
+                src_file_aggregated << aggregated << ";";
                 if(trace_)
                 {
                     logger_.logNoCMessageSourceCummulated(getClock()->currentCycle(), y*dst_count_.size()+x, 0, aggregated);
                 }
             }
-            src_file_data_transfer << "\n";
-            src_file_address_only << "\n";
-            src_file_control << "\n";
+            for(auto network : noc_networks_)
+            {
+                src_file[getNetworkFromString(network)] << "\n";
+            }
             src_file_aggregated << "\n";
         }
-        src_file_data_transfer.close();
-        src_file_address_only.close();
-        src_file_control.close();
+        for(auto network : noc_networks_)
+        {
+            src_file[getNetworkFromString(network)].close();
+        }
         src_file_aggregated.close();
 
         // DST_SRC files
-        dst_src_file_data_transfer.open(pkt_count_prefix_ + "dst_src_datatransfer_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        dst_src_file_address_only.open(pkt_count_prefix_ + "dst_src_addressonly_" + std::to_string(getClock()->currentCycle()) + ".csv");
-        dst_src_file_control.open(pkt_count_prefix_ + "dst_src_control_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        for(auto network : noc_networks_)
+        {
+            dst_src_file[getNetworkFromString(network)].open(pkt_count_prefix_ + "dst_src_" + network + "_" + std::to_string(getClock()->currentCycle()) + ".csv");
+        }
         dst_src_file_aggregated.open(pkt_count_prefix_ + "dst_src_aggregated_" + std::to_string(getClock()->currentCycle()) + ".csv");
         for(int dsty=0; dsty < y_size_; ++dsty)
         {
@@ -279,30 +269,29 @@ namespace spike_model
                     for(int srcx=0; srcx < x_size_; ++srcx)
                     {
                         aggregated = 0;
-                        dst_src_file_data_transfer << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)] << ";";
-                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)];
-                        dst_src_file_address_only << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] << ";";
-                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)];
-                        dst_src_file_control << dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)] << ";";
-                        aggregated += dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)];
-                        dst_src_file_aggregated << aggregated << ";";
-                        if(pkt_count_flush_)
+                        for(auto network : noc_networks_)
                         {
-                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::DATA_TRANSFER_NOC)] = 0;
-                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::ADDRESS_ONLY_NOC)] = 0;
-                            dst_src_count_[dsty][dstx][srcy][srcx][static_cast<int>(Networks::CONTROL_NOC)] = 0;
+                            dst_src_file[getNetworkFromString(network)] << dst_src_count_[dsty][dstx][srcy][srcx][getNetworkFromString(network)] << ";";
+                            aggregated += dst_src_count_[dsty][dstx][srcy][srcx][getNetworkFromString(network)];
+                            if(pkt_count_flush_)
+                            {
+                                dst_src_count_[dsty][dstx][srcy][srcx][getNetworkFromString(network)] = 0;
+                            }
                         }
+                        dst_src_file_aggregated << aggregated << ";";
                     }
                 }
-                dst_src_file_data_transfer << "\n";
-                dst_src_file_address_only << "\n";
-                dst_src_file_control << "\n";
+                for(auto network : noc_networks_)
+                {
+                    dst_src_file[getNetworkFromString(network)] << "\n";
+                }
                 dst_src_file_aggregated << "\n";
             }
         }
-        dst_src_file_data_transfer.close();
-        dst_src_file_address_only.close();
-        dst_src_file_control.close();
+        for(auto network : noc_networks_)
+        {
+            dst_src_file[getNetworkFromString(network)].close();
+        }
         dst_src_file_aggregated.close();
     }
 

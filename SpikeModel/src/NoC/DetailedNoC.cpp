@@ -19,15 +19,15 @@ namespace spike_model
         size_(num_tiles_ + num_memory_cpus_),
         network_width_(params->network_width),
         stats_files_prefix_(params->stats_files_prefix),
-        pkts_map_(vector(static_cast<int>(Networks::count), map<long,shared_ptr<NoCMessage>>()))
+        pkts_map_(vector(noc_networks_.size(), map<long,shared_ptr<NoCMessage>>()))
     {
         sparta_assert(noc_model_ == "detailed");
         sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.noc.params.mcpus_indices must be a vector");
         sparta_assert(params->mcpus_indices.getNumValues() == num_memory_cpus_, 
             "The number of elements in mcpus_indices must be equal to the number of MCPUs");
         sparta_assert(params->network_width.isVector(), "The top.cpu.noc.params.network_width must be a vector");
-        sparta_assert(params->network_width.getNumValues() == static_cast<int>(Networks::count),
-            "The number of elements in top.cpu.noc.params.network_width must be: " << static_cast<int>(Networks::count));
+        sparta_assert(params->network_width.getNumValues() == noc_networks_.size(),
+            "The number of elements in top.cpu.noc.params.network_width must be: " << noc_networks_.size());
 
         // Parse BookSim configuration to extract information and checks
         Booksim::BookSimConfig booksim_config;
@@ -105,32 +105,84 @@ namespace spike_model
         sparta_assert(tile_to_network_.size() == num_tiles_);
 
         // Create the wrappers for the NoC networks
-        for(int n=0; n < static_cast<int>(Networks::count); ++n)
+        for(uint8_t n=0; n < noc_networks_.size(); ++n)
             booksim_wrappers_.push_back(new Booksim::BooksimWrapper(booksim_configuration_));
-        sparta_assert(booksim_wrappers_.size() == static_cast<int>(Networks::count));
+        sparta_assert(booksim_wrappers_.size() == noc_networks_.size());
+
+        // Statistics
+        for(auto network : noc_networks_)
+        {
+            hop_count_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "hop_count_" + network,                                  // name
+                "Total number of packet hops in " + network + " NoC",    // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+            count_rx_flits_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "received_flits_" + network,                             // name
+                "Number of flits received in " + network + " NoC",       // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+            count_tx_flits_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "sent_flits_" + network,                                 // name
+                "Number of flits sent in " + network + " NoC",           // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+            packet_latency_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "packet_latency_" + network,                             // name
+                "Accumulated packet latency in " + network + " NoC",     // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+            network_latency_.push_back(sparta::Counter(
+                getStatisticSet(),                                       // parent
+                "network_latency_" + network,                            // name
+                "Accumulated network latency in " + network + " NoC",    // description
+                sparta::Counter::COUNT_NORMAL                            // behavior
+            ));
+
+            average_hop_count_.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                      // parent
+                "average_hop_count_" + network,                         // name
+                "Average hop count in  " + network + " NoC",            // description
+                getStatisticSet(),                                      // context
+                "hop_count_" + network + "/sent_packets_"+network       // Expression
+            ));
+            load_flits_.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                      // parent
+                "load_flits_" + network,                                // name
+                "Load in " + network + " NoC (flit/node/cycle)",        // description
+                getStatisticSet(),                                      // context
+                "received_flits_" + network + "/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
+            ));
+            avg_packet_lat_.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                      // parent
+                "avg_pkt_latency_" + network,                           // name
+                "Avg. Packet Latency in " + network + " NoC",           // description
+                getStatisticSet(),                                      // context
+                "packet_latency_" + network + "/received_packets_" + network // Expression
+            ));
+            avg_network_lat_.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                      // parent
+                "avg_net_latency_" + network,                           // name
+                "Avg. Network Latency in " + network + " NoC",           // description
+                getStatisticSet(),                                      // context
+                "network_latency_" + network + "/received_packets_" + network // Expression
+            ));
+        }
     }
 
     DetailedNoC::~DetailedNoC()
     {
         // Print booksim statistics at the end of the execution
         std::ofstream booksim_stats;
-        for(int n=0; n < static_cast<int>(Networks::count); ++n)
+        for(uint8_t n=0; n < noc_networks_.size(); ++n)
         {
             string filename = stats_files_prefix_;
-            switch(static_cast<Networks>(n))
-            {
-                case Networks::DATA_TRANSFER_NOC:
-                    filename += "_datatransfer";
-                    break;
-                case Networks::ADDRESS_ONLY_NOC:
-                    filename += "_addressonly";
-                    break;
-                case Networks::CONTROL_NOC:
-                    filename += "_control";
-                    break;
-                default:
-                    sparta_assert(false);
-            }
+            filename += "_";
+            filename += noc_networks_[n];
             filename += ".txt";
             booksim_stats.open(filename);
             booksim_wrappers_[n]->PrintStats(booksim_stats);
@@ -140,7 +192,7 @@ namespace spike_model
         }
 
         // Delete BookSim wrappers
-        for(int i=static_cast<int>(Networks::count)-1; i >= 0; --i)
+        for(int i=noc_networks_.size()-1; i >= 0; --i)
             delete booksim_wrappers_[i];
         debug_logger_ << getContainer()->getLocation() << ": " << std::endl;
     }
@@ -214,21 +266,7 @@ namespace spike_model
         }
         pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        switch(static_cast<Networks>(mess->getNoCNetwork()))
-        {
-            case Networks::DATA_TRANSFER_NOC:
-                count_tx_flits_data_transfer_ += size;
-                break;
-            case Networks::ADDRESS_ONLY_NOC:
-                count_tx_flits_address_only_ += size;
-                break;
-            case Networks::CONTROL_NOC:
-                count_tx_flits_control_ += size;
-                break;
-
-            default:
-                sparta_assert(false);
-        }
+        count_tx_flits_[mess->getNoCNetwork()] += size;
     }
 
     void DetailedNoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
@@ -261,30 +299,16 @@ namespace spike_model
         }
         pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        switch(static_cast<Networks>(mess->getNoCNetwork()))
-        {
-            case Networks::DATA_TRANSFER_NOC:
-                count_tx_flits_data_transfer_ += size;
-                break;
-            case Networks::ADDRESS_ONLY_NOC:
-                count_tx_flits_address_only_ += size;
-                break;
-            case Networks::CONTROL_NOC:
-                count_tx_flits_control_ += size;
-                break;
-
-            default:
-                sparta_assert(false);
-        }
+        count_tx_flits_[mess->getNoCNetwork()] += size;
     }
 
     bool DetailedNoC::runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle)
     {
-        vector<bool> run_booksim_at_next_cycle = vector(static_cast<int>(Networks::count), true); // Just after a retired packet or after be called with multiple cycles
+        vector<bool> run_booksim_at_next_cycle = vector(noc_networks_.size(), true); // Just after a retired packet or after be called with multiple cycles
         
         if(SPARTA_EXPECT_TRUE(cycles == 1)) // Run one cycle
         {
-            for(int n=0; n < static_cast<int>(Networks::count); ++n)
+            for(uint8_t n=0; n < noc_networks_.size(); ++n)
             {
                 Booksim::BooksimWrapper::RetiredPacket pkt;
                 // Run BookSim
@@ -299,29 +323,10 @@ namespace spike_model
                     sparta_assert(mess->getClass() == pkt.c);
                     pkts_map_[n].erase(pkt.pid);
                     // Update statistics for each network
-                    switch(static_cast<Networks>(n))
-                    {
-                        case Networks::DATA_TRANSFER_NOC:
-                            hop_count_data_transfer_ += pkt.hops;
-                            count_rx_flits_data_transfer_ += pkt.ps;
-                            packet_latency_data_transfer_ += pkt.plat;
-                            network_latency_data_transfer_ += pkt.nlat;
-                            break;
-                        case Networks::ADDRESS_ONLY_NOC:
-                            hop_count_address_only_ += pkt.hops;
-                            count_rx_flits_address_only_ += pkt.ps;
-                            packet_latency_address_only_ += pkt.plat;
-                            network_latency_address_only_ += pkt.nlat;
-                            break;
-                        case Networks::CONTROL_NOC:
-                            hop_count_control_ += pkt.hops;
-                            count_rx_flits_control_ += pkt.ps;
-                            packet_latency_control_ += pkt.plat;
-                            network_latency_control_ += pkt.nlat;
-                            break;
-                        default:
-                            sparta_assert(false);
-                    }
+                    hop_count_[n] += pkt.hops;
+                    count_rx_flits_[n] += pkt.ps;
+                    packet_latency_[n] += pkt.plat;
+                    network_latency_[n] += pkt.nlat;
                     // Send to the actual destination at NEXT_CYCLE
                     int rel_time = current_cycle + 1 - getClock()->currentCycle(); // rel_time to NEXT_CYCLE = current+1
                     sparta_assert(rel_time >= 0); // rel_time must be a cycle that sparta can run after current booksim iteration
@@ -336,7 +341,7 @@ namespace spike_model
         }
         else // Advance BookSim simulation time
         {
-            for(int n=0; n < static_cast<int>(Networks::count); ++n)
+            for(uint8_t n=0; n < noc_networks_.size(); ++n)
             {
                 sparta_assert(!booksim_wrappers_[n]->CheckInFlightPackets());
                 sparta_assert(cycles);
@@ -346,7 +351,7 @@ namespace spike_model
         
         // Return if any NoC network needs to run BookSim at the next cycle
         bool any_network_needs_to_run_at_next_cycle = false;
-        for(int n=0; n < static_cast<int>(Networks::count) && !any_network_needs_to_run_at_next_cycle; ++n)
+        for(uint8_t n=0; n < noc_networks_.size() && !any_network_needs_to_run_at_next_cycle; ++n)
             any_network_needs_to_run_at_next_cycle |= run_booksim_at_next_cycle[n];
         return any_network_needs_to_run_at_next_cycle;
     }

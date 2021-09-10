@@ -1,4 +1,6 @@
 #include "Arbiter.hpp"
+#include <sparta/app/Simulation.hpp>
+#include <sparta/app/SimulationConfiguration.hpp>
 
 namespace spike_model
 {
@@ -6,6 +8,12 @@ namespace spike_model
 
     Arbiter::Arbiter(sparta::TreeNode* node, const ArbiterParameterSet *p) : sparta::Unit(node)
     {
+        //TODO: This should be improved and this only represent the NoC networks, in the future crossbar will be more outputs
+        // Also, using the UnboundParameterTree, the parameter needs to be in the config file and the parameter has a default value that 
+        // should be used.
+        std::string noc_networks = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()
+                                                ->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_networks")->getAs<std::string>();
+        num_outputs_ = std::count(noc_networks.begin(), noc_networks.end(), ',') + 1;
     }
 
     void Arbiter::submit(std::shared_ptr<NoCMessage> msg, bool is_core, int id)
@@ -15,7 +23,7 @@ namespace spike_model
 
         if(hasNoCMsgInNetwork(noc_network))
         {
-	    addNoCMsg(msg, noc_network, input_unit);
+            addNoCMsg(msg, noc_network, input_unit);
         }
         else
         {
@@ -71,7 +79,7 @@ namespace spike_model
     void Arbiter::submitToNoc()
     {
         bool schedule_next = false;
-        for(int i = 0; i < (int)NoC::Networks::count;i++)
+        for(int i = 0; i < (int)num_outputs_;i++)
         {
             int j = (rr_cntr[i] + 1) % num_inputs_;
             int cntr = 0;
@@ -97,9 +105,9 @@ namespace spike_model
 
     void Arbiter::setNumInputs(uint16_t cores_per_tile, uint16_t l2_banks_per_tile)
     {
-        rr_cntr.resize((int)NoC::Networks::count, 0);
+        rr_cntr.resize((int)num_outputs_, 0);
         cores_per_tile_ = cores_per_tile;
         num_inputs_ = cores_per_tile + l2_banks_per_tile;
-        pending_noc_msgs.resize((int)NoC::Networks::count, std::vector<std::queue<std::shared_ptr<NoCMessage>>>(num_inputs_));
+        pending_noc_msgs.resize((int)num_outputs_, std::vector<std::queue<std::shared_ptr<NoCMessage>>>(num_inputs_));
     }
 }

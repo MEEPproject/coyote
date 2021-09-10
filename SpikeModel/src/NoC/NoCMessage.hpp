@@ -76,7 +76,7 @@ namespace spike_model
 
             /*!
              * \brief Get the noc network to use
-             * \see NoC::Networks
+             * \see NoC::noc_networks_
              * \return NoC Network
              */
             uint8_t getNoCNetwork(){return noc_network_;}

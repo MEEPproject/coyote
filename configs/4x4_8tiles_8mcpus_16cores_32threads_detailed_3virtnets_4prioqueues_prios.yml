@@ -74,6 +74,8 @@ top:
     noc:
       params:
         noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        noc_networks:                       # (vector<string>)  NoC networks to define
+          - "DATA_TRANSFER"
         message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
           - "REMOTE_L2_REQUEST:27"
           - "MEMORY_REQUEST_LOAD:27"
@@ -98,7 +100,7 @@ top:
           - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
         booksim_configuration: configs/booksim/4x4_mesh_iq_7vcs_prios.cfg  # (std::string)   BookSim configuration file
         mcpus_indices: [0,3,4,7,8,11,12,15] # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
-        network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
+        network_width: [603]          # (uint16_t)        The physical channel width in bits
         stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
 
 ...

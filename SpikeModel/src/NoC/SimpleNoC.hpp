@@ -80,51 +80,8 @@ namespace spike_model
         uint16_t                            y_size_;            //! The size of Y dimension
         vector<pair<uint16_t, uint16_t>>    mcpus_coordinates_; //! The coordinates of MCPUs
         vector<pair<uint16_t, uint16_t>>    tiles_coordinates_; //! The coordinates of TILEs
-        sparta::Counter                     hop_count_data_transfer_ = sparta::Counter
-        (
-            getStatisticSet(),                                  // parent
-            "hop_count_datatransfer",                           // name
-            "Total number of packet hops in Data-transfer NoC", // description
-            sparta::Counter::COUNT_NORMAL                       // behavior
-        );                                                      //! Tracks the hop count in data-transfer NoC
-        sparta::Counter                     hop_count_address_only_ = sparta::Counter
-        (
-            getStatisticSet(),                                  // parent
-            "hop_count_addressonly",                            // name
-            "Total number of packet hops in Address-only NoC",  // description
-            sparta::Counter::COUNT_NORMAL                       // behavior
-        );                                                      //! Tracks the hop count in address-only NoC
-        sparta::Counter                     hop_count_control_ = sparta::Counter
-        (
-            getStatisticSet(),                                  // parent
-            "hop_count_control",                                // name
-            "Total number of packet hops in Control NoC",       // description
-            sparta::Counter::COUNT_NORMAL                       // behavior
-        );                                                      //! Tracks the hop count in control NoC
-        sparta::StatisticDef                average_hop_count_data_transfer_ = sparta::StatisticDef
-        (
-            getStatisticSet(),                                  // parent
-            "average_hop_count_datatransfer",                   // name
-            "Average hop count in Data-transfer NoC",           // description
-            getStatisticSet(),                                  // context
-            "hop_count_datatransfer/sent_packets_datatransfer"  // Expression
-        );                                                      //! The average hop count in data-transfer NoC (counts crossed routers)
-        sparta::StatisticDef                average_hop_count_address_only_ = sparta::StatisticDef
-        (
-            getStatisticSet(),                                  // parent
-            "average_hop_count_addressonly",                    // name
-            "Average hop count in Address-only NoC",            // description
-            getStatisticSet(),                                  // context
-            "hop_count_addressonly/sent_packets_addressonly"    // Expression
-        );                                                      //! The average hop count in address-only NoC (counts crossed routers)
-        sparta::StatisticDef                average_hop_count_control_ = sparta::StatisticDef
-        (
-            getStatisticSet(),                                  // parent
-            "average_hop_count_control",                        // name
-            "Average hop count in Control NoC",                 // description
-            getStatisticSet(),                                  // context
-            "hop_count_control/sent_packets_control"            // Expression
-        );                                                      //! The average hop count in control NoC (counts crossed routers)
+        std::vector<sparta::Counter>        hop_count_;         //! Tracks the hop count for each NoC network
+        std::vector<sparta::StatisticDef>   average_hop_count_; //! The average hop count for each NoC (counts crossed routers)
         //[y][x][network]
         vector<vector<vector<uint64_t>>>    dst_count_;         //! Accumulates the number of packets to each destination by NoC network
         vector<vector<vector<uint64_t>>>    src_count_;         //! Accumulates the number of packets from each source by NoC network

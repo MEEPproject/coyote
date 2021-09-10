@@ -82,6 +82,7 @@ namespace spike_model
 
         private:
             uint16_t num_inputs_;
+            uint8_t num_outputs_;       //! Number of outputs in the crossbar, currently: equal to the number of NoCs
             std::vector<int> rr_cntr;
             uint16_t cores_per_tile_;
             std::vector<std::vector<std::queue<std::shared_ptr<NoCMessage>>>> pending_noc_msgs;

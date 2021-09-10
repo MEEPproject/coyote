@@ -74,6 +74,10 @@ top:
     noc:
       params:
         noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        noc_networks:                       # (vector<string>)  NoC networks to define
+          - "DATA_TRANSFER"
+          - "ADDRESS_ONLY"
+          - "CONTROL"
         message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
           - "REMOTE_L2_REQUEST:27"
           - "MEMORY_REQUEST_LOAD:27"
