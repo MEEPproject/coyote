@@ -20,6 +20,7 @@ namespace spike_model
          */
         
         friend class AccessDirector; 
+        friend class MemoryCPUWrapper; 
         friend class MemoryController; 
     
         public:

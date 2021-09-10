@@ -221,7 +221,8 @@ namespace spike_model {
 		std::shared_ptr<CacheRequest> instr_for_mc = sched_mem_req.front();
 		
 		//-- Send to the MC
-		out_port_mc_.send(instr_for_mc, 1);
+		out_port_mc_.send(instr_for_mc, 1); //This latency needs to be >0. Otherwise, a lower priority event would trigger a higher priority one for the same cycle, 
+                                            //being the scheduling phase for the higher one already finished.
 		count_requests_mc++;
 
 		//-- consume the memory request from the scheduler
@@ -332,6 +333,8 @@ namespace spike_model {
 		DEBUG_MSG("Returned from MC: " << *mes);
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
+			DEBUG_MSG("Returned from MC: " << *mes);
+            mes->setMemoryAck(true);
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 			count_replies_noc++;
 			
@@ -345,6 +348,7 @@ namespace spike_model {
 		//   If the ID is > 0, the CacheRequest is to be handled in this Memory Tile
 		if(mes->getID() == 0) {
 			DEBUG_MSG("\tCacheRequest using the Bypass: " << *mes);
+            mes->setMemoryAck(true);
 			std::shared_ptr<NoCMessage> outgoing_noc_message;
 			if(mes->getMemTile() == (uint16_t)-1) {
 				outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());	

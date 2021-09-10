@@ -41,7 +41,7 @@ namespace spike_model
          * \brief A cache bank that belongs to a Tile in the architecture.
          *
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
-         * be in service at the sime time. Whether banks are shared or private to the tile is controlled from
+         * be in service at the some time. Whether banks are shared or private to the tile is controlled from
          * the EventManager class. The Cache is write-back and write-allocate.
          */
     public:
@@ -58,11 +58,11 @@ namespace spike_model
             {
             }
 
-            PARAMETER(uint64_t, line_size, 128, "DL1 line size (power of 2)")
-            PARAMETER(uint64_t, size_kb, 2048, "Size of DL1 in KB (power of 2)")
-            PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
+            PARAMETER(uint64_t, line_size, 128, "Line size of the cache (power of 2)")
+            PARAMETER(uint64_t, size_kb, 2048, "Size of the cache in KB (power of 2)")
+            PARAMETER(uint64_t, associativity, 8, "Cache associativity (power of 2)")
             PARAMETER(uint64_t, bank_and_tile_offset, 1, "The stride for banks and tiles. It is log2'd to get the bits that need to be shifted to identify the set")
-            PARAMETER(bool, always_hit, false, "DL1 will always hit")
+            PARAMETER(bool, always_hit, false, "The cache will always hit")
             // Parameters for event scheduling
             PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
             PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
@@ -239,10 +239,10 @@ namespace spike_model
 
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
-        // This single slot could potentially be extended to a mmu pending miss queue
+        // This single slot could potentially be extended to a MMU pending miss queue
 
 
-        // L1 Data Cache
+        // Using the same handling policies as the L1 Data Cache
         using DL1Handle = SimpleDL1::Handle;
         DL1Handle l2_cache_;
         const bool always_hit_;
@@ -265,7 +265,7 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
 
         /*!
-        * \brief Sends an acknoledgement for a serviced request
+        * \brief Sends an acknowledgement for a serviced request
         * \param req The request to acknowledge
         */
         void sendAck_(const std::shared_ptr<CacheRequest> & req);
