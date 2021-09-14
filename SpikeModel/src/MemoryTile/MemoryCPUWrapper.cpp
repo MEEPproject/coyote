@@ -356,7 +356,6 @@ namespace spike_model {
 		DEBUG_MSG("Returned from MC: " << *mes);
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
-			DEBUG_MSG("Returned from MC: " << *mes);
             mes->setMemoryAck(true);
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 			count_replies_noc++;

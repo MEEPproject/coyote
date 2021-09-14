@@ -139,7 +139,7 @@ def intToPRV(string, event, paraver_line, last_state):
     if string != "":
         base=0
         #if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
-        if event.name in ["pc", "address", "MemoryOperation", "Ack", "L1MissServiced", "Resume", "BankOperation", "MemTileMCRecv", "MemTileMCSent"] or "Request" in event.name or "Ack" in event.name:
+        if event.name in ["pc", "address", "MemoryOperation", "Ack", "L1MissServiced", "Resume", "BankOperation", "MemTileMCRecv", "MemTileMCSent", "MemTileVecOpRecv", "MemTileVecOpSent", "MemTileScaOpRecv", "MemTileScaOpSent", "MemTileMemTileOpRecv", "MemTileMemTileOpSent"] or "Request" in event.name or "Ack" in event.name:
             base=16
         #elif "Resume" in event.name: #Resume with bank, tile, mc... info
         #    base=16
@@ -273,9 +273,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
 
         i = 0 #Starts at 1 because the firs column after the time stamp is not an event
 
-        print("row: " + str(row));
         for col in row[1:]:
-            print("col: " + str(col));
 
             i = i + 1
             if (i==2 or i==4 or i==5) and ("resume" in row[3] or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
@@ -284,7 +282,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
             if i==4 and (row[3]=="l2_miss" or row[3]=="bank_operation"): #L2 misses have no destination
                 continue
 
-            if i==5 and (row[3] in ['local_request', 'remote_request', 'surrogate_request', 'memory_request', 'memory_operation', 'memory_ack', 'ack_received', 'ack_forward_received', "ack_forwarded", "miss_serviced", "mem_tile_mc_recv", "mem_tile_mc_sent"]): #These events already have their address as the semantic value
+            if i==5 and (row[3] in ['local_request', 'remote_request', 'surrogate_request', 'memory_request', 'memory_operation', 'memory_ack', 'ack_received', 'ack_forward_received', "ack_forwarded", "miss_serviced", "mem_tile_mc_recv", "mem_tile_mc_sent", "mem_tile_occupancy_out_noc", "mem_tile_occupancy_mc", "mem_tile_vvl", "mem_tile_vecop_recv", "mem_tile_vecop_sent", "mem_tile_scaop_recv", "mem_tile_scaop_sent", "mem_tile_spop_recv", "mem_tile_spop_sent", "mem_tile_mtop_recv", "mem_tile_mtop_sent", "mem_tile_noc_recv", "mem_tile_noc_sent"]): #These events already have their address as the semantic value
                 continue
 
             if i==3: #If this is the event type, pass the value, which is in the last element of the row
@@ -298,25 +296,25 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 elif col=="miss_on_evicted":
                     value=row[4]
 
-                print("#1");
-                print(i)
-                print(value)
-                print(base_event_dict[i])
-                print(PrvEvents[base_event_dict[i]])
-                print(derived_event_dict[col]-2);
-                print(PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2])
-                print(paraver_line)
+                #print("#1");
+                #print(i)
+                #print(value)
+                #print(base_event_dict[i])
+                #print(PrvEvents[base_event_dict[i]])
+                #print(derived_event_dict[col]-2);
+                #print(PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2])
+                #print(paraver_line)
                 last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2], paraver_line, last_state[i])
             else:
                 if i==1: #Core id
                     parser_functions[i](col, None, paraver_line, last_state[i])
                 else:
-                    print("#r21");
-                    print(i)
-                    print(col)
-                    print(base_event_dict[i])
-                    print(PrvEvents[base_event_dict[i]])
-                    print(paraver_line)
+                    #print("#r21");
+                    #print(i)
+                    #print(col)
+                    #print(base_event_dict[i])
+                    #print(PrvEvents[base_event_dict[i]])
+                    #print(paraver_line)
 
                     last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
