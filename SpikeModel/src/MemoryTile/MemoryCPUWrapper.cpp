@@ -296,7 +296,7 @@ namespace spike_model {
 		
 		
 		while(remaining_elements > 0) {
-			DEBUG_MSG("memOp_unit: noepr: " << number_of_elements_per_request << ", re: " << remaining_elements << ", address: " << address);
+			DEBUG_MSG("elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", address: " << address);
 			
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
@@ -307,7 +307,7 @@ namespace spike_model {
 			remaining_elements -= number_of_elements_per_request;
 			address += line_size_;
 		}
-		uint32_t number_of_replies = vvl / number_of_elements_per_request; // the number of expected CacheRequests returned from the memory controller
+		uint32_t number_of_replies = std::max((uint32_t)1, vvl / number_of_elements_per_request); // the number of expected CacheRequests returned from the memory controller
 		
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
@@ -329,9 +329,9 @@ namespace spike_model {
 		
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
-		transaction_id->second.counter_cacheRequests = vvl;											// How many responses are expected from the MC?
-		transaction_id->second.counter_scratchpadRequests = vvl/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile?
-		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 	// How many elements fit into 1 line_size (64 Bytes)?
+		transaction_id->second.counter_cacheRequests = vvl;																// How many responses are expected from the MC?
+		transaction_id->second.counter_scratchpadRequests = std::max((uint32_t)1, vvl/number_of_elements_per_response);	// How many responses are sent back to the VAS Tile?
+		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response-1; 						// How many elements fit into 1 line_size (64 Bytes)?
 	}
 	
 	void MemoryCPUWrapper::memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr) {
@@ -470,19 +470,18 @@ namespace spike_model {
 		
 		DEBUG_MSG("\tHandled in the MCPU: parent instr: " << *(transaction_id->second.mcpu_instruction));
 		
-		uint32_t scratchpadRequest_to_fill = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
 		transaction_id->second.counter_cacheRequests--;
+		uint32_t cacheRequests_to_go_for_SP = transaction_id->second.counter_cacheRequests % transaction_id->second.number_of_elements_per_response;
 		
 		switch(mes->getType())	{
 			case CacheRequest::AccessType::FETCH:
 			case CacheRequest::AccessType::LOAD:
 				
-				if(scratchpadRequest_to_fill == 0) {
+				if(cacheRequests_to_go_for_SP == 0) {
 					transaction_id->second.counter_scratchpadRequests--;
 					
 					std::shared_ptr outgoing_message = createScratchpadRequest(mes, ScratchpadRequest::ScratchpadCommand::WRITE);
 					outgoing_message->setSize(line_size_);
-					outgoing_message->setServiced();
 					outgoing_message->setOperandReady(transaction_id->second.counter_scratchpadRequests == 0);
 					
 					std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), transaction_id->second.mcpu_instruction->getSourceTile());
@@ -507,10 +506,10 @@ namespace spike_model {
 				break;
 		}
 		
-		DEBUG_MSG("\t\tSP to fill: " << scratchpadRequest_to_fill << ", CRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
+		DEBUG_MSG("\t\tCRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
 		
-		if(transaction_id->second.counter_cacheRequests == 0) { //Counting the number of the CacheRequest-Replies
-				transaction_table.erase(transaction_id); //if the counter reaches 0, remove MCPUInstr from hash table.
+		if(transaction_id->second.counter_cacheRequests == 0) {
+				transaction_table.erase(transaction_id);
 				DEBUG_MSG("\t\t\tcomplete");
 		}
 	}
