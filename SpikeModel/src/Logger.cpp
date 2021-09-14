@@ -341,7 +341,7 @@ namespace spike_model
             log(timestamp, id, pc, sstream.str());
         }
     }
-
+    
     void Logger::logKI(uint64_t timestamp, uint64_t id)
     {
         std::string ev="KI";
@@ -350,6 +350,143 @@ namespace spike_model
            log(timestamp, id, 0, "KI,0,0");
         }
     }
+    
+    //-- Memory Tile Logs
+    void Logger::logMemTileOccupancyOutNoC(uint64_t timestamp, uint16_t id, uint32_t value) {
+        std::string ev = "mem_tile_occupancy_out_noc";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << value;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileOccupancyMC(uint64_t timestamp, uint16_t id, uint32_t value) {
+        std::string ev = "mem_tile_occupancy_mc";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << value;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileVVL(uint64_t timestamp, uint16_t id, uint64_t core_id, uint32_t value) {
+        std::string ev = "mem_tile_vvl";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << core_id << "," << value;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileVecOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address) {
+        std::string ev="mem_tile_vecop_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << core_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileVecOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address) {
+        std::string ev="mem_tile_vecop_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << core_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileScaOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address) {
+        std::string ev="mem_tile_scaop_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << core_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileScaOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address) {
+        std::string ev="mem_tile_scaop_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << core_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id) {
+        std::string ev="mem_tile_spop_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << core_id;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id) {
+        std::string ev="mem_tile_spop_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << core_id;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileMTOpRecv(uint64_t timestamp, uint16_t id, uint16_t src_id, uint64_t address) {
+        std::string ev="mem_tile_mtop_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << src_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileMTOpSent(uint64_t timestamp, uint16_t id, uint16_t dest_id, uint64_t address) {
+        std::string ev="mem_tile_mtop_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << dest_id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_mc_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_mc_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileNoCRecv(uint64_t timestamp, uint16_t id, uint16_t srcAddress) {
+        std::string ev="mem_tile_noc_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << srcAddress;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileNoCSent(uint64_t timestamp, uint16_t id, uint16_t destAddress) {
+        std::string ev="mem_tile_noc_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << destAddress;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
 
     void Logger::close()
     {

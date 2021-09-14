@@ -103,13 +103,20 @@ namespace spike_model {
 			uint64_t mc_shift;
 			uint64_t mc_mask;
 			
-			struct transaction {
+			
+			struct LastLogTime {
+				uint64_t sched_outgoing = 0;
+				uint64_t sched_mem_req = 0;
+			};
+			LastLogTime lastLogTime;
+			
+			struct Transaction {
 				std::shared_ptr<MCPUInstruction> mcpu_instruction;
 				uint32_t counter_cacheRequests;
 				uint32_t counter_scratchpadRequests;
 				uint32_t number_of_elements_per_response;
 			};
-			std::unordered_map<std::uint32_t, transaction> transaction_table;
+			std::unordered_map<std::uint32_t, Transaction> transaction_table;
 			
 			
 
@@ -143,7 +150,7 @@ namespace spike_model {
 					&unit_event_set_, "controller_cycle_outgoing_transaction", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_outgoing_transaction)
 			};
 			BusDelay<std::shared_ptr<NoCMessage>> sched_outgoing;
-
+			
 			
 			
 
@@ -178,6 +185,8 @@ namespace spike_model {
 			uint16_t calcDestMemTile(uint64_t address);
 			void handleReplyMessageFromMC(std::shared_ptr<CacheRequest> mes);
 			void sendToDestination(std::shared_ptr<CacheRequest> mes);
+			void log_sched_mem_req();
+			void log_sched_outgoing();
 			
 
 

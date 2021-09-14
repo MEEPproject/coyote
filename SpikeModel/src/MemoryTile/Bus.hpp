@@ -51,6 +51,12 @@ namespace spike_model {
 			 * latency.
 			 */
 			void reschedule();
+			
+			/*!
+			 * \brief Return the current occupancy level of the queue
+			 * \return The current number of elements in the queue
+			 */
+			uint32_t size();
 						
 		private:
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> *controller_cycle_event;
@@ -90,6 +96,11 @@ namespace spike_model {
 			controller_cycle_event->schedule(sparta::Clock::Cycle(latency));
 		}
 	}
+	
+	template <typename T> uint32_t Bus<T>::size() {
+		return bus.size();
+	}
+
 	
 	
 	

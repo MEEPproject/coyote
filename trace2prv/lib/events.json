@@ -30,7 +30,22 @@
           {"eventName": "NocMessageDestination",               "eventID": "23"  },
           {"eventName": "NocMessageSource",               "eventID": "24"  },
           {"eventName": "NocMessageDestinationCummulated",               "eventID": "25"  },
-          {"eventName": "NocMessageSourceCummulated",               "eventID": "26"  }
+          {"eventName": "NocMessageSourceCummulated",               "eventID": "26"  },
+	  {"eventName": "MemTileOccupancyOutNoC",	"eventID": "27"},
+	  {"eventName": "MemTileOccupancyMC", 		"eventID": "28"},
+	  {"eventName": "MemTileVVL", 			"eventID": "29"},
+	  {"eventName": "MemTileVecOpRecv",		"eventID": "30"},
+	  {"eventName": "MemTileVecOpSent", 		"eventID": "31"},
+	  {"eventName": "MemTileScaOpRecv",		"eventID": "32"},
+	  {"eventName": "MemTileScaOpSent", 		"eventID": "33"},
+	  {"eventName": "MemTileSPOpRecv",		"eventID": "34"},
+	  {"eventName": "MemTileSPOpSent",		"eventID": "35"},
+	  {"eventName": "MemTileMemTileOpRecv",		"eventID": "36"},
+	  {"eventName": "MemTileMemTileOpSent", 	"eventID": "37"},
+	  {"eventName": "MemTileMCRecv",		"eventID": "38"},
+	  {"eventName": "MemTileMCSent",		"eventID": "39"},
+	  {"eventName": "MemTileNoCRecv",		"eventID": "40"},
+	  {"eventName": "MemTileNocSent",		"eventID": "41"}
         ]
       },
       { "eventName": "destination",          "eventID": "516"},

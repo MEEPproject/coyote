@@ -68,7 +68,7 @@ namespace spike_model
              * \brief Add an L2 Read event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The read address
              */
             void logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -77,7 +77,7 @@ namespace spike_model
              * \brief Add an L2 write event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The written address
              */
             void logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -86,7 +86,7 @@ namespace spike_model
              * \brief Add an L2 writeback event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core (does not fully apply...)
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              * \param address The written address
              */
             void logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -95,7 +95,7 @@ namespace spike_model
              * \brief Add a Stall event to the trace. This means that a core is waiting on a memory request.
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              */
             void logStall(uint64_t timestamp, uint64_t id, uint64_t pc);
 
@@ -103,7 +103,7 @@ namespace spike_model
              * \brief Add an L2 Miss event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The missing address
              */
             void logL2Miss(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -112,7 +112,7 @@ namespace spike_model
              * \brief Add an event representing a request to a cache bank local to the tile
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param bank The id of the accessed bank
              * \param address The address in the request
              */
@@ -122,7 +122,7 @@ namespace spike_model
              * \brief Add an event representing a request to a cache bank on a remote tile
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param tile The destination tile for the request
              * \param The address in the request
              */
@@ -132,7 +132,7 @@ namespace spike_model
              * \brief Add a an event representing a request to a cache bank local to the tile, that is the result of an earlier remote request.
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param tile The tile
              * \param The address in the request
              */
@@ -142,7 +142,7 @@ namespace spike_model
              * \brief Add a an event representing a request to a memory cpu
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param mc The destination memory controller
              * \param The address in the request
              */
@@ -152,7 +152,7 @@ namespace spike_model
              * \brief Add an event representing the start of the operation of a memory cpu to service a request
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The address in the request
              */
             void logMemoryCPUOperation(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -161,7 +161,7 @@ namespace spike_model
              * \brief Add an event representing an acknowledgement to memory cpu request
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param tile The destination tile for the ack
              * \param address The address in the request
              */
@@ -171,7 +171,7 @@ namespace spike_model
              * \brief Add a an event representing a request to a memory controller
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param mc The destination memory controller
              * \param The address in the request
              */
@@ -181,7 +181,7 @@ namespace spike_model
              * \brief Add an event representing the start of the operation of a memory controller to service a request
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param mc The destination memory controller
              * \param address The address in the request
              */
@@ -191,7 +191,7 @@ namespace spike_model
              * \brief Add an event representing an acknowledgement to memory controller request
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param tile The destination tile for the ack
              * \param address The address in the request
              */
@@ -202,7 +202,7 @@ namespace spike_model
              * \brief Add an event representing the submission of a bank to a command 
              * \param timestamp The timestamp for the event
              * \param mc The id of the memory controller for the bank
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param bank The bank in the command
              * \param address The address in the request
              * \note Important: this event is not tied to a particular scalar core
@@ -213,7 +213,7 @@ namespace spike_model
              * \brief Add an event representing the reception of a memory controller ack at its destination tile.
              * \param timestamp The logger to use
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The address in the request
              */
             void logTileRecAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -222,7 +222,7 @@ namespace spike_model
              * \brief Add an event representing the forwarding of an ack to another tile.
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param tile The destination tile (which was the source tile of an earlier remote request)
              * \param address The address in the request
              */
@@ -232,7 +232,7 @@ namespace spike_model
              * \brief Add an event representing the reception of a forwarded ack
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The address in the request
              */
             void logTileRecAckForwarded(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
@@ -241,7 +241,7 @@ namespace spike_model
              * \brief Add an event representing the completion of the service for an L1 miss
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param address The address in the request
              * \param timestamp
              */
@@ -254,6 +254,127 @@ namespace spike_model
              */
             void logKI(uint64_t timestamp, uint64_t id);
 
+            //-- Memory Tile Logs
+            /*!
+             * \brief Occupancy of the outgoing queue connected to the NoC router
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param value The current level of occupancy
+             */
+            void logMemTileOccupancyOutNoC(uint64_t timestamp, uint16_t id, uint32_t value);
+
+            /*!
+             * \brief Occupancy of the queue connecting the memory tile to the memory controller
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param value The current level of occupancy
+             */
+            void logMemTileOccupancyMC(uint64_t timestamp, uint16_t id, uint32_t value);
+            
+            /*!
+             * \brief Setting of VVL
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param core_id The core ID the VVL setting belongs to
+             * \param value The current level of occupancy
+             */
+            void logMemTileVVL(uint64_t timestamp, uint16_t id, uint64_t core_id, uint32_t value);
+            
+            /*!
+             * \brief Vector operation received by the MemTile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The source tile
+             */
+            void logMemTileVecOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address);
+            
+            /*!
+             * \brief Vector operation returned to the VAS Tile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The destination tile
+             */
+            void logMemTileVecOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t address);
+            
+            /*!
+             * \brief Scalar operation received by the MemTile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The source tile
+             */
+            void logMemTileScaOpRecv(uint64_t timestamp, uint16_t id, uint64_t tile, uint64_t address);
+            
+            /*!
+             * \brief Scalar operation returned to the VAS Tile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The destination tile
+             */
+            void logMemTileScaOpSent(uint64_t timestamp, uint16_t id, uint64_t tile, uint64_t address);
+            
+            /*!
+             * \brief Scratchpad operation received by the MemTile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The source tile
+             */
+            void logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t tile);
+            
+            /*!
+             * \brief Scratchpad operation returned to the VAS Tile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param tile The destination tile
+             */
+            void logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t tile);
+
+            /*!
+             * \brief Memory Tile Request received by another Memory Tile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the Memory Tile that received the request
+             * \param src_id The ID of the Memory Tile the produced the request
+             */
+            void logMemTileMTOpRecv(uint64_t timestamp, uint16_t id, uint16_t src_id, uint64_t address);
+            
+            /*!
+             * \brief Memory Tile Request sent to another Memory Tile
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param dest_id The destination memory tile
+             */
+            void logMemTileMTOpSent(uint64_t timestamp, uint16_t id, uint16_t dest_id, uint64_t address);
+            
+            /*!
+             * \brief A memory request is forwarded to the memory controller/LLC
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             */
+            void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address);
+            
+            /*!
+             * \brief A memory request is returned from the memory controller/LLC
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             */
+            void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
+            
+            /*!
+             * \brief An NoC message is forwarded
+             * \param timestamp The timestamp for the event
+             * \param id The id of the memory tile
+             * \param destAddress The destination address of the NoC message
+             */
+            void logMemTileNoCSent(uint64_t timestamp, uint16_t id, uint16_t destAddress);
+            
+            /*!
+             * \brief An NoC message has been received
+             * \param timestamp The timestamp for the event
+             * \param id The id of the memory tile
+             * \param srcAddress Where the message came from.
+             */
+            void logMemTileNoCRecv(uint64_t timestamp, uint16_t id, uint16_t srcAddress);
             /*!
              * \brief Close the trace
              */
@@ -270,7 +391,7 @@ namespace spike_model
              * \brief Add an L2 writeback event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core (does not fully apply...)
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              * \param address The accessed address
              * \param time_since_eviction The number of cycles that have passed since the line was evicted
              */
@@ -281,7 +402,7 @@ namespace spike_model
              * \brief Add an NoCMessage Source event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the source of the message
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              */
             void logNoCMessageSource(uint64_t timestamp, uint64_t src_id, uint64_t pc);
 
@@ -289,7 +410,7 @@ namespace spike_model
              * \brief Add an NoCMessage Source event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the source of the message
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              * \param num_packets The number of packets that have been enqueued since the last event
              */
             void logNoCMessageSourceCummulated(uint64_t timestamp, uint64_t src_id, uint64_t pc, uint64_t num_packets);
@@ -298,7 +419,7 @@ namespace spike_model
              * \brief Add a cummulated NoCMessage Destination event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the source of the message
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              */
             void logNoCMessageDestination(uint64_t timestamp, uint64_t dst_id, uint64_t pc);
             
@@ -306,7 +427,7 @@ namespace spike_model
              * \brief Add a cummulated NoCMessage Destination event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the source of the message
-             * \param pc The PC of the instruction related to the event the event (does not fully apply...)
+             * \param pc The PC of the instruction related to the event (does not fully apply...)
              * \param num_packets The number of packets that have been enqueued since the last event
              */
             void logNoCMessageDestinationCummulated(uint64_t timestamp, uint64_t dst_id, uint64_t pc, uint64_t num_packets);
@@ -330,7 +451,7 @@ namespace spike_model
              * \brief Implementation: Add a generic event.
              * \param timestamp timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event the event
+             * \param pc The PC of the instruction related to the event
              * \param ev Event type dependant information
              */
             void log(uint64_t timestamp, uint64_t id,  uint64_t pc, std::string ev);
