@@ -300,6 +300,7 @@ namespace spike_model {
 		//-- get the number of elements loaded by 1 memory request
 		uint number_of_elements_per_request = line_size_ / (uint32_t)instr->get_width();
 		int32_t remaining_elements = vvl;
+		uint32_t number_of_replies = 0;
 		uint64_t address = instr->getAddress();
 		
 		
@@ -314,9 +315,8 @@ namespace spike_model {
 			
 			remaining_elements -= number_of_elements_per_request;
 			address += line_size_;
-		}
-		uint32_t number_of_replies = std::max((uint32_t)1, vvl / number_of_elements_per_request); // the number of expected CacheRequests returned from the memory controller
-		
+			number_of_replies++;
+		}		
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
 		transaction_id->second.counter_scratchpadRequests = number_of_replies;	// How many responses are sent back to the VAS Tile?
@@ -338,7 +338,7 @@ namespace spike_model {
 		uint32_t number_of_elements_per_response = line_size_ / (uint32_t)instr->get_width();
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		transaction_id->second.counter_cacheRequests = vvl;																// How many responses are expected from the MC?
-		transaction_id->second.counter_scratchpadRequests = std::max((uint32_t)1, vvl/number_of_elements_per_response);	// How many responses are sent back to the VAS Tile?
+		transaction_id->second.counter_scratchpadRequests = (vvl + number_of_elements_per_response - 1)/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile? (ceil(vvl/number_of_elements_per_response), but with integers)
 		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response-1; 						// How many elements fit into 1 line_size (64 Bytes)?
 	}
 	
@@ -365,6 +365,7 @@ namespace spike_model {
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
             mes->setMemoryAck(true);
+			DEBUG_MSG("CacheRequest sent to NoC: " << *mes);	
 			out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 			count_replies_noc++;
 			logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), mes->getHomeTile());
