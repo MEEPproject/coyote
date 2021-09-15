@@ -28,7 +28,7 @@ namespace spike_model
              * \param pc The program counter of the instruction that generates the event
              */
             MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {
-                setLMUL(1);
+                setLMUL(LMULSetting::ONE);
                 setWidth(VectorElementType::BIT64);
             }
 
@@ -42,7 +42,7 @@ namespace spike_model
              */
             MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(pc, time, c)
                           , avl(avl) {
-                setLMUL(1);
+                setLMUL(LMULSetting::ONE);
                 setDestinationReg(regId);
                 setWidth(VectorElementType::BIT64);
             }
@@ -76,13 +76,13 @@ namespace spike_model
              * \brief Set the LMUL setting for the current VVL request.
              * \param lmul, the lmul setting.
              */
-            void setLMUL(uint lmul) {this->lmul = lmul;}
+            void setLMUL(LMULSetting lmul) {this->lmul = lmul;}
             
             /*!
              * \brief Return the LMUL setting
              * \return The LMUL setting for this request.
              */
-            uint getLMUL() {return lmul;}
+            LMULSetting getLMUL() {return lmul;}
             
             /*!
              * \brief Set the vector element width.
@@ -97,14 +97,14 @@ namespace spike_model
             VectorElementType getWidth() {return width;}
 
         private:
-            uint8_t lmul;
+            LMULSetting lmul;
             VectorElementType width;
             uint64_t avl, vvl;
     };
     
     
     inline std::ostream& operator<<(std::ostream &str, MCPUSetVVL &instr) {
-        str << "AVL: " << instr.getAVL() << ", VVL: " << instr.getVVL() << ", lmul: " << instr.getLMUL() << ", w: " << (uint)instr.getWidth() << ", coreID: " << instr.getCoreId();
+        str << "AVL: 0x" << std::hex << instr.getAVL() << ", VVL: 0x" << instr.getVVL() << ", lmul: 0x" << (int)instr.getLMUL() << ", w: 0x" << (uint)instr.getWidth() << ", coreID: 0x" << instr.getCoreId() << ", PC: 0x" << instr.getPC();
         return str;
     }
 }

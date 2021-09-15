@@ -65,6 +65,7 @@ namespace spike_model {
 		
 		if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
+			DEBUG_MSG("CacheRequest received from NoC: " << *cr);	
 			out_port_mc_.send(cr, 0);
 			logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), cr->getAddress());
 			count_requests_mc++;
@@ -105,12 +106,19 @@ namespace spike_model {
 		
 		count_control++;
 		
-		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth() * (uint64_t)mes->getLMUL();
+		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth();
 		vvl = std::min(elements_per_sp, mes->getAVL());
+		
+		int lmul = (int)mes->getLMUL();
+		if(lmul < 0) {
+			vvl >>= lmul*(-1);
+		} else {
+			vvl <<= lmul;
+		}
+		
 		//vvl = std::min((uint64_t)8, mes->getAVL());
 		
 		mes->setVVL(vvl);
-			
 		mes->setServiced();
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "MCPUSetVVL: " << *mes);
