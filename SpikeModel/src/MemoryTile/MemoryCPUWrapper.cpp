@@ -340,7 +340,7 @@ namespace spike_model {
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
 		transaction_id->second.counter_cacheRequests = vvl;																// How many responses are expected from the MC?
 		transaction_id->second.counter_scratchpadRequests = (vvl + number_of_elements_per_response - 1)/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile? (ceil(vvl/number_of_elements_per_response), but with integers)
-		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response-1; 						// How many elements fit into 1 line_size (64 Bytes)?
+		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 						// How many elements fit into 1 line_size (64 Bytes)?
 	}
 	
 	void MemoryCPUWrapper::memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr) {
