@@ -201,6 +201,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
     auto num_cores = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
     auto num_tiles = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    auto num_tiles_per_row = upt.get("top.cpu.params.num_tiles_per_row").getAs<uint16_t>();
     auto num_memory_cpus = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
     auto num_memory_controllers = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto num_l2_banks_in_tile = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
@@ -286,7 +287,16 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, mc_shift, mc_mask, num_cores);
+        
+        // The corresponding MCPU is the closest in the same row
+        uint16_t row=i/num_tiles_per_row;
+        uint16_t corr_mcpu=2*row;
+        if(num_tiles>1 && i%num_tiles_per_row>=num_tiles_per_row/2)
+        {
+            corr_mcpu=corr_mcpu+1;
+        }
+
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, mc_shift, mc_mask, num_cores, corr_mcpu);
     }
 
     for(std::size_t i = 0; i < num_memory_cpus; ++i)

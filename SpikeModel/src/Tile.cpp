@@ -244,15 +244,15 @@ namespace spike_model
     {
         if(!r->isServiced())
         {
-            std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
+            //std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
 
             //TODO: The actual MCPU that will handle the request needs to be defined
-	    std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+    	    std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, corresponding_mcpu);
             getArbiter()->submit(msg, true, r->getCoreId());
         }
         else
         {
-            std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             request_manager_->notifyAck(r);
         }
     }
@@ -260,7 +260,7 @@ namespace spike_model
     void Tile::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
     {
         //TODO: The actual MCPU that will handle the request needs to be defined
-	std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+	std::shared_ptr<NoCMessage> msg = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, corresponding_mcpu);
         getArbiter()->submit(msg, true, r->getCoreId());
     }
 
@@ -271,10 +271,11 @@ namespace spike_model
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
                uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-               uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores)
+               uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores, uint16_t corr_mcpu)
     {
         setNumTiles(num_tiles);
         setCoresPerTile(num_cores/num_tiles);
+        corresponding_mcpu=corr_mcpu;
         access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, mc_shift, mc_mask);
     }
 

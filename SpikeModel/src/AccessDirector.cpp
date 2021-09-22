@@ -127,7 +127,7 @@ namespace spike_model
                     else //If ways have been disabled the ACK will be sent when all banks finish disabling
                     {
                         //SEND ACK TO MCPU
-                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getCoreId());
+                        tile->getArbiter()->submit(getScratchpadAckMessage(r), true, r->getSourceTile());
                     }
                     scratchpad_available_size=scratchpad_available_size-request_size;
 
@@ -316,7 +316,7 @@ namespace spike_model
     
     std::shared_ptr<NoCMessage> AccessDirector::getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, 0);
+        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, req->getSourceTile());
     }
 
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)
