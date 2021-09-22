@@ -24,7 +24,8 @@ namespace spike_model {
 			line_size_(p->line_size),
 			latency_(p->latency),
 			sched_mem_req(&controller_cycle_event_mem_req, p->latency),
-			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency) {
+			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency),
+			sched_incoming_mc(&controller_cycle_event_incoming_mem_req, 1) {
 				in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc_, std::shared_ptr<NoCMessage>));
 				in_port_mc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc_, std::shared_ptr<CacheRequest>));
 				instructionID_counter = 1;
@@ -359,6 +360,13 @@ namespace spike_model {
 	//-- Message handling from the MC
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	void MemoryCPUWrapper::receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes)	{
+		sched_incoming_mc.push(mes);
+	}
+	
+	
+	void MemoryCPUWrapper::controllerCycle_incoming_mem_req() {
+		
+		std::shared_ptr<CacheRequest> mes = sched_incoming_mc.front();
 		
 		logger_.logMemTileMCRecv(getClock()->currentCycle(), getID(), mes->getAddress());
 		mes->setMemoryAck(true);
@@ -388,6 +396,7 @@ namespace spike_model {
 		}
 		
 		handleReplyMessageFromMC(mes);
+		sched_incoming_mc.pop();
 	}
 
 
