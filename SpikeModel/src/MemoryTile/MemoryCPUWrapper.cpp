@@ -391,6 +391,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::controllerCycle_incoming_mem_req() {
 		
 		std::shared_ptr<CacheRequest> mes = sched_incoming_mc.front();
+		sched_incoming_mc.pop();
 		
         if(trace_) {
 		    logger_.logMemTileMCRecv(getClock()->currentCycle(), getID(), mes->getAddress());
@@ -425,7 +426,6 @@ namespace spike_model {
 		}
 		
 		handleReplyMessageFromMC(mes);
-		sched_incoming_mc.pop();
 	}
 
 
