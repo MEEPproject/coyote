@@ -84,6 +84,7 @@ int main(int argc, char **argv)
         // architectural parameters
         auto isa                    = upt.get("top.cpu.params.isa").getAs<std::string>();
         auto num_tiles              = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+        auto num_tiles_per_row      = upt.get("top.cpu.params.num_tiles_per_row").getAs<uint16_t>();
         auto num_cores              = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
         auto num_threads_per_core   = upt.get("top.cpu.params.num_threads_per_core").getAs<uint16_t>();
         auto thread_switch_latency  = upt.get("top.cpu.params.thread_switch_latency").getAs<uint16_t>();
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
         auto tile_policy            = upt.get("top.cpu.tile0.params.tile_policy").getAs<std::string>();
         auto sharing                = upt.get("top.cpu.tile0.params.l2_sharing_mode").getAs<std::string>();
         auto num_banks              = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
-        
+
         // Copy parameters shared by multiple units
         std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
         cls.getSimulationConfiguration().processParameter(num_tiles_p, sparta::utils::uint32_to_str(num_tiles));
@@ -131,6 +132,8 @@ int main(int argc, char **argv)
             "\ntop.cpu.memory_cpu*.params.line_size: " << mcpu_line_size <<
             "\nL1$D line size: " << dcache_line_size << " because top.cpu.params.dcache_config is: " << dcache_config <<
             "\nL1$I line size: " << icache_line_size << " because top.cpu.params.icache_config is: " << icache_config);
+
+        sparta_assert(num_tiles%num_tiles_per_row == 0, "The number of tiles must be a multiple of the tile per row.");
 
         // Create the simulator
         sparta::Scheduler scheduler;

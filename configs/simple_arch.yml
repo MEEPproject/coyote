@@ -27,12 +27,13 @@ top:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
       num_cores: 1                          # (uint16_t)        The number of cores to simulate
-      num_threads_per_core: 1               # (uint16_t)	      The number of threads per core
-      thread_switch_latency: 0              # (uint16_t)	      The number of cycles required to make the thread runnable
-      num_tiles: 1                          # (uint16_t)	      The number of tiles to simulate
+      num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
+      thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
+      num_tiles: 1                          # (uint16_t)	    The number of tiles to simulate
+      num_tiles_per_row: 1                  # (uint16_t)        The number of VAS tiles in row of the mesh
       num_memory_cpus: 1                    # (uint16_t)        The number of MCPUs to simulate
       num_llcs: 1                           # (uint16_t)        The number of LLCs are in the architecture (1 MCPU is connected to 1 LLC!)
-      # num_memory_controllers: 1           # (uint16_t)	      The number of MCs to simulate
+      # num_memory_controllers: 1           # (uint16_t)	    The number of MCs to simulate
       isa: RV64IMAFDCV                      # (std::string)	    The RISC-V isa version to use 
       icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
       dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
