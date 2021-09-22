@@ -138,8 +138,9 @@ namespace spike_model {
 		sched_outgoing.push(outgoing_noc_message);
         if(trace_) {
 		    logger_.logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl);
+		    log_sched_outgoing();
         }
-		log_sched_outgoing();
+		
 	}
 
 
@@ -173,10 +174,10 @@ namespace spike_model {
 				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size_, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
-				log_sched_outgoing();
 				
                 if(trace_) {
 			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+			    	log_sched_outgoing();
                 }
 				
 				DEBUG_MSG("sending SP ALLOC: " << *sp_request);
@@ -202,8 +203,8 @@ namespace spike_model {
 				sched_outgoing.push(noc_message);
                 if(trace_) {
 				    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+				    log_sched_outgoing();
                 }
-				log_sched_outgoing();
 			
 				DEBUG_MSG("sending SP READ: " << *outgoing_message);
 			}
@@ -293,8 +294,8 @@ namespace spike_model {
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "Sending to NoC from " << getID() << ": " << *response);
             if(trace_) {
 			    logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort());
+				log_sched_outgoing();
             }
-			log_sched_outgoing();
 			
 		} else {
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "NoC does not accept message: " << *response);
@@ -415,12 +416,11 @@ namespace spike_model {
 		if(mes->getMemTile() != (uint16_t)-1) {
 			std::shared_ptr<NoCMessage> outgoing_noc_message;
 			outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEM_TILE_REPLY, line_size_, getID(), mes->getMemTile());
+			sched_outgoing.push(outgoing_noc_message);
             if(trace_) {
 			    logger_.logMemTileMTOpSent(getClock()->currentCycle(), getID(), mes->getMemTile(), mes->getAddress());
+				log_sched_outgoing();
             }
-			
-			sched_outgoing.push(outgoing_noc_message);
-			log_sched_outgoing();
 			return;
 		}
 		
@@ -512,12 +512,12 @@ namespace spike_model {
 			std::shared_ptr<NoCMessage> outgoing_noc_message;
 			outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile());
 			
+			sched_outgoing.push(outgoing_noc_message);
+			
             if(trace_) {
 			    logger_.logMemTileScaOpSent(getClock()->currentCycle(), getID(), mes->getHomeTile(), mes->getAddress());
+				log_sched_outgoing();
             }
-			
-			sched_outgoing.push(outgoing_noc_message);
-			log_sched_outgoing();
 			return;
 		}
 
@@ -553,9 +553,9 @@ namespace spike_model {
 						sched_outgoing.add_delay_queue(noc_message, destReg);
 					}
 					
-					log_sched_outgoing();
                     if(trace_) {
 					    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), transaction_id->second.mcpu_instruction->getSourceTile());
+						log_sched_outgoing();
                     }
 					DEBUG_MSG("\t\tReturning SP: " << *outgoing_message);
 				}
@@ -594,8 +594,8 @@ namespace spike_model {
 			sched_outgoing.push(noc_message);
             if(trace_) {
 			    logger_.logMemTileMTOpSent(getClock()->currentCycle(), getID(), destMemTile, mes->getAddress());
+				log_sched_outgoing();
             }
-			log_sched_outgoing();
 			
 			DEBUG_MSG("\tForwarding to Memory Tile " << destMemTile);
 		}
@@ -628,9 +628,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::log_sched_outgoing() {
 		uint64_t clk = getClock()->currentCycle();
 		if(clk > lastLogTime.sched_outgoing) {
-            if(trace_) {
-			    logger_.logMemTileOccupancyOutNoC(clk, getID(), sched_outgoing.size());
-            }
+		    logger_.logMemTileOccupancyOutNoC(clk, getID(), sched_outgoing.size());
 			lastLogTime.sched_outgoing = clk;
 		}
 	}
