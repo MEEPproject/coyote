@@ -29,7 +29,7 @@ namespace spike_model
              * \param s The data mapping policy for scratchpad accesses
              * \param d The data mapping policy for tiles
              */
-            SharedL2Director(Tile * t, CacheDataMappingPolicy b, CacheDataMappingPolicy s, CacheDataMappingPolicy d) 
+            SharedL2Director(Tile * t, CacheDataMappingPolicy b, VRegMappingPolicy s, CacheDataMappingPolicy d) 
                                                     : AccessDirector(t, b, s), tile_data_mapping_policy_(d){}
             
 

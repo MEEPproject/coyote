@@ -4,6 +4,7 @@
 
 #include "AddressMappingPolicy.hpp"
 #include "CacheDataMappingPolicy.hpp"
+#include "VRegMappingPolicy.hpp"
 #include "EventVisitor.hpp"
 
 #include <map>
@@ -29,7 +30,7 @@ namespace spike_model
              */
             AccessDirector(Tile * t) 
                                                     : tile(t), bank_data_mapping_policy_(CacheDataMappingPolicy::PAGE_TO_BANK), 
-                                                      scratchpad_data_mapping_policy_(CacheDataMappingPolicy::SET_INTERLEAVING), pending_scratchpad_management_ops(){}
+                                                      scratchpad_data_mapping_policy_(VRegMappingPolicy::CORE_TO_BANK), pending_scratchpad_management_ops(){}
             
             /*!
              * \brief Constructor for AccessDirector
@@ -37,7 +38,7 @@ namespace spike_model
              * \param b The data mapping policy for cache access
              * \param s The data mapping policy for scratchpad accesses
              */
-            AccessDirector(Tile * t, CacheDataMappingPolicy b, CacheDataMappingPolicy s) 
+            AccessDirector(Tile * t, CacheDataMappingPolicy b, VRegMappingPolicy s) 
                                                     : tile(t), bank_data_mapping_policy_(b), 
                                                       scratchpad_data_mapping_policy_(s), pending_scratchpad_management_ops(){}
 
@@ -114,7 +115,14 @@ namespace spike_model
             Tile * tile;
 
             uint64_t num_ways;
+            uint16_t num_banks_per_core;
             uint64_t way_size;
+
+            static const uint8_t num_vregs_per_core=32;
+
+            uint8_t vreg_bits;
+            uint8_t core_bits;
+            uint8_t core_to_bank_interleaving_bits;
 
             uint64_t scratchpad_ways=0;
             uint64_t scratchpad_available_size=0;
@@ -147,7 +155,7 @@ namespace spike_model
             
         protected:
             CacheDataMappingPolicy bank_data_mapping_policy_;
-            CacheDataMappingPolicy scratchpad_data_mapping_policy_;
+            VRegMappingPolicy scratchpad_data_mapping_policy_;
 
         private: 
             std::map<std::shared_ptr<spike_model::ScratchpadRequest>, uint64_t> pending_scratchpad_management_ops;

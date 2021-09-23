@@ -43,6 +43,10 @@ namespace spike_model
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
          * be in service at the some time. Whether banks are shared or private to the tile is controlled from
          * the EventManager class. The Cache is write-back and write-allocate.
+         *
+         * This cache might return more than one ack in the same cycle if an access that corresponds to more than one request is serviced. 
+         * External arbitration and queueing is necessary to avoid this behavior.
+         *
          */
     public:
         /*!

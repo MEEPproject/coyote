@@ -28,7 +28,7 @@ namespace spike_model
              * \param b The cache data mapping policy for banks within a tile
              * \param s The data mapping policy for scratchpad accesses
              */
-            PrivateL2Director(Tile * t, CacheDataMappingPolicy b, CacheDataMappingPolicy s) : AccessDirector(t, b, s) {}
+            PrivateL2Director(Tile * t, CacheDataMappingPolicy b, VRegMappingPolicy s) : AccessDirector(t, b, s) {}
             
 
         private:

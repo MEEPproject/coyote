@@ -257,6 +257,9 @@ namespace spike_model
         block_offset_bits=(uint8_t)(ceil(log2(line_size)));
         tile_bits=(uint8_t)ceil(log2(num_tiles));
         bank_bits=(uint8_t)ceil(log2(banks_per_tile));
+        vreg_bits=(uint8_t)ceil(log2(num_vregs_per_core));
+        core_bits=(uint8_t)ceil(log2(tile->num_cores_));
+        core_to_bank_interleaving_bits=(uint8_t)log2(banks_per_tile/tile->num_cores_);
 
         uint64_t s=size_kbs*num_tiles*1024;
         uint64_t num_sets=s/(assoc*line_size);
@@ -322,22 +325,19 @@ namespace spike_model
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)
     {
         uint16_t destination=0;
-        
         if(bank_bits>0) //If more than one bank
         {
-            uint8_t left=tag_bits;
-            uint8_t right=block_offset_bits;
             switch(scratchpad_data_mapping_policy_)
             {
-                case CacheDataMappingPolicy::SET_INTERLEAVING:
-                    left+=set_bits-bank_bits;
+                case VRegMappingPolicy::CORE_TO_BANK:
+                    //Convert to [core_id_bits,vreg_id_bits] format and get the bank_bits most significant bits
+                    destination=((r->getCoreId() << vreg_bits) | r->getDestinationRegId()) >> (vreg_bits+core_bits-bank_bits);
                     break;
-                case CacheDataMappingPolicy::PAGE_TO_BANK:
-                    right+=set_bits-bank_bits;
+                case VRegMappingPolicy::VREG_INTERLEAVING:
                     break;
             }
-            destination=(r->getAddress() << left) >> (left+right);
         }
+        printf("Destination is %d\n", destination);
         return destination;
     }
 

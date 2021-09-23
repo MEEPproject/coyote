@@ -31,7 +31,7 @@ namespace spike_model
             "The top.cpu.tile*.params.l2_sharing_mode must be tile_private or fully_shared");
         sparta_assert(bank_policy_ == "page_to_bank" || bank_policy_ == "set_interleaving", 
             "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
-        sparta_assert(scratchpad_policy_ == "page_to_bank" || scratchpad_policy_ == "set_interleaving",
+        sparta_assert(scratchpad_policy_ == "core_to_bank" || scratchpad_policy_ == "vreg_interleaving",
             "The top.cpu.tile*.params.scratchpad_policy must be page_to_bank or set_interleaving");
         node_ = node;
         arbiter = NULL;
@@ -72,15 +72,16 @@ namespace spike_model
             printf("Unsupported cache data mapping policy\n");
         }
 
-        spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        if(scratchpad_policy_=="page_to_bank")
+        spike_model::VRegMappingPolicy s_pol=spike_model::VRegMappingPolicy::CORE_TO_BANK;
+        if(scratchpad_policy_=="core_to_bank")
         {
-            s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            s_pol=spike_model::VRegMappingPolicy::CORE_TO_BANK;
         }
-        else if(scratchpad_policy_=="set_interleaving")
+        else if(scratchpad_policy_=="vreg_interleaving")
         {
-            s_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+            s_pol=spike_model::VRegMappingPolicy::VREG_INTERLEAVING;
         }
+    
         else
         {
             printf("Unsupported cache data mapping policy\n");
@@ -105,7 +106,7 @@ namespace spike_model
             {
                 printf("Unsupported cache data mapping policy\n");
             }
-            access_director=new SharedL2Director(this, b_pol, t_pol, s_pol);
+            access_director=new SharedL2Director(this, b_pol, s_pol, t_pol);
         }
     }
 

@@ -70,7 +70,7 @@ namespace spike_model
                 PARAMETER(uint64_t, latency, 1, "The number of cycles to get to a local cache bank")
                 PARAMETER(std::string, l2_sharing_mode, "tile_private", "How the cache will be shared among the tiles")
                 PARAMETER(std::string, bank_policy, "set_interleaving", "The data mapping policy for banks")
-                PARAMETER(std::string, scratchpad_policy, "set_interleaving", "The data mapping policy for the scratchpad")
+                PARAMETER(std::string, scratchpad_policy, "core_to_bank", "The data mapping policy for the scratchpad")
                 PARAMETER(std::string, tile_policy, "set_interleaving", "The data mapping policy for tiles")
             };
 

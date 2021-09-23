@@ -17,7 +17,7 @@ meta:
     show_factories: false                   # (bool)            Print generated factories
     trace: false                            # (bool)            Generate a trace into paraver format
     events_to_trace: [any]                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
-    enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
+    enable_smart_mcpu: true                # (bool)            Enable or disable smart MCPU
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
     cmd: apps/mt-matmul/matmul              # (std::string)     App to execute in the RISC-V simulator
 
@@ -26,7 +26,7 @@ top:
   cpu:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 1                          # (uint16_t)        The number of cores to simulate
+      num_cores: 8                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_tiles: 1                          # (uint16_t)	    The number of tiles to simulate
@@ -44,7 +44,7 @@ top:
         latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
         l2_sharing_mode: tile_private       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
         bank_policy: page_to_bank           # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
-        scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
+        scratchpad_policy: core_to_bank     # (std::string)     The data mapping policy for the scratchpad (core_to_bank, full_vreg_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
       l2_bank*:
         params:
