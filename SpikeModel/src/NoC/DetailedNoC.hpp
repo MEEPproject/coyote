@@ -72,15 +72,15 @@ namespace spike_model
          * \note This function is not executed under Sparta management, so, the getClock()->currentCycle() is pointing to the latest+1 cycle managed by Sparta
          */
         bool runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle);
+
+         /*! 
+         * \brief Forwards a message from TILE to the actual destination using BookSim
+         * \param mess The message to handle
+         */
         void handleMessageFromTile_(const shared_ptr<NoCMessage> & mess) override;
 
     private:
 
-        /*! 
-         * \brief Forwards a message from TILE to the actual destination using BookSim
-         * \param mess The message to handle
-         */
-        
         /*! 
          * \brief Forwards a message from a MCPU to the correct destination using BookSim
          * \param mess The message to handle

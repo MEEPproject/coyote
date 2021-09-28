@@ -81,7 +81,6 @@ namespace spike_model {
 	    mes->setVVL(mes->getAVL());
 	    std::cout << "MCPU: Returning VVL " << mes->getVVL() << " to core " << mes->getCoreId() << std::endl;
 	    mes->setServiced();
-            std::cout << "MCPU getclock " << getClock()->currentCycle() << std::endl;
 	    out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size_, mes->getMemoryCPU(), mes->getSourceTile()), 0);
 
             //-- Are there any messages left in the queue?
@@ -102,7 +101,6 @@ namespace spike_model {
 		count_requests_mc_++;
 		//std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		mes->setServiced();
-                //std::cout << "MCPU getclock " << getClock()->currentCycle() << std::endl;
 		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
 	}
 

@@ -26,7 +26,6 @@
 #include "NoC/NoC.hpp"
 #include "map"
 #include "CacheBank.hpp"
-#include "NoCQueueStatus.hpp"
 #include "ArbiterMsg.hpp"
 
 namespace spike_model
@@ -66,9 +65,14 @@ namespace spike_model
 
             bool hasNoCMsgInNetwork();
 
+            void addCacheRequest(std::shared_ptr<CacheRequest> mes, uint16_t bank, int core);
+
+            bool hasCacheRequest(uint16_t bank, int core);
+
+            bool hasCacheRequestInNetwork();
+
             void setNumInputs(uint16_t cores_per_tile, uint16_t l2_banks_per_tile, uint16_t tile_id);
 
-            void setRequestManager(std::shared_ptr<EventManager> r);
             /*
                First num_cores slots are reserved each for a core in the VAS tile
                Second num_l2_banks slots are reserved one each for a L2 bank in a VAS tile
@@ -77,7 +81,9 @@ namespace spike_model
 
             void submit(const std::shared_ptr<ArbiterMessage> & msg);
 
-            void submitToNoC(uint64_t current_cycle);
+            void submitToNoC();
+
+            void submitToL2();
 
             void setNoC(NoC *noc);
 
@@ -87,28 +93,23 @@ namespace spike_model
 
             std::shared_ptr<NoCMessage> popNoCMsg(int network_type, int input_unit);
 
-            size_t queueSize(int network_type, int input_unit);
+            std::shared_ptr<CacheRequest> popCacheRequest(uint16_t bank, int core);
 
             bool isCore(int j);
-
-            bool isInputBelowWatermark(int j);
 
             std::unique_ptr<sparta::DataInPort<std::shared_ptr<ArbiterMessage>>> in_ports_tile_;
 
         private:
-            uint64_t current_cycle;
             uint16_t num_inputs_;
             int8_t num_outputs_;       //! Number of outputs in the crossbar, currently: equal to the number of NoCs
-            std::vector<int> rr_cntr;
+            std::vector<int> rr_cntr_noc_;
+            std::vector<int> rr_cntr_cache_req_;
             uint16_t cores_per_tile_;
+            uint16_t num_l2_banks_;
             NoC *noc;
-            sparta::TreeNode* node_;
-            const size_t q_sz = 10;
-            const size_t threshold = 5;
-            std::vector<std::vector<std::queue<std::shared_ptr<NoCMessage>>>> pending_noc_msgs;
-            std::shared_ptr<EventManager> request_manager_;
+            std::vector<std::vector<std::queue<std::shared_ptr<NoCMessage>>>> pending_noc_msgs_;
+            std::vector<std::vector<std::queue<std::shared_ptr<CacheRequest>>>> pending_l2_msgs_;
             std::vector<CacheBank*> l2_banks;
-            uint16_t tile_id_;
     };
 }
 #endif

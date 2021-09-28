@@ -15,7 +15,6 @@
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 #include "NoC/DetailedNoC.hpp"
-#include "NoCQueueStatus.hpp"
 
 class SimulationOrchestrator : public spike_model::LogCapable, public spike_model::EventVisitor
 {
@@ -87,8 +86,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
         
         void handle(std::shared_ptr<spike_model::InsnLatencyEvent> r) override;
-
-        void handle(std::shared_ptr<spike_model::NoCQueueStatus> r) override;
 
     private:
         std::shared_ptr<spike_model::SpikeWrapper> spike;
@@ -182,6 +179,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         void scheduleArbiter();
 
-        bool hasNoCMsgInNetwork();
+        bool hasMsgInArbiter();
 };
 #endif

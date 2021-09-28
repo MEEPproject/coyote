@@ -32,19 +32,22 @@ namespace spike_model
         tiles_[source]->putRequest_(req);
     }
 
-    void EventManager::scheduleArbiter(uint64_t current_cycle)
+    void EventManager::scheduleArbiter()
     {
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
         {
-            (*itr)->getArbiter()->submitToNoC(current_cycle);
+            (*itr)->getArbiter()->submitToNoC();
+            (*itr)->getArbiter()->submitToL2();
         }
     }
 
-    bool EventManager::hasNoCMsgInNetwork()
+    bool EventManager::hasMsgInArbiter()
     {
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
         {
             if((*itr)->getArbiter()->hasNoCMsgInNetwork())
+                return true;
+            else if((*itr)->getArbiter()->hasCacheRequestInNetwork())
                 return true;
         }
         return false;

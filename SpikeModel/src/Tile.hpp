@@ -102,7 +102,7 @@ namespace spike_model
             void insnLatencyCallback(const std::shared_ptr<InsnLatencyEvent>& r);
 
             Arbiter* getArbiter();
-            
+
             void setArbiter(Arbiter *arbiter);
             /*!
              * \brief Set the request manager for the tile
@@ -185,7 +185,7 @@ namespace spike_model
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
                                 uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores);
-            
+
             uint16_t getL2Banks();
             std::shared_ptr<EventManager> getRequestManager();
 

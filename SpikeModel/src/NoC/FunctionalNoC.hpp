@@ -51,13 +51,13 @@ namespace spike_model
          */
         virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) override;
 
-    private:
-
         /*! \brief Forwards a message from TILE to the actual destination using a predefined latency
          *  \param mess The message to handle
          */
         void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess) override;
-        
+
+    private:
+
         /*! \brief Forwards a message from a MCPU to the correct destination using a predefined latency
          *  \param mess The message
          */

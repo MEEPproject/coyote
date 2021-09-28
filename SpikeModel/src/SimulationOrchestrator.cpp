@@ -178,12 +178,12 @@ void SimulationOrchestrator::handleSpartaEvents()
 
 void SimulationOrchestrator::scheduleArbiter()
 {
-    request_manager->scheduleArbiter(current_cycle);
+    request_manager->scheduleArbiter();
 }
 
-bool SimulationOrchestrator::hasNoCMsgInNetwork()
+bool SimulationOrchestrator::hasMsgInArbiter()
 {
-    return request_manager->hasNoCMsgInNetwork();
+    return request_manager->hasMsgInArbiter();
 }
 
 void SimulationOrchestrator::run()
@@ -193,15 +193,13 @@ void SimulationOrchestrator::run()
     while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
     {
         //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
-        //std::cout << current_cycle << std::endl;
         simulateInstInActiveCores();
         handleSpartaEvents();
-        auto t1 = std::chrono::high_resolution_clock::now();
+        //auto t1 = std::chrono::high_resolution_clock::now();
         scheduleArbiter();
-        auto t2 = std::chrono::high_resolution_clock::now();
-        timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
+        //auto t2 = std::chrono::high_resolution_clock::now();
+        //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
         //next_event_tick=spike_model->getScheduler()->nextEventTick();
-        //std::cout << current_cycle << std::endl;
 
         // Execute one cycle of BookSim
         if(detailed_noc_ != NULL)
@@ -214,7 +212,7 @@ void SimulationOrchestrator::run()
         selectRunnableThreads();
 
         //If there are no active cores, booksim must not be executed at next cycle and there is a pending event
-        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1 && !hasNoCMsgInNetwork())
+        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1 && !hasMsgInArbiter())
         {
             // Advance BookSim clock
             if(detailed_noc_ != NULL)
@@ -597,50 +595,6 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
             {
                 logger_.logResume(current_cycle, r->getCoreId());
             }
-        }
-    }
-}
-
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::NoCQueueStatus> r)
-{
-    uint16_t core_id = r->getCoreId();
-    if(!r->isServiced())
-    {
-        std::vector<uint16_t>::iterator itr;
-        itr = std::find(active_cores.begin(), active_cores.end(), core_id);
-        if(itr != active_cores.end())
-        {
-            active_cores.erase(itr);
-        }
-
-        itr = std::find(runnable_cores.begin(), runnable_cores.end(), core_id);
-        if(itr != runnable_cores.end())
-        {
-            runnable_cores.erase(itr);
-        }
-        cur_cycle_suspended_threads.push_back(core_id);
-        runnable_after[core_id/num_threads_per_core] = current_cycle + thread_switch_latency;
-    }
-    else
-    {
-        bool waiting_on_mshr = false;
-        size_t prev_in_flight=spike->checkNumInFlightL1Misses(core_id);
-        if(prev_in_flight>=max_in_flight_l1_misses && spike->checkNumInFlightL1Misses(core_id)<max_in_flight_l1_misses)
-        {
-            uint16_t core_group_start=(core_id/num_threads_per_core)*num_threads_per_core;
-            uint16_t core_group_end=core_group_start+num_threads_per_core;
-            for(uint16_t i = core_group_start; i < core_group_end; i++)
-            {
-                if(waiting_on_mshrs[i])
-                {
-                    waiting_on_mshr = true;
-                }
-            }
-        }
-
-        if(!waiting_on_mshr && !waiting_on_fetch[core_id] && !spike->isRawDependency(core_id))
-        {
-            resumeCore(core_id);
         }
     }
 }

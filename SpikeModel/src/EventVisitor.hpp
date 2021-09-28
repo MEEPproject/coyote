@@ -17,7 +17,6 @@ namespace spike_model
     class MCPUSetVVL;
     class MCPUInstruction;
     class InsnLatencyEvent;
-    class NoCQueueStatus;
 
     class EventVisitor
     {
@@ -93,8 +92,6 @@ namespace spike_model
              * \param i The instruction to handle
              */
             virtual void handle(std::shared_ptr<spike_model::MCPUInstruction> i);
-
-            virtual void handle(std::shared_ptr<spike_model::NoCQueueStatus> i);
     };
 }
 #endif

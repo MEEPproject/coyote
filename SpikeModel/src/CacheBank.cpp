@@ -53,6 +53,7 @@ namespace spike_model
     // Callbacks
     ////////////////////////////////////////////////////////////////////////////////
 
+    // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAck_(const std::shared_ptr<CacheRequest> & req)
     {
         bool was_stalled=in_flight_reads_.is_full();
@@ -88,7 +89,7 @@ namespace spike_model
         else
         {
             busy_ = false;
-        }    
+        }
     }
 
 
@@ -152,7 +153,7 @@ namespace spike_model
         {
             busy_=false;
         }
-    } 
+    }
 
     // Handle cache access request
     bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)

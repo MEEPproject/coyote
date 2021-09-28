@@ -187,7 +187,6 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 }
             }
         }
-        //else if(node_name.find(to_replace_arbiter_)!=std::string::npos)
         else if(node_name.find("arbiter")!=std::string::npos)
         {
             for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles){
@@ -281,15 +280,6 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
     {
         noc->setLogger(topology_->logger);
     }
-
-    /*for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
-    {
-        auto a_node = root_node->getChild(std::string("cpu.tile") +
-                sparta::utils::uint32_to_str(num_of_tiles) + std::string(".arbiter"));
-        sparta_assert(a_node != nullptr);
-        Arbiter *a = a_node->getResourceAs<spike_model::Arbiter>();
-        a->out_port_noc_.registerProducingEvent(a->pending_arbiter_event_);
-    }*/
 
     for(std::size_t num_of_tiles = 0; num_of_tiles < topology_->num_tiles; ++num_of_tiles)
     {
@@ -445,7 +435,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
         tile->setArbiter(arbiter);
         arbiter->setNoC(noc);
 
-         for(int i = 0; i < tile->getL2Banks();i++)
+        for(int i = 0; i < tile->getL2Banks();i++)
         {
             auto l2_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
                         std::string(".l2_bank") + sparta::utils::uint32_to_str(i));

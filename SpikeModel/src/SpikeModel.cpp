@@ -269,7 +269,6 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->getArbiter()->setRequestManager(m);
         tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping, num_cores);
         tiles[i]->getArbiter()->setNumInputs(num_cores/num_tiles, tiles[i]->getL2Banks(), i);
     }

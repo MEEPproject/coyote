@@ -8,15 +8,12 @@ namespace spike_model
 
     Arbiter::Arbiter(sparta::TreeNode* node, const ArbiterParameterSet *p) : sparta::Unit(node)
     {
-        current_cycle = 0;
         //TODO: This should be improved and this only represent the NoC networks, in the future crossbar will be more outputs
         // Also, using the UnboundParameterTree, the parameter needs to be in the config file and the parameter has a default value that 
         // should be used.
-        //std::string noc_networks = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()
-          //                                      ->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_networks")->getAs<std::string>();
-        //num_outputs_ = std::count(noc_networks.begin(), noc_networks.end(), ',') + 1;
-        num_outputs_ = 3;
-        node_ = node;
+        std::string noc_networks = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()
+                                                ->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_networks")->getAs<std::string>();
+        num_outputs_ = std::count(noc_networks.begin(), noc_networks.end(), ',') + 1;
 
         std::string in_name=std::string("in_tile");
         std::unique_ptr<sparta::DataInPort<std::shared_ptr<ArbiterMessage>>> in_=std::make_unique<sparta::DataInPort<std::shared_ptr<ArbiterMessage>>> (&unit_port_set_, in_name);
@@ -26,31 +23,36 @@ namespace spike_model
 
     void Arbiter::submit(const std::shared_ptr<ArbiterMessage> & msg)
     {
-        int noc_network = msg->nocmsg->getNoCNetwork();
-        int input_unit = getInputIndex(msg->is_core, msg->id);
-
-        addNoCMsg(msg->nocmsg, noc_network, input_unit);
-    }
-
-    size_t Arbiter::queueSize(int network_type, int input_unit)
-    {
-        return pending_noc_msgs[network_type][input_unit].size();
+        if(msg->type == spike_model::MessageType::CACHE_REQUEST)
+        {
+            std::shared_ptr<CacheRequest> req = std::static_pointer_cast<CacheRequest>(msg->msg);
+            uint16_t bank = req->getCacheBank(); //TODO: THIS MUST BE FIXED!!
+            uint16_t core = req->getCoreId(); //TODO: THIS MUST BE FIXED!!
+            addCacheRequest(req, bank, getInputIndex(true, core));
+        }
+        else
+        {
+            std::shared_ptr<NoCMessage> nocmsg = std::static_pointer_cast<NoCMessage>(msg->msg);
+            int noc_network = nocmsg->getNoCNetwork();
+            int input_unit = getInputIndex(msg->is_core, msg->id);
+            addNoCMsg(nocmsg, noc_network, input_unit);
+        }
     }
 
     void Arbiter::addNoCMsg(std::shared_ptr<NoCMessage> mes, int network_type, int input_unit)
     {
-        pending_noc_msgs[network_type][input_unit].push(mes);
+        pending_noc_msgs_[network_type][input_unit].push(mes);
     }
 
     std::shared_ptr<NoCMessage> Arbiter::getNoCMsg(int network_type, int input_unit)
     {
-        return pending_noc_msgs[network_type][input_unit].front();
+        return pending_noc_msgs_[network_type][input_unit].front();
     }
 
     std::shared_ptr<NoCMessage> Arbiter::popNoCMsg(int network_type, int input_unit)
     {
-        std::shared_ptr<NoCMessage> msg = pending_noc_msgs[network_type][input_unit].front();
-        pending_noc_msgs[network_type][input_unit].pop();
+        std::shared_ptr<NoCMessage> msg = pending_noc_msgs_[network_type][input_unit].front();
+        pending_noc_msgs_[network_type][input_unit].pop();
         return msg;
     }
 
@@ -58,9 +60,9 @@ namespace spike_model
     {
         for(int i = 0; i < (int)num_outputs_; i++)
         {
-            for(size_t j = 0; j < pending_noc_msgs[i].size(); j++)
+            for(size_t j = 0; j < pending_noc_msgs_[i].size(); j++)
             {
-                if(!pending_noc_msgs[i][j].empty())
+                if(!pending_noc_msgs_[i][j].empty())
                     return true;
             }
         }
@@ -69,7 +71,37 @@ namespace spike_model
 
     bool Arbiter::hasNoCMsg(int network_type, int input_unit)
     {
-        return !pending_noc_msgs[network_type][input_unit].empty();
+        return !pending_noc_msgs_[network_type][input_unit].empty();
+    }
+
+    void Arbiter::addCacheRequest(std::shared_ptr<CacheRequest> req, uint16_t bank, int core)
+    {
+        pending_l2_msgs_[bank][core].push(req);
+    }
+
+    std::shared_ptr<CacheRequest> Arbiter::popCacheRequest(uint16_t bank, int core)
+    {
+        std::shared_ptr<CacheRequest> msg = pending_l2_msgs_[bank][core].front();
+        pending_l2_msgs_[bank][core].pop();
+        return msg;
+    }
+
+    bool Arbiter::hasCacheRequestInNetwork()
+    {
+        for(int i = 0; i < num_l2_banks_; i++)
+        {
+            for(size_t j = 0; j < pending_l2_msgs_[i].size(); j++)
+            {
+                if(!pending_l2_msgs_[i][j].empty())
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    bool Arbiter::hasCacheRequest(uint16_t bank, int core)
+    {
+        return !pending_l2_msgs_[bank][core].empty();
     }
 
     /*
@@ -96,14 +128,6 @@ namespace spike_model
         return false;
     }
 
-    bool Arbiter::isInputBelowWatermark(int j)
-    {
-        for(int i = 0; i < (int)num_outputs_;i++)
-            if(queueSize(i,j) > threshold)
-                return false;
-        return true;
-    }
-
     void Arbiter::addBank(CacheBank* bank)
     {
         l2_banks.push_back(bank);
@@ -114,24 +138,44 @@ namespace spike_model
         return l2_banks[index];
     }
 
-    void Arbiter::submitToNoC(uint64_t current_cycle)
+    void Arbiter::submitToL2()
     {
-        current_cycle *= 3;
+        for(int i = 0; i < num_l2_banks_; i++)
+        {
+            int j = (rr_cntr_cache_req_[i] + 1) % cores_per_tile_;
+            int cntr = 0;
+            while(cntr != cores_per_tile_)
+            {
+                if(hasCacheRequest(i, j))
+                {
+                    l2_banks[i]->getAccess_(popCacheRequest(i,j));
+                    rr_cntr_cache_req_[i] = j;
+                    break;
+                }
+                else
+                {
+                    j = (j + 1) % cores_per_tile_;
+                    cntr++;
+                }
+            }
+        }
+    }
+
+    void Arbiter::submitToNoC()
+    {
         for(int i = 0; i < (int)num_outputs_;i++)
         {
-            int j = (rr_cntr[i] + 1) % num_inputs_;
+            int j = (rr_cntr_noc_[i] + 1) % num_inputs_;
             int cntr = 0;
             while(cntr != num_inputs_)
             {
                 if(hasNoCMsg(i, j))
                 {
-                    //schedule_next = true;
                     std::shared_ptr<NoCMessage> msg = getNoCMsg(i, j);
                     if(noc->checkSpaceForPacket(true, msg))
                     {
                         noc->handleMessageFromTile_(popNoCMsg(i,j));
-                        rr_cntr[i] = j;
-                        current_cycle = getClock()->currentCycle();
+                        rr_cntr_noc_[i] = j;
                         break;
                     }
                     else
@@ -150,11 +194,6 @@ namespace spike_model
         }
     }
 
-    void Arbiter::setRequestManager(std::shared_ptr<EventManager> r)
-    {
-        request_manager_=r;
-    }
-
     void Arbiter::setNoC(NoC *noc)
     {
         this->noc = noc;
@@ -162,10 +201,12 @@ namespace spike_model
 
     void Arbiter::setNumInputs(uint16_t cores_per_tile, uint16_t l2_banks_per_tile, uint16_t tile_id)
     {
-        rr_cntr.resize((int)num_outputs_, -1);
+        rr_cntr_noc_.resize((int)num_outputs_, -1);
+        rr_cntr_cache_req_.resize(l2_banks_per_tile, -1);
         num_inputs_ = cores_per_tile + l2_banks_per_tile;
-        pending_noc_msgs.resize((int)num_outputs_, std::vector<std::queue<std::shared_ptr<NoCMessage>>>(num_inputs_));
-        tile_id_ = tile_id;
+        pending_noc_msgs_.resize((int)num_outputs_, std::vector<std::queue<std::shared_ptr<NoCMessage>>>(num_inputs_));
+        pending_l2_msgs_.resize(l2_banks_per_tile, std::vector<std::queue<std::shared_ptr<CacheRequest>>>(cores_per_tile));
         cores_per_tile_ = cores_per_tile;
+        num_l2_banks_ = l2_banks_per_tile;
     }
 }

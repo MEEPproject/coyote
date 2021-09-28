@@ -130,9 +130,10 @@ namespace spike_model
         //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
         std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
 	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-        msg->nocmsg = mes;
+        msg->msg = mes;
         msg->is_core = false;
         msg->id = req->get_l2_bank_id();
+        msg->type = spike_model::MessageType::NOC_MSG;
         out_port_arbiter_.send(msg, 0);
     }
 
@@ -140,17 +141,21 @@ namespace spike_model
     {
         std::shared_ptr<NoCMessage> mes = access_director->getRemoteL2RequestMessage(req);
 	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-        msg->nocmsg = mes;
+        msg->msg = mes;
         msg->is_core = true;
         msg->id = req->getCoreId();
+        msg->type = spike_model::MessageType::NOC_MSG;
         out_port_arbiter_.send(msg, lapse);
     }
 
     void Tile::issueLocalRequest_(const std::shared_ptr<Request> & req, uint64_t lapse)
     {
-        //uint16_t bank=req->calculateHome();
-        uint16_t bank=req->getCacheBank(); //TODO: THIS MUST BE FIXED!!
-        out_ports_l2_reqs_[bank]->send(req, lapse+latency_);
+	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
+        msg->msg = req;
+        msg->is_core = true;
+        msg->id = req->getCoreId();
+        msg->type = spike_model::MessageType::CACHE_REQUEST;
+        out_port_arbiter_.send(msg, lapse + latency_);
     }
 
     void Tile::issueBankAck_(const std::shared_ptr<CacheRequest> & req)
@@ -259,7 +264,7 @@ namespace spike_model
             //TODO: The actual MCPU that will handle the request needs to be defined
 	    std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
 	    std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-            msg->nocmsg = mes;
+            msg->msg = mes;
             msg->is_core = true;
             msg->id = r->getCoreId();
             uint64_t lapse=0;
@@ -267,6 +272,7 @@ namespace spike_model
             {
                 lapse=(r->getTimestamp()+1)-getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
             }
+            msg->type = spike_model::MessageType::NOC_MSG;
             out_port_arbiter_.send(msg, lapse);
         }
         else
@@ -281,7 +287,7 @@ namespace spike_model
         //TODO: The actual MCPU that will handle the request needs to be defined
 	std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
 	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-        msg->nocmsg = mes;
+        msg->msg = mes;
         msg->is_core = true;
         msg->id = r->getCoreId();
         uint64_t lapse=0;
@@ -289,6 +295,7 @@ namespace spike_model
         {
             lapse=(r->getTimestamp()+1)-getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
         }
+        msg->type = spike_model::MessageType::NOC_MSG;
         out_port_arbiter_.send(msg, lapse);
     }
 

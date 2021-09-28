@@ -89,9 +89,10 @@ namespace spike_model
                         tile->logger_.logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
                     }
 	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                    msg->nocmsg = getDataForwardMessage(r);
+                    msg->msg = getDataForwardMessage(r);
                     msg->is_core = true;
                     msg->id = r->getCoreId();
+                    msg->type = spike_model::MessageType::NOC_MSG;
                     tile->out_port_arbiter_.send(msg, 0);
                 }
             }
@@ -132,9 +133,10 @@ namespace spike_model
                     {
                         //SEND ACK TO MCPU
 	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->msg = getScratchpadAckMessage(r);
                         msg->is_core = true;
                         msg->id = r->getCoreId();
+                        msg->type = spike_model::MessageType::NOC_MSG;
                         tile->out_port_arbiter_.send(msg, 0);
                     }
                     scratchpad_available_size=scratchpad_available_size-request_size;
@@ -148,9 +150,10 @@ namespace spike_model
                     {
                         //SEND ACK TO MCPU
 	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->msg = getScratchpadAckMessage(r);
                         msg->is_core = true;
                         msg->id = r->getCoreId();
+                        msg->type = spike_model::MessageType::NOC_MSG;
                         tile->out_port_arbiter_.send(msg, 0);
                         pending_scratchpad_management_ops.erase(r);
                     }
@@ -192,9 +195,10 @@ namespace spike_model
                     {
                         //SEND ACK TO MCPU
 	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->msg = getScratchpadAckMessage(r);
                         msg->is_core = true;
                         msg->id = r->getCoreId();
+                        msg->type = spike_model::MessageType::NOC_MSG;
                         tile->out_port_arbiter_.send(msg, 0);
                     }
                 }
@@ -206,9 +210,10 @@ namespace spike_model
                     {
                         //SEND ACK TO MCPU
 	                std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                        msg->nocmsg = getScratchpadAckMessage(r);
+                        msg->msg = getScratchpadAckMessage(r);
                         msg->is_core = true;
                         msg->id = r->getCoreId();
+                        msg->type = spike_model::MessageType::NOC_MSG;
                         tile->out_port_arbiter_.send(msg, 0);
                         pending_scratchpad_management_ops.erase(r);
                     }
@@ -227,9 +232,10 @@ namespace spike_model
                 {
                     //Send ACK to MCPU
 	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
-                    msg->nocmsg = getScratchpadAckMessage(r);
+                    msg->msg = getScratchpadAckMessage(r);
                     msg->is_core = true;
                     msg->id = r->getCoreId();
+                    msg->type = spike_model::MessageType::NOC_MSG;
                     tile->out_port_arbiter_.send(msg, 0);
                 }
                 break;

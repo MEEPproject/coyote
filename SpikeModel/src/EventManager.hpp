@@ -65,8 +65,8 @@ namespace spike_model
              */
             std::shared_ptr<Event> getServicedRequest();
 
-            void scheduleArbiter(uint64_t current_cycle);
-            bool hasNoCMsgInNetwork();
+            void scheduleArbiter();
+            bool hasMsgInArbiter();
 
         protected:
             std::vector<Tile *> tiles_;
