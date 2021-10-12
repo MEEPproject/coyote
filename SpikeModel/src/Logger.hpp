@@ -4,6 +4,7 @@
 #include <memory>
 #include <fstream>
 #include <list>
+#include <limits>
 
 namespace spike_model
 {
