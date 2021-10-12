@@ -24,7 +24,7 @@ RUN groupadd --gid "${USER_GID}" "${USER}" && \
       --shell /bin/bash \
       ${USER}
 
-RUN echo "bscuser:bscuser" | chpasswd
+RUN echo "${USER}:${USER}" | chpasswd
 RUN adduser ${USER} sudo
 
 COPY user-mapping.sh /
