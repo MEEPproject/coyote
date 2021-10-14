@@ -51,8 +51,12 @@ derived_event_dict= {
                         "mem_tile_mtop_sent"            : 37,
                         "mem_tile_mc_recv"              : 38,
                         "mem_tile_mc_sent"              : 39,
-                        "mem_tile_noc_recv"             : 40,
-                        "mem_tile_noc_sent"             : 41
+                        "mem_tile_llc_recv"             : 40,
+                        "mem_tile_llc_sent"             : 41,
+                        "mem_tile_mc2llc"               : 42,
+                        "mem_tile_llc2mc"               : 43,
+                        "mem_tile_noc_recv"             : 44,
+                        "mem_tile_noc_sent"             : 45
                     }
 
 base_event_dict= {
@@ -139,7 +143,7 @@ def intToPRV(string, event, paraver_line, last_state):
     if string != "":
         base=0
         #if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
-        if event.name in ["pc", "address", "MemoryOperation", "Ack", "L1MissServiced", "Resume", "BankOperation", "MemTileMCRecv", "MemTileMCSent", "MemTileVecOpRecv", "MemTileVecOpSent", "MemTileScaOpRecv", "MemTileScaOpSent", "MemTileMemTileOpRecv", "MemTileMemTileOpSent"] or "Request" in event.name or "Ack" in event.name:
+        if event.name in ["pc", "address", "MemoryOperation", "Ack", "L1MissServiced", "Resume", "BankOperation"] or "Request" in event.name or "Ack" in event.name or "MemTile" in event.name:
             base=16
         #elif "Resume" in event.name: #Resume with bank, tile, mc... info
         #    base=16

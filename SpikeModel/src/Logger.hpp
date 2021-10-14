@@ -344,9 +344,17 @@ namespace spike_model
              * \param dest_id The destination memory tile
              */
             void logMemTileMTOpSent(uint64_t timestamp, uint16_t id, uint16_t dest_id, uint64_t address);
+           
+           /*!
+            * \brief A memory request is returned from the memory controller
+            * \param timestamp The timestamp for the event
+            * \param id The id of the producing memory tile
+            * \param address The address being contacted
+            */
+           void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
             
             /*!
-             * \brief A memory request is forwarded to the memory controller/LLC
+             * \brief A memory request is forwarded to the memory controller
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
@@ -354,13 +362,37 @@ namespace spike_model
             void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address);
             
             /*!
-             * \brief A memory request is returned from the memory controller/LLC
+             * \brief A memory request is forwarded to the LLC
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
              */
-            void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
-            
+            void logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
+
+            /*!
+             * \brief A memory request is forwarded to the LLC
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             */
+            void logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address);
+
+            /*!
+             * \brief A memory request is forwarded from the LLC to the MC
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             */
+            void logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address);
+
+            /*!
+             * \brief A memory request is returned from the MC to the LLC
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             */
+            void logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address);
+
             /*!
              * \brief An NoC message is forwarded
              * \param timestamp The timestamp for the event
