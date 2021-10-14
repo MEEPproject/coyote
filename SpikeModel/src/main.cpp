@@ -99,6 +99,9 @@ int main(int argc, char **argv)
         auto tile_policy            = upt.get("top.cpu.tile0.params.tile_policy").getAs<std::string>();
         auto sharing                = upt.get("top.cpu.tile0.params.l2_sharing_mode").getAs<std::string>();
         auto num_banks              = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+        auto x_size                 = upt.get("top.cpu.params.x_size").getAs<uint16_t>();
+        auto y_size                 = upt.get("top.cpu.params.y_size").getAs<uint16_t>();
+        auto mcpus_indices          = upt.get("top.cpu.params.mcpus_indices").getAs<std::string>();
         
         // Copy parameters shared by multiple units
         std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
@@ -107,6 +110,12 @@ int main(int argc, char **argv)
         cls.getSimulationConfiguration().processParameter(num_mcpus_p, sparta::utils::uint32_to_str(num_memory_cpus));
         std::string num_mcs_p ("top.cpu.params.num_memory_controllers");
         cls.getSimulationConfiguration().processParameter(num_mcs_p, sparta::utils::uint32_to_str(num_memory_cpus));
+        std::string x_size_p ("top.cpu.noc.params.x_size");
+        cls.getSimulationConfiguration().processParameter(x_size_p, sparta::utils::uint32_to_str(x_size));
+        std::string y_size_p ("top.cpu.noc.params.y_size");
+        cls.getSimulationConfiguration().processParameter(y_size_p, sparta::utils::uint32_to_str(y_size));
+        std::string mcpus_indices_p ("top.cpu.noc.params.mcpus_indices");
+        cls.getSimulationConfiguration().processParameter(mcpus_indices_p, mcpus_indices);
 
         uint32_t bank_and_tile_bits=1;
 

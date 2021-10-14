@@ -16,6 +16,10 @@ namespace spike_model
         out_ports_memory_cpus_(params->num_memory_cpus),
         num_tiles_(params->num_tiles),
         num_memory_cpus_(params->num_memory_cpus),
+        x_size_(params->x_size),
+        y_size_(params->y_size),
+        size_(num_tiles_ + num_memory_cpus_),
+        mcpus_indices_(params->mcpus_indices),
         noc_model_(params->noc_model),
         max_class_used_(0),
         noc_networks_(params->noc_networks)
@@ -43,6 +47,16 @@ namespace spike_model
             in_ports_memory_cpus_[i]=std::move(in);
             in_ports_memory_cpus_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(NoC, handleMessageFromMemoryCPU_, std::shared_ptr<NoCMessage>));
         }
+
+        sparta_assert(x_size_ * y_size_ == num_memory_cpus_ + num_tiles_, 
+            "The NoC mesh size must be equal to the number of elements to connect:" << 
+            "\n X: " << x_size_ <<
+            "\n Y: " << y_size_ <<
+            "\n PEs: " << num_memory_cpus_ + num_tiles_);
+        sparta_assert(x_size_ * y_size_ == size_);
+        sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.params.mcpus_indices must be a vector");
+        sparta_assert(params->mcpus_indices.getNumValues() == num_memory_cpus_, 
+            "The number of elements in mcpus_indices must be equal to the number of MCPUs");
 
         // Validate NoC Networks name
         sparta_assert(noc_networks_.size() < std::numeric_limits<uint8_t>::max());

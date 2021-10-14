@@ -16,15 +16,11 @@ namespace spike_model
     DetailedNoC::DetailedNoC(sparta::TreeNode *node, const DetailedNoCParameterSet *params) :
         NoC(node, params),
         booksim_configuration_(params->booksim_configuration),
-        size_(num_tiles_ + num_memory_cpus_),
         network_width_(params->network_width),
         stats_files_prefix_(params->stats_files_prefix),
         pkts_map_(vector(noc_networks_.size(), map<long,shared_ptr<NoCMessage>>()))
     {
         sparta_assert(noc_model_ == "detailed");
-        sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.noc.params.mcpus_indices must be a vector");
-        sparta_assert(params->mcpus_indices.getNumValues() == num_memory_cpus_, 
-            "The number of elements in mcpus_indices must be equal to the number of MCPUs");
         sparta_assert(params->network_width.isVector(), "The top.cpu.noc.params.network_width must be a vector");
         sparta_assert(params->network_width.getNumValues() == noc_networks_.size(),
             "The number of elements in top.cpu.noc.params.network_width must be: " << noc_networks_.size());
@@ -87,8 +83,8 @@ namespace spike_model
         uint16_t tile = 0;
         for(uint16_t idx = 0; idx < size_; idx++)
         { // The validity of SRC and DST IDs (saved in mcpu_ and tile_to_network vectors) are enforced here because are >=0 and < size_
-            if(mcpu < params->mcpus_indices.getNumValues() && 
-               params->mcpus_indices.getValueAsStringAt(mcpu) == std::to_string(idx))
+            if(mcpu < mcpus_indices_.size() && 
+               mcpus_indices_.at(mcpu) == idx)
             {
                 mcpu_to_network_.push_back(idx);
                 network_is_mcpu_.push_back(true);

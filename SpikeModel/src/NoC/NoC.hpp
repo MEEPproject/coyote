@@ -52,6 +52,9 @@ namespace spike_model
             }
             PARAMETER(uint16_t, num_tiles, 1, "The number of tiles")
             PARAMETER(uint16_t, num_memory_cpus, 1, "The number of memory CPUs")
+            PARAMETER(uint16_t, x_size, 2, "The size of X dimension")
+            PARAMETER(uint16_t, y_size, 1, "The size of Y dimension")
+            PARAMETER(std::vector<uint16_t>, mcpus_indices, {0}, "The indices of MCPUs in the network ordered by MCPU")
             PARAMETER(std::string, noc_model, "functional", "The noc model to use (functional, simple, detailed)")
             PARAMETER(std::vector<std::string>, noc_networks, std::vector<std::string>(
                 {"DATA_TRANSFER",
@@ -134,6 +137,10 @@ namespace spike_model
         std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
         uint16_t                                        num_tiles_;                     //! The number of tiles connected
         uint16_t                                        num_memory_cpus_;               //! The number of memory cpus connected
+        uint16_t                                        x_size_;                        //! The size of X dimension
+        uint16_t                                        y_size_;                        //! The size of Y dimension
+        uint16_t                                        size_;                          //! The network size
+        std::vector<uint16_t>                           mcpus_indices_;                 //! The indices of MCPUs in the network ordered by MCPU
         std::string                                     noc_model_;                     //! The model of NoC to simulate
         uint8_t                                         max_class_used_;                //! The maximum class value used in messages
         std::vector<std::string>                        noc_networks_;                  //! The name of the defined NoC networks

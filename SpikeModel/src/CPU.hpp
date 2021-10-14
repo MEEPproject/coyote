@@ -46,6 +46,9 @@ public:
         PARAMETER(std::string, icache_config, "64:8:64", "The icache configuration")
         PARAMETER(std::string, dcache_config, "64:8:64", "The dcache configuration")
         PARAMETER(std::string, varch, "v128:e64:s128", "The varch to simulate")
+        PARAMETER(uint16_t, x_size, 2, "The size of X dimension")
+        PARAMETER(uint16_t, y_size, 1, "The size of Y dimension")
+        PARAMETER(std::vector<uint16_t>, mcpus_indices, {0}, "The indices of MCPUs in the network ordered by MCPU")
     };
 
     //! \brief Name of this resource. Required by sparta::UnitFactory
@@ -75,6 +78,9 @@ private:
     std::string icache_config_;
     std::string dcache_config_;
     std::string varch_;
+    uint16_t                            x_size_;            //! The size of X dimension
+    uint16_t                            y_size_;            //! The size of Y dimension
+    std::vector<uint16_t>               mcpus_indices_;     //! The indices of MCPUs in the network ordered by MCPU
 
 }; // class CPU
 }  // namespace spike_model

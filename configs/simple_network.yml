@@ -1,12 +1,12 @@
-# Name: 4x4_8tiles_8mcpus_16cores_32threads_detailed_3pnets_4prioqueues_prios.yml
+# Name: simple_networks
 # Description: Describes an architecture composed by:
 #  - 8 tiles with: 
-#     - 2 cores (2 threads)
+#     - 1 core (1 thread)
 #     - 16 l2 slices
 #  - 8 MCPUs with: 
 #     - 1 MC
 #     - 8 memory banks 
-#  - a detailed NoC using 3 physical networks with 4 priority queues and priority arbitration
+#  - a simple NoC with a latency of 4 cycles per hop
 
 ---
 
@@ -16,18 +16,18 @@ meta:
     architecture: core_topology_4           # (std::string)     Topology to simulate (core_topology_4)
     show_factories: false                   # (bool)            Print generated factories
     trace: false                            # (bool)            Generate a trace into paraver format
-    events_to_trace: []                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    events_to_trace: [any]                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
-    cmd: apps/mt-matmul-vec/matmul          # (std::string)     App to execute in the RISC-V simulator
+    cmd: apps/spmv-vec/spmv              # (std::string)     App to execute in the RISC-V simulator
 
 # Architecture configuration
 top:
   cpu:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 32                         # (uint16_t)        The number of cores to simulate
-      num_threads_per_core: 2               # (uint16_t)	      The number of threads per core
+      num_cores: 8                          # (uint16_t)        The number of cores to simulate
+      num_threads_per_core: 1               # (uint16_t)	      The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	      The number of cycles required to make the thread runnable
       num_tiles: 8                          # (uint16_t)	      The number of tiles to simulate
       num_memory_cpus: 8                    # (uint16_t)        The number of MCPUs to simulate
@@ -47,7 +47,7 @@ top:
         bank_policy: set_interleaving       # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
         scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
-        address_policy: close_page          # (std::string)     The data mapping policy in main memory (open_page, close_page)
+        address_policy: open_page           # (std::string)     The data mapping molicy in main memory (open_page, close_page)
       l2_bank*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
@@ -65,6 +65,7 @@ top:
       params:
         num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
         write_allocate: true                # (bool)            The write allocation policy
+        reordering_policy: access_type      # (std::string)     The reordering policy for memory requests
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows
@@ -76,35 +77,22 @@ top:
           delay_write: 200                  # (uint64_t)        The delay to write
     noc:
       params:
-        noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        noc_model: simple               # (std::string)     NoC Model to simulate (functional, simple, detailed)
         noc_networks:                       # (vector<string>)  NoC networks to define
           - "DATA_TRANSFER"
           - "ADDRESS_ONLY"
           - "CONTROL"
         message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
-          - "REMOTE_L2_REQUEST:27"
-          - "MEMORY_REQUEST_LOAD:27"
-          - "MEMORY_REQUEST_STORE:27"
-          - "MEMORY_REQUEST_WB:27"
-          - "REMOTE_L2_ACK:27"
-          - "MEMORY_ACK:27"
-          - "MCPU_REQUEST:27"
-          - "SCRATCHPAD_ACK:27"
-          - "SCRATCHPAD_DATA_REPLY:27"
-          - "SCRATCHPAD_COMMAND:27"
-        message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
-          - "REMOTE_L2_REQUEST:ADDRESS_ONLY.1"
-          - "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1"
-          - "MEMORY_REQUEST_STORE:DATA_TRANSFER.0"
-          - "MEMORY_REQUEST_WB:DATA_TRANSFER.0"
-          - "REMOTE_L2_ACK:DATA_TRANSFER.1"
-          - "MEMORY_ACK:DATA_TRANSFER.0"
-          - "MCPU_REQUEST:ADDRESS_ONLY.0"
-          - "SCRATCHPAD_ACK:CONTROL.0"
-          - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2"
-          - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
-        booksim_configuration: configs/booksim/4x4_mesh_iq_4vcs_prios.cfg  # (std::string)   BookSim configuration file
-        network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
-        stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
+          - "REMOTE_L2_REQUEST:8"
+          - "MEMORY_REQUEST_LOAD:8"
+          - "MEMORY_REQUEST_STORE:8"
+          - "MEMORY_REQUEST_WB:8"
+          - "REMOTE_L2_ACK:8"
+          - "MEMORY_ACK:8"
+          - "MCPU_REQUEST:8"
+          - "SCRATCHPAD_ACK:8"
+          - "SCRATCHPAD_DATA_REPLY:8"
+          - "SCRATCHPAD_COMMAND:8"
+        latency_per_hop: 4                  # (uint16_t)        The average latency for each packet
 
 ...

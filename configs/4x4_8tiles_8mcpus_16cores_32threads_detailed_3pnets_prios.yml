@@ -36,6 +36,9 @@ top:
       icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
       dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
       varch: v512:e64:s512                  # (std::string)     The RISC-V Vector uArch string
+      x_size: 4                             # (uint16_t)        The size of X dimension
+      y_size: 4                             # (uint16_t)        The size of Y dimension
+      mcpus_indices: [0,3,4,7,8,11,12,15]   # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
     tile*:
       params:
         num_l2_banks: 16                    # (uint16_t)        The number of l2 cache banks in the tile
@@ -101,7 +104,6 @@ top:
           - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2"
           - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
         booksim_configuration: configs/booksim/4x4_mesh_iq_1vc_prios.cfg  # (std::string)   BookSim configuration file
-        mcpus_indices: [0,3,4,7,8,11,12,15] # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
         network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
         stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
 

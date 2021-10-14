@@ -18,8 +18,6 @@ namespace spike_model
     SimpleNoC::SimpleNoC(sparta::TreeNode *node, const SimpleNoCParameterSet *params) :
         NoC(node, params),
         latency_per_hop_(params->latency_per_hop),
-        x_size_(params->x_size),
-        y_size_(params->y_size),
         dst_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(noc_networks_.size(), 0))),
         src_count_(y_size_, vector<vector<uint64_t>>(x_size_, vector<uint64_t>(noc_networks_.size(), 0))),
         dst_src_count_(y_size_, vector<vector<vector<vector<uint64_t>>>>(x_size_, vector<vector<vector<uint64_t>>>(
@@ -30,25 +28,15 @@ namespace spike_model
         pkt_count_flush_(params->flush_packet_count_each_period)
     {
         sparta_assert(noc_model_ == "simple");
-        sparta_assert(x_size_ * y_size_ == num_memory_cpus_ + num_tiles_, 
-            "The NoC mesh size is equal to the number of elements to connect:" << 
-            "\n X: " << x_size_ <<
-            "\n Y: " << y_size_ <<
-            "\n PEs: " << num_memory_cpus_ + num_tiles_);
-        sparta_assert(params->mcpus_location.isVector(), "The top.cpu.noc.params.mcpus_location must be a vector");
-        sparta_assert(params->mcpus_location.getNumValues() == num_memory_cpus_, 
-            "The number of elements in mcpus_location must be equal to the number of MCPUs");
         // Add all coordinates to tile_coordinates_ (first = X, second = Y)
         // Tiles are filled in order starting from (0,0) up to (x_size,y_size) without MCPUs
         for(int y=0; y < y_size_; ++y)
             for(int x=0; x < x_size_; ++x)
                 tiles_coordinates_.push_back(std::make_pair(x, y));
         // Fill mcpus_coordinates_ vector and remove MCPUs from tiles_coordinates_
-        int dot_pos;
         std::pair<uint16_t, uint16_t> current;
-        for(auto mcpu_xy : params->mcpus_location){
-            dot_pos = mcpu_xy.find(".");
-            current = std::make_pair(stoi(mcpu_xy.substr(0,dot_pos)), stoi(mcpu_xy.substr(dot_pos+1)));
+        for(auto mcpu_idx : mcpus_indices_){
+            current = std::make_pair(mcpu_idx % x_size_, mcpu_idx / x_size_); // X, Y
             mcpus_coordinates_.push_back(current);
             tiles_coordinates_.erase(std::remove(tiles_coordinates_.begin(), tiles_coordinates_.end(), current), tiles_coordinates_.end());
         }

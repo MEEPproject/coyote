@@ -32,9 +32,6 @@ namespace spike_model
             {
             }
             PARAMETER(uint16_t, latency_per_hop, 4, "The latency for each hop (router + output_link)")
-            PARAMETER(uint16_t, x_size, 2, "The size of X dimension")
-            PARAMETER(uint16_t, y_size, 1, "The size of Y dimension")
-            PARAMETER(vector<string>, mcpus_location, {"0.0"}, "The coordinates of MCPUs in the NoC mesh like [X.Y,3.0] ordered by MCPU")
             PARAMETER(std::string, packet_count_file_prefix, "packet_count_", "The prefix of SRC and DST packet count filenames")
             PARAMETER(uint32_t, packet_count_periodicity, 100000, "SRC and DST packet count statistics write periodicity")
             PARAMETER(bool, flush_packet_count_each_period, false, "Flush the packet count statistics or accumulate them")
@@ -76,8 +73,6 @@ namespace spike_model
         void writePacketCountMatrix_();
 
         uint16_t                            latency_per_hop_;   //! The latency for each hop
-        uint16_t                            x_size_;            //! The size of X dimension
-        uint16_t                            y_size_;            //! The size of Y dimension
         vector<pair<uint16_t, uint16_t>>    mcpus_coordinates_; //! The coordinates of MCPUs
         vector<pair<uint16_t, uint16_t>>    tiles_coordinates_; //! The coordinates of TILEs
         std::vector<sparta::Counter>        hop_count_;         //! Tracks the hop count for each NoC network
