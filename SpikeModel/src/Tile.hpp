@@ -153,7 +153,13 @@ namespace spike_model
              * \brief Handles a cache request
              * \param r The event to handle
              */
-            virtual void handle(std::shared_ptr<spike_model::Request> r) override;
+            virtual void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
+             
+             /*!
+             * \brief Handles a scratchpad request
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
             
             /*!
              * \brief Handles a MCPU request

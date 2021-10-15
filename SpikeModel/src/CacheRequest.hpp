@@ -41,19 +41,21 @@ namespace spike_model
              * \param  a The requested address
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
+             * \param  bypass_l2 True if the L2 has to be bypassed. Default value False
              * \note This is an incomplete cache request used for writebacks. The id of the producing core NEEDS to be set afterwards. Handle with care
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc, 0), type(t){memory_ack=false;}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc, 0), type(t), memory_ack(false), bypass_l2(false){}
 
             /*!
              * \brief Constructor for CacheRequest
              * \param  a The requested address
-             * \param  t The type of the request
+             * \param   t The type of the request
              * \param  pc The program counter of the requesting instruction
-             * \param c The requesting core
+             * \param  c The requesting core
+             * \param  bypass_l2 True if the L2 has to be bypassed. Default value False
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t){memory_ack=false;}
-
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t), memory_ack(false), bypass_l2(false) {}
+            
             /*!
              * \brief Constructor for CacheRequest
              * \param a The requested address
@@ -61,8 +63,9 @@ namespace spike_model
              * \param pc The program counter of the requesting instruction
              * \param time The timestamp for the request
              * \param c The requesting core
+             * \param  bypass_l2 True if the L2 has to be bypassed. Default value False
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c): Request(a, pc, time, c), type(t) {memory_ack=false;}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c, bool bypass_l2=false): Request(a, pc, time, c), type(t), memory_ack(false), bypass_l2(bypass_l2) {}
 
             /*!
              * \brief Get the type of the request
@@ -117,6 +120,12 @@ namespace spike_model
              */
             uint64_t getCol();
 
+            /*!
+             * \brief Get whether the L2 has to be bypassed
+             * \return True if the L2 has to be bypassed
+             */
+            bool getBypassL2();
+
             /*
              * \brief Equality operator for instances of CacheRequest
              * \param m The request to compare with
@@ -168,6 +177,8 @@ namespace spike_model
             uint64_t row_;
             uint64_t col_;
             bool memory_ack;
+
+            bool bypass_l2;
             
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest

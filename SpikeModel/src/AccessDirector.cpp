@@ -14,7 +14,7 @@ namespace spike_model
                 
     void AccessDirector::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        if(r->memoryAck())
+        if(r->memoryAck() && !r->getBypassL2())
         {
             r->setMemoryAck(false);
             tile->issueBankAck_(r);

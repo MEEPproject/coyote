@@ -250,7 +250,19 @@ namespace spike_model
         id_=id;
     }
 
-    void Tile::handle(std::shared_ptr<spike_model::Request> r)
+    void Tile::handle(std::shared_ptr<spike_model::CacheRequest> r)
+    {
+        if(!r->getBypassL2() || r->memoryAck())
+        {
+            access_director->putAccess(r);
+        }
+        else
+        {
+            issueMemoryControllerRequest_(r);
+        }
+    }
+    
+    void Tile::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
     {
         access_director->putAccess(r);
     }

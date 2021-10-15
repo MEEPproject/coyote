@@ -83,7 +83,7 @@ int main(int argc, char **argv)
         auto cmd                    = upt.get("meta.params.cmd").getAs<std::string>();
         auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
         auto vector_bypass_l1       = upt.get("meta.params.vector_bypass_l1").getAs<bool>();
-//        auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
+        auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
         // architectural parameters
         auto isa                    = upt.get("top.cpu.params.isa").getAs<std::string>();
         auto num_tiles              = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
@@ -164,7 +164,8 @@ int main(int argc, char **argv)
             varch,                                  // RISC-V Vector uArch string
             fast_cache,                             // Use a fast L1 cache model instead of the default spike cache
             enable_smart_mcpu,
-            vector_bypass_l1);                     // Enable smart mcpu
+            vector_bypass_l1,
+            vector_bypass_l2);                     // Enable smart mcpu
 
         
         // Get a NoC pointer or NULL to represent non detailed NoC models

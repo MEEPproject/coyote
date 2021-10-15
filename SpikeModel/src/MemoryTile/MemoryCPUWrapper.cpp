@@ -101,7 +101,13 @@ namespace spike_model {
 		count_requests_mc_++;
 		//std::cout << "Returning: " << mes << ", coreID: " << mes->getCoreId() << std::endl;
 		mes->setServiced();
-		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), mes->getHomeTile()), 0);
+        uint16_t destination=mes->getHomeTile();
+        if(mes->getBypassL2())
+        {
+            destination=mes->getSourceTile();
+            mes->setServiced();
+        }
+		out_port_noc_.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size_, mes->getMemoryController(), destination), 0);
 	}
 
 
