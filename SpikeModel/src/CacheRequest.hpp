@@ -35,12 +35,22 @@ namespace spike_model
             CacheRequest() = delete;
             CacheRequest(Request const&) = delete;
             CacheRequest& operator=(Request const&) = delete;
+            
+            /*!
+             * \brief Constructor for CacheRequest
+             * \param  a The requested address
+             * \param  t The type of the request
+             * \param  pc The program counter of the requesting instruction
+             * \note This is an incomplete cache request used for writebacks. The id of the producing core NEEDS to be set afterwards. Handle with care
+             */
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc): Request(a, pc, 0), type(t){memory_ack=false;}
 
             /*!
              * \brief Constructor for CacheRequest
              * \param  a The requested address
              * \param  t The type of the request
              * \param  pc The program counter of the requesting instruction
+             * \param c The requesting core
              */
             CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint16_t c): Request(a, pc, c), type(t){memory_ack=false;}
 

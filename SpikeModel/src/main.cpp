@@ -82,6 +82,8 @@ int main(int argc, char **argv)
         auto fast_cache             = upt.get("meta.params.fast_cache").getAs<bool>();
         auto cmd                    = upt.get("meta.params.cmd").getAs<std::string>();
         auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
+        auto vector_bypass_l1       = upt.get("meta.params.vector_bypass_l1").getAs<bool>();
+//        auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
         // architectural parameters
         auto isa                    = upt.get("top.cpu.params.isa").getAs<std::string>();
         auto num_tiles              = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
@@ -89,6 +91,7 @@ int main(int argc, char **argv)
         auto num_threads_per_core   = upt.get("top.cpu.params.num_threads_per_core").getAs<uint16_t>();
         auto thread_switch_latency  = upt.get("top.cpu.params.thread_switch_latency").getAs<uint16_t>();
         auto varch                  = upt.get("top.cpu.params.varch").getAs<std::string>();
+//        auto lanes_per_vpu          = upt.get("top.cpu.params.lanes_per_vpu").getAs<std::uint16_t>();
         auto icache_config          = upt.get("top.cpu.params.icache_config").getAs<std::string>();
         auto dcache_config          = upt.get("top.cpu.params.dcache_config").getAs<std::string>();
         auto l2bank_line_size       = upt.get("top.cpu.tile0.l2_bank0.params.line_size").getAs<uint64_t>();
@@ -160,7 +163,8 @@ int main(int argc, char **argv)
             cmd,                                    // Application to execute
             varch,                                  // RISC-V Vector uArch string
             fast_cache,                             // Use a fast L1 cache model instead of the default spike cache
-            enable_smart_mcpu);                     // Enable smart mcpu
+            enable_smart_mcpu,
+            vector_bypass_l1);                     // Enable smart mcpu
 
         
         // Get a NoC pointer or NULL to represent non detailed NoC models
