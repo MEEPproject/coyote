@@ -432,12 +432,12 @@ namespace spike_model {
 		DEBUG_MSG("Returned from MC: " << *mes);
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
-			DEBUG_MSG("CacheRequest sent to NoC: " << *mes);	
-			out_port_noc.send(std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size, mes->getMemoryController(), mes->getHomeTile()), 0);
-			count_replies_noc++;
+			std::shared_ptr<NoCMessage> outgoing_noc_message;
+			outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size, getID(), mes->getHomeTile());
+			sched_outgoing.push(outgoing_noc_message);
 			if(trace_) {
-				logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), mes->getHomeTile());
-            }
+				log_sched_outgoing();
+			}
 			
 			return;
 		}
