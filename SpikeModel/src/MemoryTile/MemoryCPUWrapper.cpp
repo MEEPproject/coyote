@@ -71,12 +71,22 @@ namespace spike_model {
 		
 		if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
-			DEBUG_MSG("CacheRequest received from NoC: " << *cr);	
-			out_port_mc.send(cr, 0);
-			if(trace_) {
-				logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), cr->getAddress());
+			DEBUG_MSG("CacheRequest received from NoC: " << *cr);
+			
+			if(this->enabled_llc) {
+				out_port_llc.send(cr, 0);
+				if(trace_) {
+					logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), cr->getAddress());
+				}
+				count_requests_llc++;
+			} else {
+				out_port_mc.send(cr, 0);
+				if(trace_) {
+					logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), cr->getAddress());
+				}
+				count_requests_mc++;
 			}
-			count_requests_mc++;
+			
 			return;
 		}
 		
