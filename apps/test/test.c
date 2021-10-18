@@ -20,15 +20,15 @@ void indexed_vector_load(int coreid, int ncores, long *matrix, long *indices, lo
 		"loop:\n"
 			"vsetvli		t3, t2, e64, m1\n"
 			"vle.v			v0, (t1)\n"				// unit stride load of the indices
-			"vsll.vi		v0, v0, 3\n"			// the index is a byte offset!
+			"vsll.vi		v0, v0, 3\n"			// the index for vlxe expects the indices given as a byte offset!
 													//						 	     3      2      1      0
 													// Example: data (uint16_t):  0x1020 0x3040 0x5060 0x7080
 													//			   index vector:  0x01 0x02							in v0
 													//	vlxe.v v1, (data), v0
 													
 													// Result in v1: 0x6070 and 0x5060 since the index is byte-wise, not element wise
-													// To load 0x3040 and 0x5060, the indices have to be shifted by 1 (or multiplied by 2 first)
-													// Since we work with 64 bit values here, we have to shift by 3 (or multiply by 8)
+													// To load the uint16_t 0x5060 and 0x3040, the indices have to be shifted by 1 (or multiplied by 2)
+													// first. Since we work with 64 bit values here, we have to shift by 3 (or multiply by 8)
 			
 			"vlxe.v			v8, (%1), v0\n"			// indexed load of the matrix values
 
