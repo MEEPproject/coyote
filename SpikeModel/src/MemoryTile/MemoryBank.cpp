@@ -43,13 +43,13 @@ namespace spike_model
             case BankCommand::CommandType::READ:
                 count_read_++;
                 state=BankState::READING;
-                delay=delay_read;
+                delay=delay_read * c->getRequest()->get_mem_op_latency();   // The HBM returns <= 32B. For larger requests, the delay is adapted.
                 break;
 
             case BankCommand::CommandType::WRITE:
                 count_write_++;
                 state=BankState::WRITING;
-                delay=delay_write;
+                delay=delay_write * c->getRequest()->get_mem_op_latency();  // The HBM returns <= 32B. For larger requests, the delay is adapted.
                 break;
         }
         command_completed_event.preparePayload(c)->schedule(delay);

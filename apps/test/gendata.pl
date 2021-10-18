@@ -128,10 +128,11 @@ sub main() {
   
   for my $i (range($n)) {
     $indices->[$i] = ($i * 8) % ($n*$n);  # create some indices, which cannot be cached
-    $vector->[$i] = $i*$i;
-    for my $j (range($n)) {
-      $matrix->[$i*$n+$j] = ($i*$n+$j)*($i*$n+$j);
-    }
+    $vector->[$i] = $i;
+  }
+
+  for my $i (range($indices->[-1])) {
+    $matrix->[$i] = $i;
   }
 
   print "\n#ifndef __DATASET_H";

@@ -161,6 +161,28 @@ namespace spike_model
             {
                  return l2_bank_id_;
             }
+            
+            /**
+             * \brief Configure how long the memory controller work on this memory request.
+             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
+             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
+             * (or even less), will be beneficial.
+             * \param latency: The memory controller latency for this request.
+             */
+            void set_mem_op_latency(uint latency) {
+                mem_op_latency = latency;
+            }
+            
+            /**
+             * \brief Configure how long the memory controller work on this memory request.
+             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
+             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
+             * (or even less), will be beneficial.
+             * \return: The memory controller latency for this request.
+             */
+            uint get_mem_op_latency() {
+                return mem_op_latency;
+            }
 
         private:
             AccessType type;
@@ -175,6 +197,8 @@ namespace spike_model
             uint64_t row_;
             uint64_t col_;
             bool memory_ack;
+            
+            uint8_t mem_op_latency;
             
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest

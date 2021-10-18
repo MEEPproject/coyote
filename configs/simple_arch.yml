@@ -16,8 +16,9 @@ meta:
     architecture: core_topology_4           # (std::string)     Topology to simulate (core_topology_4)
     show_factories: false                   # (bool)            Print generated factories
     trace: false                            # (bool)            Generate a trace into paraver format
-    events_to_trace: [any]                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
-    enable_smart_mcpu: true                # (bool)            Enable or disable smart MCPU
+    events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    enable_smart_mcpu: true                 # (bool)            Enable or disable smart MCPU
+    enable_llc: true                        # (bool)            Enable or disable the LLC attached to the Memory Tile    
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
     cmd: apps/mt-matmul/matmul              # (std::string)     App to execute in the RISC-V simulator
 
@@ -72,8 +73,8 @@ top:
           column_element_size: 32           # (uint64_t)        The size of column elements
           delay_open: 16                    # (uint64_t)        The delay to open a row
           delay_close: 16                   # (uint64_t)        The delay to close a row
-          delay_read: 200                   # (uint64_t)        The delay to read
-          delay_write: 200                  # (uint64_t)        The delay to write
+          delay_read: 200                   # (uint64_t)        The delay to read 32 Bytes from main memory (HBM)
+          delay_write: 200                  # (uint64_t)        The delay to write 32 Bytes from main memory (HBM)
     noc:
       params:
         noc_model: functional               # (std::string)     NoC Model to simulate (functional, simple, detailed)

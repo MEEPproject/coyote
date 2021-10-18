@@ -40,7 +40,7 @@ namespace spike_model {
 				root_node			= node->getRoot()->getAs<sparta::RootTreeNode>();
 				auto config			= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
 				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
-				this->enabled_llc	= config.tryGet("top.cpu.params.num_llcs")->getAs<uint16_t>() > 0;
+				this->enabled_llc	= config.tryGet("meta.params.enable_llc")->getAs<bool>();
 				this->sp_reg_size	= (size_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
 									  (size_t)config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
 									  (size_t)1024 / (
@@ -73,6 +73,8 @@ namespace spike_model {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
 			DEBUG_MSG("CacheRequest received from NoC: " << *cr);
 			
+			cr->set_mem_op_latency(line_size/32); // if memtile not enabled, handle only cache lines (64 Bytes)
+			
 			if(this->enabled_llc) {
 				out_port_llc.send(cr, 0);
 				if(trace_) {
@@ -101,6 +103,7 @@ namespace spike_model {
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_CYAN, "CacheRequest: " << *mes);
 				
 		if(mes->getMemTile() == (uint16_t)-1) {		//-- a transaction from the VAS Tile
+			mes->set_mem_op_latency(line_size/32);
 			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile
 			count_scalar++;
 
@@ -278,6 +281,7 @@ namespace spike_model {
 		
 		//-- Send to the LLC or MC
 		if(this->enabled_llc) {
+			instr_for_mc->set_mem_op_latency(line_size/32);	// Overwrite! LLC always loads 64 Bytes = 2*32 Bytes
 			out_port_llc.send(instr_for_mc, 1);
 			
 			if(trace_) {
@@ -286,6 +290,7 @@ namespace spike_model {
 			DEBUG_MSG("Sending to LLC: " << *instr_for_mc);
 			count_requests_llc++;
 		} else {
+			//-- set_mem_op_latency set in the Vector Address Generator
 			out_port_mc.send(instr_for_mc, 1); 	// This latency needs to be >0. Otherwise, a lower priority event would trigger 
 												// a higher priority one for the same cycle, 
 												// being the scheduling phase for the higher one already finished.
@@ -356,6 +361,7 @@ namespace spike_model {
 			
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
+			memory_request->set_mem_op_latency(line_size/32);	// load 64 Bytes
 									
 			//-- schedule this request for the MC
 			sendToDestination(memory_request);
@@ -378,7 +384,8 @@ namespace spike_model {
 		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
 			
 			//-- create and schedule request for the MC
-			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr); 
+			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr);
+			memory_request->set_mem_op_latency(1);	// load 32 Bytes or less
 			sendToDestination(memory_request);
 		}
 		
@@ -516,8 +523,7 @@ namespace spike_model {
 					instr->getCoreId());
 
 		cr->setDestinationReg(instr->getDestinationRegId(), instr->getDestinationRegType());
-		cr->setID(instr->getID());	// set CacheRequest ID to the mcpu instruction ID it was generated from		
-		
+		cr->setID(instr->getID());	// set CacheRequest ID to the mcpu instruction ID it was generated from
 		return cr;
 	}
 	

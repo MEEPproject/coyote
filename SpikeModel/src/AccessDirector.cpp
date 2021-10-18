@@ -337,7 +337,7 @@ namespace spike_model
                     break;
             }
         }
-        printf("Destination is %d\n", destination);
+        //printf("Destination is %d\n", destination);
         return destination;
     }
 
