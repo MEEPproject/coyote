@@ -50,6 +50,9 @@ top:
         bank_policy: page_to_bank           # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
         scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
+      arbiter:
+        params:
+          q_sz: 16                          # (uint64_t)        The arbiter Queue Size
       l2_bank*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)

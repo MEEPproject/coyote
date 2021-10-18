@@ -67,6 +67,7 @@ namespace spike_model
 
             void scheduleArbiter();
             bool hasMsgInArbiter();
+            bool hasArbiterQueueFreeSlot(uint16_t core);
 
         protected:
             std::vector<Tile *> tiles_;

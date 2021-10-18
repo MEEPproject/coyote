@@ -26,6 +26,7 @@
 #include "ScratchpadRequest.hpp"
 
 #include "SimpleDL1.hpp"
+#include "Tile.hpp"
 
 #include "LogCapable.hpp"
 
@@ -197,7 +198,17 @@ namespace spike_model
         {
             return l2_bank_id_;
         }
-            
+
+        void setTile(Tile *tile)
+        {
+            this->tile = tile;
+        }
+
+        Tile* getTile()
+        {
+            return tile;
+        }
+
         /*!
          * \brief Handles a cache request
          * \param r The event to handle
@@ -237,6 +248,8 @@ namespace spike_model
         sparta::UniqueEvent<> issue_access_event_ 
             {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(CacheBank, issueAccess_)};
 
+        sparta::PayloadEvent<std::shared_ptr<CacheRequest> > send_ack_event_ {&unit_event_set_, "send_ack_event_", CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest> )};
+
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
         // This single slot could potentially be extended to a mmu pending miss queue
@@ -259,6 +272,8 @@ namespace spike_model
         uint16_t max_outstanding_misses_;
 
         bool busy_;
+
+        Tile *tile;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Callbacks

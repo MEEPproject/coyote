@@ -56,42 +56,49 @@ namespace spike_model
     // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAck_(const std::shared_ptr<CacheRequest> & req)
     {
-        bool was_stalled=in_flight_reads_.is_full();
-
-        req->setServiced();
-
-        reloadCache_(calculateLineAddress(req));
-        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
+        // do sendAck every cycle
+        if(getTile()->getArbiter()->hasL2NoCQueueFreeSlot(get_l2_bank_id()))
         {
-            auto range_misses=in_flight_reads_.equal_range(req);
+            bool was_stalled=in_flight_reads_.is_full();
 
-            sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
+            req->setServiced();
 
-            while(range_misses.first != range_misses.second)
+            reloadCache_(calculateLineAddress(req));
+            if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
             {
-                range_misses.first->second->setServiced();
-                out_core_ack_.send(range_misses.first->second);
-                range_misses.first++;
+                auto range_misses=in_flight_reads_.equal_range(req);
+
+                sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
+
+                while(range_misses.first != range_misses.second)
+                {
+                    range_misses.first->second->setServiced();
+                    out_core_ack_.send(range_misses.first->second);
+                    range_misses.first++;
+                }
+
+                in_flight_reads_.erase(req);
             }
 
-            in_flight_reads_.erase(req);
-        }
-
-        if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
-        {
-            //ISSUE EVENT
-            if(was_stalled && !busy_)
+            if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
             {
-                busy_=true;
-                issue_access_event_.schedule(sparta::Clock::Cycle(0));
+                //ISSUE EVENT
+                if(was_stalled && !busy_)
+                {
+                    busy_=true;
+                    issue_access_event_.schedule(sparta::Clock::Cycle(0));
+                }
+            }
+            else
+            {
+                busy_ = false;
             }
         }
         else
         {
-            busy_ = false;
+            send_ack_event_.preparePayload(req)->schedule(1);
         }
     }
-
 
     void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
     {
@@ -100,58 +107,65 @@ namespace spike_model
 
     void CacheBank::issueAccess_()
     {
-        bool stall=false;
-        if(pending_scratchpad_requests_.size()>0) //Scratchpad requests are handled first
+        if(getTile()->getArbiter()->hasL2NoCQueueFreeSlot(get_l2_bank_id()))
         {
-            const std::shared_ptr<ScratchpadRequest> s=pending_scratchpad_requests_.front();
-            pending_scratchpad_requests_.pop_front(); //We always hit in the scratchpad. Nothing to check.
+            bool stall=false;
+            if(pending_scratchpad_requests_.size()>0) //Scratchpad requests are handled first
+            {
+                const std::shared_ptr<ScratchpadRequest> s=pending_scratchpad_requests_.front();
+                pending_scratchpad_requests_.pop_front(); //We always hit in the scratchpad. Nothing to check.
 
-            if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::ALLOCATE)
-            {
-                l2_cache_->disableWays(s->getSize());
+                if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::ALLOCATE)
+                {
+                    l2_cache_->disableWays(s->getSize());
+                }
+                else if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::FREE)
+                {
+                    l2_cache_->enableWays(s->getSize());
+                }
+                s->setServiced();
+                out_core_ack_.send(s, hit_latency_);
             }
-            else if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::FREE)
+            else
             {
-                l2_cache_->enableWays(s->getSize());
+                MemoryAccessInfoPtr m;
+                if(pending_fetch_requests_.size()>0)
+                {
+                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_fetch_requests_.front());   
+                    pending_fetch_requests_.pop_front();
+                }
+                else if(pending_load_requests_.size()>0)
+                {
+                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_load_requests_.front());  
+                    pending_load_requests_.pop_front();
+                }
+                else if(pending_store_requests_.size()>0)
+                {
+                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
+                    pending_store_requests_.pop_front();
+                }
+
+                handleCacheLookupReq_(m);
+
+                if(in_flight_reads_.is_full())
+                {
+                    stall=true;
+                    count_stall_++;
+                }
             }
-            s->setServiced();
-            out_core_ack_.send(s, hit_latency_);
+
+            if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
+            {
+                issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
+            }
+            else
+            {
+                busy_=false;
+            }
         }
         else
         {
-            MemoryAccessInfoPtr m;
-            if(pending_fetch_requests_.size()>0)
-            {
-                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_fetch_requests_.front());   
-                pending_fetch_requests_.pop_front();
-            }
-            else if(pending_load_requests_.size()>0)
-            {
-                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_load_requests_.front());  
-                pending_load_requests_.pop_front();
-            }
-            else if(pending_store_requests_.size()>0)
-            {
-                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
-                pending_store_requests_.pop_front();
-            }
-
-            handleCacheLookupReq_(m);
-
-            if(in_flight_reads_.is_full())
-            {
-                stall=true;
-                count_stall_++;
-            }
-        }
-
-        if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
-        {
-            issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
-        }
-        else
-        {
-            busy_=false;
+            issue_access_event_.schedule(1); //keep checking every cycle if there is space in the Queue
         }
     }
 

@@ -441,6 +441,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                         std::string(".l2_bank") + sparta::utils::uint32_to_str(i));
             sparta_assert(l2_node != nullptr);
             CacheBank* bank  = l2_node->getResourceAs<spike_model::CacheBank>();
+            bank->setTile(tile);
             arbiter->addBank(bank);
         }
 

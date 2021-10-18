@@ -32,6 +32,7 @@ namespace spike_model
 {
     class EventManager; //Forward declarations
     class NoC;
+    class CacheBank;
 
     class Arbiter : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
@@ -49,6 +50,7 @@ namespace spike_model
                     sparta::ParameterSet(n)
                 {
                 }
+                PARAMETER(uint16_t, q_sz, 16, "The size of the arbiter queue for each input unit")
             };
 
             Arbiter(sparta::TreeNode* node, const ArbiterParameterSet *p);
@@ -97,6 +99,18 @@ namespace spike_model
 
             bool isCore(int j);
 
+            bool hasArbiterQueueFreeSlot(uint16_t tile_id, uint16_t core_id);
+
+            bool hasNoCQueueFreeSlot(uint16_t core_id);
+
+            bool hasL1L2QueueFreeSlot(uint16_t core_id);
+
+            bool hasL2NoCQueueFreeSlot(uint16_t bank_id);
+
+            size_t NoCQueueSize(int network_type, int input_unit);
+
+            size_t L2QueueSize(uint16_t bank, uint16_t core);
+
             std::unique_ptr<sparta::DataInPort<std::shared_ptr<ArbiterMessage>>> in_ports_tile_;
 
         private:
@@ -110,6 +124,7 @@ namespace spike_model
             std::vector<std::vector<std::queue<std::shared_ptr<NoCMessage>>>> pending_noc_msgs_;
             std::vector<std::vector<std::queue<std::shared_ptr<CacheRequest>>>> pending_l2_msgs_;
             std::vector<CacheBank*> l2_banks;
+            size_t q_sz;
     };
 }
 #endif

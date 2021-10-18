@@ -54,7 +54,7 @@ namespace spike_model
             in_name=std::string("in_l2_bank") + sparta::utils::uint32_to_str(i) + std::string("_req");
             std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
             in_ports_l2_reqs_[i]=std::move(in_req);
-            in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequest_, std::shared_ptr<CacheRequest>));
+            in_ports_l2_reqs_[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, issueMemoryControllerRequestFromL2_, std::shared_ptr<CacheRequest>));
         }
 
         in_port_noc_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Tile, handleNoCMessage_, std::shared_ptr<NoCMessage>));
@@ -125,14 +125,28 @@ namespace spike_model
         return num_l2_banks_;
     }
 
-    void Tile::issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req)
+    void Tile::issueMemoryControllerRequestFromL2_(const std::shared_ptr<CacheRequest> & req)
+    {
+        issueMemoryControllerRequest_(req, false);
+    }
+
+    void Tile::issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req, bool isCore)
     {
         //std::cout << "Issuing memory controller request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << "\n";
         std::shared_ptr<NoCMessage> mes=access_director->getMemoryRequestMessage(req);
 	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
         msg->msg = mes;
-        msg->is_core = false;
-        msg->id = req->get_l2_bank_id();
+
+        if(isCore)
+        {
+            msg->is_core = true;
+            msg->id = req->getCoreId();
+        }
+        else
+        {
+            msg->is_core = false;
+            msg->id = req->get_l2_bank_id();
+        }
         msg->type = spike_model::MessageType::NOC_MSG;
         out_port_arbiter_.send(msg, 0);
     }
@@ -250,6 +264,11 @@ namespace spike_model
         id_=id;
     }
 
+    uint16_t Tile::getId()
+    {
+        return id_;
+    }
+
     void Tile::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
         if(!r->getBypassL2() || r->memoryAck())
@@ -258,7 +277,7 @@ namespace spike_model
         }
         else
         {
-            issueMemoryControllerRequest_(r);
+            issueMemoryControllerRequest_(r, true);
         }
     }
     

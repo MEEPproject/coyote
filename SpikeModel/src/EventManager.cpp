@@ -41,6 +41,16 @@ namespace spike_model
         }
     }
 
+    bool EventManager::hasArbiterQueueFreeSlot(uint16_t core)
+    {
+        bool ret = false;
+        for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
+        {
+            ret = ret || (*itr)->getArbiter()->hasArbiterQueueFreeSlot((*itr)->getId(), core);
+        }
+        return ret;
+    }
+
     bool EventManager::hasMsgInArbiter()
     {
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)

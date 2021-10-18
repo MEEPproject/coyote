@@ -15,6 +15,7 @@
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 #include "NoC/DetailedNoC.hpp"
+#include <set>
 
 class SimulationOrchestrator : public spike_model::LogCapable, public spike_model::EventVisitor
 {
@@ -130,7 +131,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
         bool booksim_has_packets_in_flight_;        //! Flag that indicates if booksim has packets in flight
-
+        std::set<uint16_t> stalled_cores_for_arbiter;
         /*!
          * \brief Simulate an instruction in each of the active cores
          */
@@ -180,5 +181,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         void scheduleArbiter();
 
         bool hasMsgInArbiter();
+
+        bool hasArbiterQueueFreeSlot(uint16_t core);
+
 };
 #endif

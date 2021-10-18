@@ -38,7 +38,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     waiting_on_fetch.resize(num_cores,false);
     waiting_on_mshrs.resize(num_cores,false);
 }
-        
+
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
 {
     return cycle-spike_model->getScheduler()->getCurrentTick();
@@ -83,7 +83,18 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             e->handle(this);
         }
 
-        if(!core_active)
+        bool hasFreeSlot= hasArbiterQueueFreeSlot(current_core);
+
+        if(!core_active && !hasFreeSlot)
+        {
+            std::cout << "Fetch miss and Arbiter Queue full for " << current_core << " and " << current_cycle << std::endl;
+        }
+        else if(!hasFreeSlot)
+        {
+            stalled_cores_for_arbiter.insert(current_core);
+        }
+
+        if(!core_active || !hasFreeSlot)
         {
             std::vector<uint16_t>::iterator itr;
             itr = std::find(active_cores.begin(), active_cores.end(), current_core);
@@ -181,6 +192,11 @@ void SimulationOrchestrator::scheduleArbiter()
     request_manager->scheduleArbiter();
 }
 
+bool SimulationOrchestrator::hasArbiterQueueFreeSlot(uint16_t core)
+{
+    return request_manager->hasArbiterQueueFreeSlot(core);
+}
+
 bool SimulationOrchestrator::hasMsgInArbiter()
 {
     return request_manager->hasMsgInArbiter();
@@ -197,6 +213,17 @@ void SimulationOrchestrator::run()
         handleSpartaEvents();
         //auto t1 = std::chrono::high_resolution_clock::now();
         scheduleArbiter();
+        std::set<uint16_t>::iterator it = stalled_cores_for_arbiter.begin();
+        while(it!=stalled_cores_for_arbiter.end())
+        {
+            if(hasArbiterQueueFreeSlot(*it))
+            {
+                resumeCore(*it);
+                it = stalled_cores_for_arbiter.erase(it);
+            }
+            else
+                it++;
+        }
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
         //next_event_tick=spike_model->getScheduler()->nextEventTick();
@@ -242,7 +269,7 @@ void SimulationOrchestrator::run()
 
 void SimulationOrchestrator::selectRunnableThreads()
 {
-    //If active core is ehanged, mark the other active thread in RR fashion as runnable
+    //If active core is changed, mark the other active thread in RR fashion as runnable
     for(uint16_t i = 0; i < cur_cycle_suspended_threads.size(); i++)
     {
         //Make runnable, the next active thread from the group if the core has available MSHRs
@@ -278,13 +305,22 @@ void SimulationOrchestrator::resumeCore(uint64_t core)
 {
     std::vector<uint16_t>::iterator it;
 
-    it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
-
-    //If the core was stalled, make it active again
-    if (it != stalled_cores.end())
+    //core should only be made active if there is space in the Arbiter Queue
+    //This is a conservative approach. A performance efficient approach would be to activate the core and let it execute
+    //instructions until it generates a packet for arbiter.
+    if(hasArbiterQueueFreeSlot(core))
     {
-        stalled_cores.erase(it);
-        active_cores.push_back(core);
+        it=std::find(stalled_cores.begin(), stalled_cores.end(), core);
+
+        //If the core was stalled, make it active again
+        if (it != stalled_cores.end())
+        {
+            stalled_cores.erase(it);
+            active_cores.push_back(core);
+        }
+    }
+    else{
+       stalled_cores_for_arbiter.insert(core);
     }
 }
 

@@ -6,8 +6,9 @@ namespace spike_model
 {
     const char Arbiter::name[] = "arbiter";
 
-    Arbiter::Arbiter(sparta::TreeNode* node, const ArbiterParameterSet *p) : sparta::Unit(node)
+    Arbiter::Arbiter(sparta::TreeNode* node, const ArbiterParameterSet *p) : sparta::Unit(node), q_sz(p->q_sz)
     {
+        std::cout << "Q SIZE " << q_sz << std::endl;
         //TODO: This should be improved and this only represent the NoC networks, in the future crossbar will be more outputs
         // Also, using the UnboundParameterTree, the parameter needs to be in the config file and the parameter has a default value that 
         // should be used.
@@ -26,8 +27,8 @@ namespace spike_model
         if(msg->type == spike_model::MessageType::CACHE_REQUEST)
         {
             std::shared_ptr<CacheRequest> req = std::static_pointer_cast<CacheRequest>(msg->msg);
-            uint16_t bank = req->getCacheBank(); //TODO: THIS MUST BE FIXED!!
-            uint16_t core = req->getCoreId(); //TODO: THIS MUST BE FIXED!!
+            uint16_t bank = req->getCacheBank();
+            uint16_t core = req->getCoreId();
             addCacheRequest(req, bank, getInputIndex(true, core));
         }
         else
@@ -107,7 +108,6 @@ namespace spike_model
     /*
      First num_cores slots are reserved each for a core in the VAS tile
      Second num_l2_banks slots are reserved one each for a L2 bank in a VAS tile
-     This function is not used as of now
     */
     int Arbiter::getInputIndex(bool is_core, int id)
     {
@@ -119,6 +119,45 @@ namespace spike_model
         {
             return (cores_per_tile_ + id);
         }
+    }
+
+    bool Arbiter::hasNoCQueueFreeSlot(uint16_t j)
+    {
+        for(int i = 0; i < (int)num_outputs_;i++)
+            if(NoCQueueSize(i,j) >= q_sz)
+                return false;
+        return true;
+    }
+
+    bool Arbiter::hasL1L2QueueFreeSlot(uint16_t j)
+    {
+        for(uint16_t i = 0; i < num_l2_banks_; i++)
+            if(L2QueueSize(i,j) >= q_sz)
+                return false;
+        return true;
+    }
+
+    bool Arbiter::hasL2NoCQueueFreeSlot(uint16_t bank_id)
+    {
+        uint16_t j = getInputIndex(false, bank_id);
+        for(int i = 0; i < (int)num_outputs_;i++)
+            if(NoCQueueSize(i,j) >= q_sz)
+                return false;
+        return true;
+
+    }
+
+    bool Arbiter::hasArbiterQueueFreeSlot(uint16_t tile_id, uint16_t core_id)
+    {
+        bool ret = false;
+        uint16_t start_core = tile_id*cores_per_tile_;
+        uint16_t end_core = (tile_id+1)*cores_per_tile_;
+        if(core_id < start_core || core_id >= end_core)
+            return false;
+        core_id = getInputIndex(true, core_id);
+        ret = hasNoCQueueFreeSlot(core_id);
+        ret = ret | hasL1L2QueueFreeSlot(core_id);
+        return ret;
     }
 
     bool Arbiter::isCore(int j)
@@ -159,6 +198,16 @@ namespace spike_model
                 }
             }
         }
+    }
+
+    size_t Arbiter::NoCQueueSize(int network_type, int input_unit)
+    {
+        return pending_noc_msgs_[network_type][input_unit].size();
+    }
+
+    size_t Arbiter::L2QueueSize(uint16_t bank, uint16_t core)
+    {
+        return pending_l2_msgs_[bank][core].size();
     }
 
     void Arbiter::submitToNoC()

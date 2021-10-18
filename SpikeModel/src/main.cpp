@@ -105,7 +105,6 @@ int main(int argc, char **argv)
         auto x_size                 = upt.get("top.cpu.params.x_size").getAs<uint16_t>();
         auto y_size                 = upt.get("top.cpu.params.y_size").getAs<uint16_t>();
         auto mcpus_indices          = upt.get("top.cpu.params.mcpus_indices").getAs<std::string>();
-        
         // Copy parameters shared by multiple units
         std::string num_tiles_p ("top.cpu.noc.params.num_tiles");
         cls.getSimulationConfiguration().processParameter(num_tiles_p, sparta::utils::uint32_to_str(num_tiles));

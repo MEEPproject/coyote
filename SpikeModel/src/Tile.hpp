@@ -116,6 +116,8 @@ namespace spike_model
              */
             void setId(uint16_t id);
 
+            uint16_t getId();
+
             void setCoresPerTile(uint16_t num_cores)
             {
                 num_cores_ = num_cores;
@@ -240,7 +242,9 @@ namespace spike_model
              * \brief Send a request to a memory controller
              * \param req The request
              */
-            void issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req);
+            void issueMemoryControllerRequestFromL2_(const std::shared_ptr<CacheRequest> & req);
+
+            void issueMemoryControllerRequest_(const std::shared_ptr<CacheRequest> & req, bool);
             
             /*!
              * \brief Sends an L2 request to a bank in a different tile
