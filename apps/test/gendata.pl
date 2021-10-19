@@ -139,7 +139,7 @@ sub main() {
   print "\n#define __DATASET_H";
   print "\n\#define DIM ".$opts{"size"}." \n\n";
    
-  printArray( "matrix", $matrix, "long", "DIM*DIM+1");
+  printArray( "matrix", $matrix, "long", "(DIM-1)*8");
   printArray( "indices", $indices, "long", "DIM");
   printArray( "vector", $vector, "double", "DIM");
 
