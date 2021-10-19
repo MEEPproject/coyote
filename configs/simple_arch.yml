@@ -73,8 +73,8 @@ top:
           column_element_size: 32           # (uint64_t)        The size of column elements
           delay_open: 16                    # (uint64_t)        The delay to open a row
           delay_close: 16                   # (uint64_t)        The delay to close a row
-          delay_read: 200                   # (uint64_t)        The delay to read 32 Bytes from main memory (HBM)
-          delay_write: 200                  # (uint64_t)        The delay to write 32 Bytes from main memory (HBM)
+          delay_read: 100                   # (uint64_t)        The delay to read 32 Bytes from main memory (HBM)
+          delay_write: 100                  # (uint64_t)        The delay to write 32 Bytes from main memory (HBM)
     noc:
       params:
         noc_model: functional               # (std::string)     NoC Model to simulate (functional, simple, detailed)
