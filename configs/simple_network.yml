@@ -37,7 +37,8 @@ top:
       isa: RV64IMAFDCV                      # (std::string)	    The RISC-V isa version to use 
       icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
       dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
-      varch: v512:e64:s512                  # (std::string)     The RISC-V Vector uArch string
+      varch: v1024:e64:s1024                  # (std::string)     The RISC-V Vector uArch string
+      lanes_per_vpu: 16                     # (uint16_t)        The number of lanes per VPU  
       x_size: 4                             # (uint16_t)        The size of X dimension
       y_size: 4                             # (uint16_t)        The size of Y dimension
       mcpus_indices: [0,3,4,7,8,11,12,15]   # (std::vector<uint16_t>)     The network indices assigned to the MCPUs

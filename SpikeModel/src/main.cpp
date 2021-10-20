@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         auto num_threads_per_core   = upt.get("top.cpu.params.num_threads_per_core").getAs<uint16_t>();
         auto thread_switch_latency  = upt.get("top.cpu.params.thread_switch_latency").getAs<uint16_t>();
         auto varch                  = upt.get("top.cpu.params.varch").getAs<std::string>();
-//        auto lanes_per_vpu          = upt.get("top.cpu.params.lanes_per_vpu").getAs<std::uint16_t>();
+        auto lanes_per_vpu          = upt.get("top.cpu.params.lanes_per_vpu").getAs<std::uint16_t>();
         auto icache_config          = upt.get("top.cpu.params.icache_config").getAs<std::string>();
         auto dcache_config          = upt.get("top.cpu.params.dcache_config").getAs<std::string>();
         auto l2bank_line_size       = upt.get("top.cpu.tile0.l2_bank0.params.line_size").getAs<uint64_t>();
@@ -162,9 +162,10 @@ int main(int argc, char **argv)
             cmd,                                    // Application to execute
             varch,                                  // RISC-V Vector uArch string
             fast_cache,                             // Use a fast L1 cache model instead of the default spike cache
-            enable_smart_mcpu,
+            enable_smart_mcpu,                      // Enable smart mcpu
             vector_bypass_l1,
-            vector_bypass_l2);                     // Enable smart mcpu
+            vector_bypass_l2,
+            lanes_per_vpu);
 
         
         // Get a NoC pointer or NULL to represent non detailed NoC models
