@@ -35,8 +35,9 @@ namespace spike_model
 
             /*!
              * \brief Constructor for Request
-             * \param  a The requested address
-             * \param  pc The program counter of the requesting instruction
+             * \param a The requested address
+             * \param pc The program counter of the requesting instruction
+             * \param c The requesting core
              */
             Request(uint64_t a, uint64_t pc, uint16_t c): Event(pc, c), address(a){}
 
@@ -47,7 +48,7 @@ namespace spike_model
              * \param time The timestamp for the request
              * \param c The requesting core
              */
-            Request(uint64_t a, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c), address(a) {}
+            Request(uint64_t a, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c), address(a), id(0) {}
 
             /*!
              * \brief Constructor for Request
@@ -56,11 +57,11 @@ namespace spike_model
              * \param regType The type of the destination register for the request
              */
             Request(uint16_t coreId, uint64_t regId, spike_model::Request::RegType regType):
-                             Event(coreId), regId(regId), regType(regType) {}
+                             Event(coreId), regId(regId), regType(regType), id(0) {}
 
-            Request(uint16_t coreId): Event(coreId) {}
+            Request(uint16_t coreId): Event(coreId), id(0) {}
 
-            Request(uint16_t coreId, uint64_t regId): Event(coreId), regId(regId) {}
+            Request(uint16_t coreId, uint64_t regId): Event(coreId), regId(regId), id(0) {}
 
             /*!
              * \brief Get the address of the request
@@ -75,7 +76,7 @@ namespace spike_model
             size_t getDestinationRegId() const {return regId;}
 
             /*!
-             * \brief Set the size of the store
+             * \brief Set the size of the request in bytes
              * \param s The size
              */
             void setSize(uint16_t s) {size=s;}
@@ -119,9 +120,22 @@ namespace spike_model
              * \return The type of the register
              */
             RegType getDestinationRegType() const {return regType;}
+            
+            
+            /*!
+             * \brief Get the ID of the instruction.
+             * We use that in the Memory Tile to map original instructions to generated ones.
+             */
+            uint32_t getID() {return id;}
+            
+            /*!
+             * \brief Set the ID of the instruction.
+             * \param The ID to be set.
+             */
+            void setID(uint32_t id) {this->id = id;}
 
 
-                bool operator ==(const Request & m) const
+            bool operator ==(const Request & m) const
             {
                 return m.getAddress()==getAddress();
             }
@@ -133,6 +147,8 @@ namespace spike_model
 
             size_t regId;
             RegType regType;
+            
+            uint32_t id;    // used to identify the parent instruction
 
             uint16_t size;
     };

@@ -42,8 +42,12 @@ namespace spike_model
          * \brief A cache bank that belongs to a Tile in the architecture.
          *
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
-         * be in service at the sime time. Whether banks are shared or private to the tile is controlled from
+         * be in service at the some time. Whether banks are shared or private to the tile is controlled from
          * the EventManager class. The Cache is write-back and write-allocate.
+         *
+         * This cache might return more than one ack in the same cycle if an access that corresponds to more than one request is serviced. 
+         * External arbitration and queueing is necessary to avoid this behavior.
+         *
          */
     public:
         /*!
@@ -252,10 +256,10 @@ namespace spike_model
 
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
-        // This single slot could potentially be extended to a mmu pending miss queue
+        // This single slot could potentially be extended to a MMU pending miss queue
 
 
-        // L1 Data Cache
+        // Using the same handling policies as the L1 Data Cache
         using DL1Handle = SimpleDL1::Handle;
         DL1Handle l2_cache_;
         const bool always_hit_;
@@ -280,7 +284,7 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
 
         /*!
-        * \brief Sends an acknoledgement for a serviced request
+        * \brief Sends an acknowledgement for a serviced request
         * \param req The request to acknowledge
         */
         void sendAck_(const std::shared_ptr<CacheRequest> & req);

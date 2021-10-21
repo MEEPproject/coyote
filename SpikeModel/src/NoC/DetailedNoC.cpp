@@ -276,13 +276,26 @@ namespace spike_model
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
-            // MCPU -> VAS messages
+            // MemoryTile -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
                 packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
                     mcpu_to_network_[mess->getSrcPort()],   // Source
                     tile_to_network_[mess->getDstPort()],   // Destination
+                    size,                                   // Number of flits
+                    mess->getClass(),                       // Class of traffic -> Priority / VN / VC
+                    INJECTION_TIME                          // Injection time to add
+                );
+                sparta_assert(packet_id != INVALID_PKT_ID);
+                break;
+                
+            //-- MemoryTile -> MemoryTile communication
+            case NoCMessageType::MEM_TILE_REPLY:
+            case NoCMessageType::MEM_TILE_REQUEST:
+                packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
+                    mcpu_to_network_[mess->getSrcPort()],   // Source
+                    mcpu_to_network_[mess->getDstPort()],   // Destination
                     size,                                   // Number of flits
                     mess->getClass(),                       // Class of traffic -> Priority / VN / VC
                     INJECTION_TIME                          // Injection time to add

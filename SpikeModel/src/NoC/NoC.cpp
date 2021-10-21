@@ -217,6 +217,12 @@ namespace spike_model
             case NoCMessageType::SCRATCHPAD_COMMAND:
                 count_scratchpad_commands_++;
                 break;
+            case NoCMessageType::MEM_TILE_REQUEST:
+                count_mcpu_to_mcpu_requests_++;
+                break;
+            case NoCMessageType::MEM_TILE_REPLY:
+                count_mcpu_to_mcpu_replies_++;
+                break;
             default:
                 sparta_assert(false, "Unsupported message received from a MCPU!!!");
         }

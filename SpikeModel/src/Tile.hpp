@@ -71,7 +71,7 @@ namespace spike_model
                 PARAMETER(uint64_t, latency, 1, "The number of cycles to get to a local cache bank")
                 PARAMETER(std::string, l2_sharing_mode, "tile_private", "How the cache will be shared among the tiles")
                 PARAMETER(std::string, bank_policy, "set_interleaving", "The data mapping policy for banks")
-                PARAMETER(std::string, scratchpad_policy, "set_interleaving", "The data mapping policy for the scratchpad")
+                PARAMETER(std::string, scratchpad_policy, "core_to_bank", "The data mapping policy for the scratchpad")
                 PARAMETER(std::string, tile_policy, "set_interleaving", "The data mapping policy for tiles")
             };
 
@@ -189,10 +189,13 @@ namespace spike_model
              * \param banks_per_tile The number of banks per Tile
              * \param num_tiles The number of tiles in the system
              * \param num_mcs The number of memory controllers
-             * \param address_mapping_policy The address mapping policy of the memory controllers
+             * \param mc_shift The number of bits to shift to get the memory controller that handles an address
+             * \param mc_mask The mask for the AND to extract the memory controller id
+             * \param num_cores The number of cores
+             * \param corr_mcpu The MCPU that will handle requests fromthis tile
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, 
-                                uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores);
+                                uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores, uint16_t corr_mcpu);
 
             uint16_t getL2Banks();
             std::shared_ptr<EventManager> getRequestManager();
@@ -233,6 +236,7 @@ namespace spike_model
             uint8_t tag_bits;
             uint16_t num_cores_;
             uint16_t num_tiles_;
+            uint16_t corresponding_mcpu;
     
             Arbiter *arbiter;
 

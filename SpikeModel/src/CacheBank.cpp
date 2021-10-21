@@ -38,7 +38,7 @@ namespace spike_model
                 (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
 
 
-        // DL1 cache config
+        // Cache config
         std::unique_ptr<sparta::cache::ReplacementIF> repl(new sparta::cache::TreePLRUReplacement
                                                          (l2_associativity_));
         l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, l2_line_size_*bank_and_tile_offset_, *repl ));
@@ -283,13 +283,13 @@ namespace spike_model
 
         if (SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             if (always_hit_) {
-                info_logger_ << "DL1 Cache HIT all the time: phyAddr=0x" << std::hex << phyAddr;
+                info_logger_ << "Cache HIT all the time: phyAddr=0x" << std::hex << phyAddr;
             }
             else if (cache_hit) {
-                info_logger_ << "DL1 Cache HIT: phyAddr=0x" << std::hex << phyAddr;
+                info_logger_ << "Cache HIT: phyAddr=0x" << std::hex << phyAddr;
             }
             else {
-                info_logger_ << "DL1 Cache MISS: phyAddr=0x" << std::hex << phyAddr;
+                info_logger_ << "Cache MISS: phyAddr=0x" << std::hex << phyAddr;
             }
         }
 

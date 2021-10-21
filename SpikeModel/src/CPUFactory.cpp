@@ -25,6 +25,7 @@ auto spike_model::CPUFactory::setTopology(const std::string& topology,
                                           const uint32_t num_tiles,
                                           const uint32_t num_banks_per_tile,
                                           const uint32_t num_memory_cpus,
+                                          const uint32_t num_llcs,
                                           const uint32_t num_memory_controllers,
                                           const uint32_t num_memory_banks,
                                           const bool trace) -> void{
@@ -34,6 +35,7 @@ auto spike_model::CPUFactory::setTopology(const std::string& topology,
     topology_->setNumTiles(num_tiles);
     topology_->setNumL2BanksPerTile(num_banks_per_tile);
     topology_->setNumMemoryCPUs(num_memory_cpus);
+    topology_->setNumLLCs(num_llcs);
     topology_->setNumMemoryControllers(num_memory_controllers);
     topology_->setNumMemoryBanksPerMemoryController(num_memory_banks);
     topology_->setTrace(trace);
@@ -111,10 +113,11 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 }
             }
         }
-	else if(node_name.find(to_replace_memory_cpus_)!=std::string::npos) {
-	    for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
-	        parent_name = unit.parent_name;
-		node_name = unit.name;
+        else if(node_name.find(to_replace_memory_cpus_)!=std::string::npos)
+        {
+            for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
+                parent_name = unit.parent_name;
+                node_name = unit.name;
                 human_name = unit.human_name;
                 replace_with = std::to_string(num_of_memory_cpus);
                 replace(parent_name, to_replace_memory_cpus_, replace_with);
@@ -134,7 +137,32 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                 to_delete_.emplace_back(rtn);
                 resource_names_.emplace_back(node_name);
             }
-	}
+        }
+        else if(node_name.find(to_replace_llc_)!=std::string::npos)
+        {
+            for(std::size_t num_of_llcs = 0; num_of_llcs < topology_->num_llcs; ++num_of_llcs) {
+                parent_name = unit.parent_name;
+                node_name = unit.name;
+                human_name = unit.human_name;
+                replace_with = std::to_string(num_of_llcs);
+                replace(parent_name, to_replace_llc_, replace_with);
+                replace(node_name, to_replace_llc_, replace_with);
+                replace(human_name, to_replace_llc_, replace_with);
+                auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
+                auto rtn = new sparta::ResourceTreeNode(parent_node,
+                                                      node_name,
+                                                      unit.group_name,
+                                                      unit.group_id,
+                                                      human_name,
+                                                      unit.factory);
+                if(unit.is_private_subtree){
+                    rtn->makeSubtreePrivate();
+                    private_nodes_.emplace_back(rtn);
+                }
+                to_delete_.emplace_back(rtn);
+                resource_names_.emplace_back(node_name);
+            }
+        }
         else if(node_name.find(to_replace_memory_controllers_)!=std::string::npos)
         {
             for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers){
@@ -361,6 +389,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
         }
     }
 
+    
     for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
     {
             auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
@@ -378,17 +407,27 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                 b->setMemoryController(mc);
             }
     }
-
+    
+    
+    spike_model::NoC *noc_for_mcpu = root_node->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::NoC>(); 
 	for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
 		auto mcpu_node = root_node->getChild(std::string("cpu.memory_cpu") +
 				sparta::utils::uint32_to_str(num_of_memory_cpus));
 		sparta_assert(mcpu_node != nullptr);
 
-		auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
-				sparta::utils::uint32_to_str(num_of_memory_cpus)); 					// the MPCU is bound to one MC
+        MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
+        mcpu->setID(num_of_memory_cpus);
+        mcpu->setNoC(noc_for_mcpu);
+        
+        
+        /*auto mc_node = root_node->getChild(std::string("cpu.memory_controller") +
+                sparta::utils::uint32_to_str(num_of_memory_cpus));                  // the MPCU is bound to one MC
 
-		sparta_assert(mc_node != nullptr);
+        sparta_assert(mc_node != nullptr);
+        */
 
+        //-- Bind the ports
+        //   Currently each Memory Tile is communication to 1 LLC, which in turn communicates to 1 MC only.
 		for(const auto& port : ports) {
 			bool bind = false;
 			out_port_name = port.output_port_name;
@@ -402,14 +441,23 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 				replace(in_port_name, to_replace_memory_cpus_, replace_with);
 				bind = true;
 			}
-			if(out_port_name.find("memory_controller#") != std::string::npos) {
-				replace(out_port_name, to_replace_memory_controllers_, replace_with);
+			if(out_port_name.find("llc^") != std::string::npos) {
+				replace(out_port_name, to_replace_llc_, replace_with);
 				bind = true;
 			}
-			if(in_port_name.find("memory_controller#") != std::string::npos) {
-				replace(in_port_name, to_replace_memory_controllers_, replace_with);
+			if(in_port_name.find("llc^") != std::string::npos) {
+				replace(in_port_name, to_replace_llc_, replace_with);
 				bind = true;
 			}
+            if(out_port_name.find("memory_controller#") != std::string::npos) {
+                replace(out_port_name, to_replace_memory_controllers_, replace_with);
+                bind = true;
+            }
+            if(in_port_name.find("memory_controller#") != std::string::npos) {
+                replace(in_port_name, to_replace_memory_controllers_, replace_with);
+                bind = true;
+            }
+
 			if(bind && !root_node->getChildAs<sparta::Port>(out_port_name)->isBound()) {
 				std::cout << "Binding " << out_port_name << " and " << in_port_name << std::endl;
 				sparta::bind(root_node->getChildAs<sparta::Port>(out_port_name), root_node->getChildAs<sparta::Port>(in_port_name));

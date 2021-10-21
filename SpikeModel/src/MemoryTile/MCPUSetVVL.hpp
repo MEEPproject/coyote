@@ -2,11 +2,13 @@
 #define __MCPU_SetVVL_HH__
 
 #include "EventVisitor.hpp"
+#include "Request.hpp"
+#include "VectorElementType.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class MCPUSetVVL : public Event, public std::enable_shared_from_this<MCPUSetVVL>
+    class MCPUSetVVL : public Request, public std::enable_shared_from_this<MCPUSetVVL>
     {
         /**
          * \class spike_model::MCPUSetVVL
@@ -25,72 +27,85 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Event(pc)
-            {}
+            MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {
+                setLMUL(LMULSetting::ONE);
+                setWidth(VectorElementType::BIT64);
+            }
 
             /*!
              * \brief Constructor for MCPUSetVVL
-             * \param VVL The virtual vector length set by scalar core
+             * \param avl The application vector length set by scalar core
+             * \param regId Destination register
              * \param pc The program counter of the instruction that finished the simulation
              * \param time The timestamp when the event is submitted to sparta
              * \param c The core which submitted the event
              */
-            MCPUSetVVL(uint64_t AVL, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c)
-                          , AVL(AVL), regId(regId) {}
+            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(pc, time, c)
+                          , avl(avl) {
+                setLMUL(LMULSetting::ONE);
+                setDestinationReg(regId);
+                setWidth(VectorElementType::BIT64);
+            }
 
             /*!
              * \brief Handle the event
              * \param v The visitor to handle the event
              */
-            void handle(EventVisitor * v) override
-            {
+            void handle(EventVisitor * v) override {
                 v->handle(shared_from_this());
             }
 
-            uint64_t getVVL()
-            {
-                return VVL;
-            }
+            uint64_t getVVL() {return vvl;}
 
-            void setVVL(uint64_t VVL)
-            {
-                this->VVL = VVL;
-            }
+            void setVVL(uint64_t vvl) {this->vvl = vvl;}
 
-            uint64_t getAVL()
-            {
-                return AVL;
-            }
+            uint64_t getAVL() {return avl;}
 
-            void setAVL(uint64_t AVL)
-            {
-                this->AVL = AVL;
-            }
+            void setAVL(uint64_t avl) {this->avl = avl;}
 
             /*!
              * \brief Set the id and type of the destination register for the SetVVL request
              * \param r The id of the register
-             * \param t The type of the register
              */
-            void setDestinationReg(size_t r) {regId=r;}
-
-            /*!
-             * \brief Get the destination register id for the SetVVL request
-             * \return The id of the register
-             */
-            size_t getDestinationRegId() { return regId;}
-
-            /*!
-             * \brief Get the memory CPU that will be accessed
-             * \return The address of the line              */
-            uint64_t getMemoryCPU()
-            {
-                return memoryCPU;
+            void setDestinationReg(size_t r) {
+                Request::setDestinationReg(r, RegType::INTEGER);
             }
 
+            
+            /*!
+             * \brief Set the LMUL setting for the current VVL request.
+             * \param lmul, the lmul setting.
+             */
+            void setLMUL(LMULSetting lmul) {this->lmul = lmul;}
+            
+            /*!
+             * \brief Return the LMUL setting
+             * \return The LMUL setting for this request.
+             */
+            LMULSetting getLMUL() {return lmul;}
+            
+            /*!
+             * \brief Set the vector element width.
+             * \param The width of the vector elements.
+             */
+            void setWidth(VectorElementType width) {this->width = width;}
+            
+            /*!
+             * \brief Get the vector element width
+             * \return The element width of the current VVL request.
+             */
+            VectorElementType getWidth() {return width;}
+
         private:
-            uint64_t AVL, VVL, memoryCPU;
-            size_t regId;
+            LMULSetting lmul;
+            VectorElementType width;
+            uint64_t avl, vvl;
     };
+    
+    
+    inline std::ostream& operator<<(std::ostream &str, MCPUSetVVL &instr) {
+        str << "AVL: 0x" << std::hex << instr.getAVL() << ", VVL: 0x" << instr.getVVL() << ", lmul: 0x" << (int)instr.getLMUL() << ", w: 0x" << (uint)instr.getWidth() << ", coreID: 0x" << instr.getCoreId() << ", PC: 0x" << instr.getPC();
+        return str;
+    }
 }
 #endif

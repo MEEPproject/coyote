@@ -31,7 +31,7 @@ namespace spike_model
             "The top.cpu.tile*.params.l2_sharing_mode must be tile_private or fully_shared");
         sparta_assert(bank_policy_ == "page_to_bank" || bank_policy_ == "set_interleaving", 
             "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
-        sparta_assert(scratchpad_policy_ == "page_to_bank" || scratchpad_policy_ == "set_interleaving",
+        sparta_assert(scratchpad_policy_ == "core_to_bank" || scratchpad_policy_ == "vreg_interleaving",
             "The top.cpu.tile*.params.scratchpad_policy must be page_to_bank or set_interleaving");
         node_ = node;
         arbiter = NULL;
@@ -73,15 +73,16 @@ namespace spike_model
             printf("Unsupported cache data mapping policy\n");
         }
 
-        spike_model::CacheDataMappingPolicy s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
-        if(scratchpad_policy_=="page_to_bank")
+        spike_model::VRegMappingPolicy s_pol=spike_model::VRegMappingPolicy::CORE_TO_BANK;
+        if(scratchpad_policy_=="core_to_bank")
         {
-            s_pol=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+            s_pol=spike_model::VRegMappingPolicy::CORE_TO_BANK;
         }
-        else if(scratchpad_policy_=="set_interleaving")
+        else if(scratchpad_policy_=="vreg_interleaving")
         {
-            s_pol=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+            s_pol=spike_model::VRegMappingPolicy::VREG_INTERLEAVING;
         }
+    
         else
         {
             printf("Unsupported cache data mapping policy\n");
@@ -106,7 +107,7 @@ namespace spike_model
             {
                 printf("Unsupported cache data mapping policy\n");
             }
-            access_director=new SharedL2Director(this, b_pol, t_pol, s_pol);
+            access_director=new SharedL2Director(this, b_pol, s_pol, t_pol);
         }
     }
 
@@ -226,6 +227,11 @@ namespace spike_model
 
                 case NoCMessageType::MCPU_REQUEST:
                     break;
+                    
+                case NoCMessageType::SCRATCHPAD_COMMAND:
+                case NoCMessageType::SCRATCHPAD_DATA_REPLY:
+                case NoCMessageType::SCRATCHPAD_ACK:
+                    break;
 
                 default:
                     std::cout << "Unsupported message received from the NoC!!!\n";
@@ -290,10 +296,10 @@ namespace spike_model
     {
         if(!r->isServiced())
         {
-            std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
+            //std::cout << "Issuing MCPU VVL from core " << r->getCoreId() << " and tile " << id_ << std::endl;
 
             //TODO: The actual MCPU that will handle the request needs to be defined
-	    std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+	    std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, corresponding_mcpu);
 	    std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
             msg->msg = mes;
             msg->is_core = true;
@@ -308,7 +314,7 @@ namespace spike_model
         }
         else
         {
-            std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
+            //std::cout << "Acknowledge MCPU request for core " << r->getCoreId() << " from tile " << id_ << std::endl;
             request_manager_->notifyAck(r);
         }
     }
@@ -316,7 +322,7 @@ namespace spike_model
     void Tile::handle(std::shared_ptr<spike_model::MCPUInstruction> r)
     {
         //TODO: The actual MCPU that will handle the request needs to be defined
-	std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, 0);
+	std::shared_ptr<NoCMessage> mes = std::make_shared<NoCMessage>(r, NoCMessageType::MCPU_REQUEST, 32, id_, corresponding_mcpu);
 	std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
         msg->msg = mes;
         msg->is_core = true;
@@ -337,11 +343,12 @@ namespace spike_model
 
     void Tile::setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc,
                uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles,
-               uint64_t num_mcs, AddressMappingPolicy address_mapping_policy, uint16_t num_cores)
+               uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores, uint16_t corr_mcpu)
     {
         setNumTiles(num_tiles);
         setCoresPerTile(num_cores/num_tiles);
-        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, address_mapping_policy);
+        corresponding_mcpu=corr_mcpu;
+        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, mc_shift, mc_mask);
     }
 
     void Tile::insnLatencyCallback(const std::shared_ptr<spike_model::InsnLatencyEvent>& r)

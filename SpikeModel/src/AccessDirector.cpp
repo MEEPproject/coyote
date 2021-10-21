@@ -116,7 +116,7 @@ namespace spike_model
                     // obtain it
                     if(scratchpad_available_size<request_size)
                     {
-                        uint64_t ways_to_disable=ceil(request_size/way_size);
+                        uint64_t ways_to_disable=ceil(1.0*request_size/way_size);
                         r->setSize(ways_to_disable); //THIS IS A NASTY TRICK
 
                         //Ways are disabled in every bank
@@ -224,12 +224,34 @@ namespace spike_model
             {
                 if(!r->isServiced())
                 {
-                    uint16_t b=calculateBank(r);
-                    r->setCacheBank(b);
-                    tile->issueLocalRequest_(r, 1);
+                    int lines_to_read=ceil(1.0*r->getSize()/line_size);
+
+                    //Send as many reads to the bank as lines are necessary to fulfill the request
+                    for(int i=0;i<lines_to_read;i++)
+                    {
+                        uint16_t b=calculateBank(r);
+                        r->setCacheBank(b);
+                        tile->issueLocalRequest_(r, 1);
+                    }
+                    pending_scratchpad_management_ops[r]=lines_to_read;
                 }
                 else
                 {
+                    pending_scratchpad_management_ops[r]=pending_scratchpad_management_ops[r]-1;
+
+                    //If all the pending ops are done, mark as finished
+                    if(pending_scratchpad_management_ops[r]==0)
+                    {
+                        pending_scratchpad_management_ops.erase(r);
+
+                        // We need to generate a new identical pointer to be sent and then set is as ready. If we reused the old pointer and set it to ready, then 
+                        // the MCPU might get visibility on ready==true from an earlier in flight packet that holds the same pointer
+                        uint32_t old_id = r->getID();
+                        r=std::make_shared<ScratchpadRequest>(r->getAddress(), ScratchpadRequest::ScratchpadCommand::READ, r->getPC(), r->getTimestamp(), r->getCoreId(), r->getSourceTile(), r->getDestinationRegId());
+
+                        r->setOperandReady(true);
+                        r->setID(old_id);
+                    }
                     //Send ACK to MCPU
 	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
                     msg->msg = getScratchpadAckMessage(r);
@@ -257,27 +279,17 @@ namespace spike_model
             }
         }
     }
-    
-    uint8_t AccessDirector::nextPowerOf2(uint64_t v)
-    {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v |= v >> 32;
-        v++;
-        return v;
-    }
-    
-    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, AddressMappingPolicy address_mapping_policy)
+     
+    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask)
     {
         this->line_size=line_size;
 
         block_offset_bits=(uint8_t)(ceil(log2(line_size)));
         tile_bits=(uint8_t)ceil(log2(num_tiles));
         bank_bits=(uint8_t)ceil(log2(banks_per_tile));
+        vreg_bits=(uint8_t)ceil(log2(num_vregs_per_core));
+        core_bits=(uint8_t)ceil(log2(tile->num_cores_));
+        core_to_bank_interleaving_bits=(uint8_t)log2(banks_per_tile/tile->num_cores_);
 
         uint64_t s=size_kbs*num_tiles*1024;
         uint64_t num_sets=s/(assoc*line_size);
@@ -286,20 +298,8 @@ namespace spike_model
         num_ways=assoc;
         way_size=(size_kbs/num_ways)*1024;
 
-        switch(address_mapping_policy)
-        {
-            case AddressMappingPolicy::OPEN_PAGE:
-                mc_shift=ceil(log2(line_size));
-                mc_mask=nextPowerOf2(num_mcs)-1;
-                break;
-
-                
-            case AddressMappingPolicy::CLOSE_PAGE:
-                mc_shift=ceil(log2(line_size));
-                mc_mask=nextPowerOf2(num_mcs)-1;
-                break;
-        }
-
+        mc_shift=memory_controller_shift;
+        mc_mask=memory_controller_mask;
 
     }
 
@@ -349,28 +349,25 @@ namespace spike_model
     
     std::shared_ptr<NoCMessage> AccessDirector::getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, 0);
+        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, req->getSourceTile());
     }
 
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)
     {
         uint16_t destination=0;
-        
         if(bank_bits>0) //If more than one bank
         {
-            uint8_t left=tag_bits;
-            uint8_t right=block_offset_bits;
             switch(scratchpad_data_mapping_policy_)
             {
-                case CacheDataMappingPolicy::SET_INTERLEAVING:
-                    left+=set_bits-bank_bits;
+                case VRegMappingPolicy::CORE_TO_BANK:
+                    //Convert to [core_id_bits,vreg_id_bits] format and get the bank_bits most significant bits
+                    destination=((r->getCoreId() << vreg_bits) | r->getDestinationRegId()) >> (vreg_bits+core_bits-bank_bits);
                     break;
-                case CacheDataMappingPolicy::PAGE_TO_BANK:
-                    right+=set_bits-bank_bits;
+                case VRegMappingPolicy::VREG_INTERLEAVING:
                     break;
             }
-            destination=(r->getAddress() << left) >> (left+right);
         }
+        printf("Destination is %d\n", destination);
         return destination;
     }
 

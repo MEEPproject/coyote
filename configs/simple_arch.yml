@@ -33,7 +33,8 @@ top:
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_tiles: 1                          # (uint16_t)	    The number of tiles to simulate
       num_memory_cpus: 1                    # (uint16_t)        The number of MCPUs to simulate
-      # num_memory_controllers: 1             # (uint16_t)	    The number of MCs to simulate
+      num_llcs: 1                           # (uint16_t)        The number of LLCs are in the architecture (1 MCPU is connected to 1 LLC!)
+      # num_memory_controllers: 1           # (uint16_t)	    The number of MCs to simulate
       isa: RV64IMAFDCV                      # (std::string)	    The RISC-V isa version to use 
       icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
       dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
@@ -48,7 +49,7 @@ top:
         latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
         l2_sharing_mode: tile_private       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
         bank_policy: page_to_bank           # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
-        scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
+        scratchpad_policy: core_to_bank     # (std::string)     The data mapping policy for the scratchpad (core_to_bank, full_vreg_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
       arbiter:
         params:
@@ -65,7 +66,7 @@ top:
     memory_cpu*:
       params:
         line_size: 64                       # (uint64_t)        Cache line size (power of 2)
-        latency: 0                          # (uint64_t)        The latency of the MCPU
+        latency: 1                          # (uint64_t)        The latency of the MCPU
     memory_controller*:
       params:
         num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
@@ -99,6 +100,8 @@ top:
           - "SCRATCHPAD_ACK:8"
           - "SCRATCHPAD_DATA_REPLY:8"
           - "SCRATCHPAD_COMMAND:8"
+          - "MEM_TILE_REQUEST:8"
+          - "MEM_TILE_REPLY:8"
         packet_latency: 30                  # (uint16_t)        The average latency for each packet
 
 ...

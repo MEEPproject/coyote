@@ -25,6 +25,7 @@
 
 #include "PrivateL2Director.hpp"
 #include "SharedL2Director.hpp"
+#include "utils.hpp"
 #include <thread>
 
 double calculateAverageOfInternalCounters(
@@ -123,6 +124,7 @@ void SpikeModel::buildTree_()
     // architectural parameters
     auto    num_tiles               = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
     auto    num_memory_cpus         = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
+    auto    num_llcs                = upt.get("top.cpu.params.num_llcs").getAs<uint16_t>();
     auto    num_memory_controllers  = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto    num_memory_banks        = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
     auto    num_l2_banks_in_tile    = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
@@ -131,7 +133,7 @@ void SpikeModel::buildTree_()
     auto cpu_factory = getCPUFactory_();
 
     // Set the ACME topology that will be built
-    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_memory_controllers, num_memory_banks, trace);
+    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_llcs, num_memory_controllers, num_memory_banks, trace);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
@@ -199,6 +201,8 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     const auto& upt = getSimulationConfiguration()->getUnboundParameterTree();
     auto num_cores = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
     auto num_tiles = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    auto x_size = upt.get("top.cpu.params.x_size").getAs<uint16_t>();
+    auto y_size = upt.get("top.cpu.params.y_size").getAs<uint16_t>();
     auto num_memory_cpus = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
     auto num_memory_controllers = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto num_l2_banks_in_tile = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
@@ -266,10 +270,36 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 
     m->setServicedRequestsStorage(s);
 
+    uint64_t mc_shift=0;
+    uint64_t mc_mask=0;
+    switch(address_mapping)
+    {
+        case spike_model::AddressMappingPolicy::OPEN_PAGE:
+            mc_shift=ceil(log2(bank_line));
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+
+            
+        case spike_model::AddressMappingPolicy::CLOSE_PAGE:
+            mc_shift=ceil(log2(bank_line));
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+    }
+    
+    uint16_t num_vas_tiles_per_row=x_size-(num_memory_cpus/y_size);
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
         tiles[i]->setRequestManager(m);
-        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, address_mapping, num_cores);
+
+        // The corresponding MCPU is the closest in the same row.
+        uint16_t row=i/num_vas_tiles_per_row;
+        uint16_t corr_mcpu=2*row;
+        if(num_tiles>1 && i%num_vas_tiles_per_row>=num_vas_tiles_per_row/2)
+        {
+            corr_mcpu=corr_mcpu+1;
+        }
+
+        tiles[i]->setMemoryInfo(bank_size*num_l2_banks_in_tile, bank_associativity, bank_line, num_l2_banks_in_tile, num_tiles, num_memory_controllers, mc_shift, mc_mask, num_cores, corr_mcpu);
         tiles[i]->getArbiter()->setNumInputs(num_cores/num_tiles, tiles[i]->getL2Banks(), i);
     }
 
@@ -281,7 +311,8 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
 
         spike_model::MemoryCPUWrapper *mcpu=tile_node->getResourceAs<spike_model::MemoryCPUWrapper>();
 
-        mcpu->setRequestManager(m);
+        //mcpu->setRequestManager(m);
+        mcpu->setAddressMappingInfo(mc_shift, mc_mask);
     }
 
      

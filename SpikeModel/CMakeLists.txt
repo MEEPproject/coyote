@@ -176,6 +176,7 @@ add_executable(spike_model
   src/MemoryTile/MemoryBank.cpp
   src/EventVisitor.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc
+  src/utils.cpp
   )
 
 sparta_application(spike_model)

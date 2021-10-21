@@ -81,7 +81,9 @@ namespace spike_model
                  "MCPU_REQUEST:ADDRESS_ONLY.0",
                  "SCRATCHPAD_ACK:CONTROL.0",
                  "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2",
-                 "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"}), "Mapping of messages to networks and classes")
+                 "SCRATCHPAD_COMMAND:DATA_TRANSFER.3",
+                 "MEM_TILE_REQUEST:DATA_TRANSFER.2",
+                 "MEM_TILE_REPLY:DATA_TRANSFER.2"}), "Mapping of messages to networks and classes")
         };
 
         //! name of this resource.
@@ -168,6 +170,8 @@ namespace spike_model
             else if (mess == "SCRATCHPAD_ACK") return NoCMessageType::SCRATCHPAD_ACK;
             else if (mess == "SCRATCHPAD_DATA_REPLY") return NoCMessageType::SCRATCHPAD_DATA_REPLY;
             else if (mess == "SCRATCHPAD_COMMAND") return NoCMessageType::SCRATCHPAD_COMMAND;
+            else if (mess == "MEM_TILE_REQUEST") return NoCMessageType::MEM_TILE_REQUEST;
+            else if (mess == "MEM_TILE_REPLY") return NoCMessageType::MEM_TILE_REPLY;
             else sparta_assert(false, "Message " + mess + " not defined. See NoCMessageType.");
         }
 
@@ -244,6 +248,20 @@ namespace spike_model
             "Number of Scratchpad_Command",     // description
             sparta::Counter::COUNT_NORMAL       // behavior
         );                                                      //! The number of Scratchpad_Commands forwarded by NoC
+        sparta::Counter count_mcpu_to_mcpu_requests_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "mcpu_to_mcpu_requests",            // name
+            "Number of MemTile2MemTile Request",// description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory Tile requests sent
+        sparta::Counter count_mcpu_to_mcpu_replies_ = sparta::Counter
+        (
+            getStatisticSet(),                  // parent
+            "mcpu_to_mcpu_replies",             // name
+            "Number of MemTile2MemTile Replies",// description
+            sparta::Counter::COUNT_NORMAL       // behavior
+        );                                                      //! The number of Memory Tile requests acknowledged/returned
         
         /*! \brief Trace the source a destination for a message
         * \param mes The message

@@ -38,7 +38,6 @@ constexpr char DATA_FILE_OPTIONS[] = "data-file"; // Data file options, which ar
 //Arbiter arbiter;
 int main(int argc, char **argv)
 {
-    std::vector<std::string> datafiles;
 
     sparta::app::DefaultValues DEFAULTS;
     DEFAULTS.auto_summary_default = "on";
@@ -95,6 +94,7 @@ int main(int argc, char **argv)
         auto icache_config          = upt.get("top.cpu.params.icache_config").getAs<std::string>();
         auto dcache_config          = upt.get("top.cpu.params.dcache_config").getAs<std::string>();
         auto l2bank_line_size       = upt.get("top.cpu.tile0.l2_bank0.params.line_size").getAs<uint64_t>();
+        auto l2bank_size            = upt.get("top.cpu.tile0.l2_bank0.params.size_kb").getAs<uint64_t>();
         auto mcpu_line_size         = upt.get("top.cpu.memory_cpu0.params.line_size").getAs<uint64_t>();
         auto num_memory_cpus        = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
         auto noc_model              = upt.get("top.cpu.noc.params.noc_model").getAs<std::string>();
@@ -144,6 +144,7 @@ int main(int argc, char **argv)
             "\nL1$D line size: " << dcache_line_size << " because top.cpu.params.dcache_config is: " << dcache_config <<
             "\nL1$I line size: " << icache_line_size << " because top.cpu.params.icache_config is: " << icache_config);
 
+
         // Create the simulator
         sparta::Scheduler scheduler;
         std::shared_ptr<SpikeModel> sim=std::make_shared<SpikeModel>(scheduler);
@@ -153,6 +154,7 @@ int main(int argc, char **argv)
         cls.populateSimulation(&(*sim));
         std::shared_ptr<spike_model::EventManager> request_manager=sim->createRequestManager();
 
+        size_t scratchpad_size = ((num_banks * l2bank_size * 1024 * 8) / (num_cores / num_tiles)) / 32;
         std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(
             std::to_string(num_cores),              // Number of cores to simulate
             std::to_string(num_threads_per_core),   // Number of cores in each core
@@ -165,7 +167,8 @@ int main(int argc, char **argv)
             enable_smart_mcpu,                      // Enable smart mcpu
             vector_bypass_l1,
             vector_bypass_l2,
-            lanes_per_vpu);
+            lanes_per_vpu,
+            scratchpad_size);
 
         
         // Get a NoC pointer or NULL to represent non detailed NoC models

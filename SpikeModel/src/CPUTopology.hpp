@@ -122,6 +122,13 @@ public:
     auto setNumMemoryCPUs(const uint32_t num_of_memory_cpus) -> void{
         num_memory_cpus = num_of_memory_cpus;
     }
+    
+    /**
+     * @brief Set the number of LLCs in the topology
+     */
+    auto setNumLLCs(const uint32_t num_of_llcs) -> void{
+        num_llcs = num_of_llcs;
+    }
 
     /**
      * @brief Set the number of memory controllers
@@ -162,6 +169,7 @@ public:
     uint32_t num_memory_cpus;
     uint32_t num_memory_controllers;
     uint32_t num_memory_banks;
+    uint16_t num_llcs;
     bool trace;
 
     spike_model::Logger logger;

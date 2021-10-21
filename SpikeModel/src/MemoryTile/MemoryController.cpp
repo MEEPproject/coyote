@@ -3,6 +3,7 @@
 #include "FifoRrMemoryAccessScheduler.hpp"
 #include "FifoRrMemoryAccessSchedulerAccessTypePriority.hpp"
 #include "FifoCommandScheduler.hpp"
+#include "utils.hpp"
 
 namespace spike_model
 {
@@ -39,12 +40,10 @@ namespace spike_model
         address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
         if(p->address_policy=="open_page")
         {
-            printf("Using OPEN\n");
             address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
         }
         else if(p->address_policy=="close_page")
         {
-            printf("Using CLOSE\n");
             address_mapping_policy_=spike_model::AddressMappingPolicy::CLOSE_PAGE;
         }
         else
@@ -104,7 +103,6 @@ namespace spike_model
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
-        req->setMemoryAck(true);
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
         out_port_mcpu_.send(req, 0);
     }
@@ -135,6 +133,7 @@ namespace spike_model
         return res_command;
     }
 
+    
     void MemoryController::controllerCycle_()
     {
         while(sched->hasIdleBanks())
@@ -176,6 +175,7 @@ namespace spike_model
             }
         }
     }
+
 
     void MemoryController::addBank_(MemoryBank * bank)
     {
@@ -248,19 +248,6 @@ namespace spike_model
         return address_mapping_policy_;
     }
     
-    uint8_t MemoryController::nextPowerOf2(uint64_t v)
-    {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v |= v >> 32;
-        v++;
-        return v;
-    }
-
     void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size)
     {
         this->line_size=line_size;
@@ -286,9 +273,9 @@ namespace spike_model
         }
         
         rank_mask=0;
-        bank_mask=nextPowerOf2(num_banks_)-1;
-        row_mask=nextPowerOf2(num_rows_per_bank)-1;
-        col_mask=nextPowerOf2(num_cols_per_bank)-1;
+        bank_mask=utils::nextPowerOf2(num_banks_)-1;
+        row_mask=utils::nextPowerOf2(num_rows_per_bank)-1;
+        col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
     }    
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

@@ -5,6 +5,7 @@
 #include <memory>
 #include "NoCMessageType.hpp"
 #include "../Event.hpp"
+#include <iostream>
 
 namespace spike_model
 {
@@ -100,6 +101,11 @@ namespace spike_model
             uint8_t                 class_;             //! The class which represents a priority or VC or both
 
     };
+    
+    inline std::ostream& operator<<(std::ostream &str, NoCMessage &mes) {
+        str << "Src: " << mes.getSrcPort() << ", Dest: " << mes.getDstPort() << ", Type: " << (int)mes.getType();
+        return str;
+    }
 
 } // spike_model
 
