@@ -26,6 +26,7 @@ namespace spike_model
                 INTEGER,
                 FLOAT,
                 VECTOR,
+                DONT_CARE,
             };
 
             //Request(){}

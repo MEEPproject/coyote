@@ -94,11 +94,12 @@ namespace spike_model {
 			SPStatus *sp_status;
 			
 			uint16_t id;
-			uint32_t line_size_;
+			uint32_t line_size;
 			uint32_t vvl;
-			uint64_t latency_;
+			uint64_t latency;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
+			bool enabled_llc;
 		
 			uint64_t mc_shift;
 			uint64_t mc_mask;
@@ -121,20 +122,36 @@ namespace spike_model {
 			
 
 			//-- message handling 
-			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc_ {
+			sparta::DataOutPort<std::shared_ptr<NoCMessage>> out_port_noc {
 				&unit_port_set_, "out_noc"
 			};
 
-			sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc_ {
+			sparta::DataInPort<std::shared_ptr<NoCMessage>> in_port_noc {
 				&unit_port_set_, "in_noc"
 			};
 
-			sparta::DataOutPort<std::shared_ptr<Request>> out_port_mc_ {
+			sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_mc {
 				&unit_port_set_, "out_mc", false 
 			};
 
-			sparta::DataInPort<std::shared_ptr<Request>> in_port_mc_ {
+			sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_mc {
 				&unit_port_set_, "in_mc"
+			};
+		
+			sparta::DataOutPort<std::shared_ptr<Request>> out_port_llc {
+				&unit_port_set_, "out_llc", false
+			};
+
+			sparta::DataInPort<std::shared_ptr<Request>> in_port_llc {
+				&unit_port_set_, "in_llc"
+			};
+			
+			sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_llc_mc {
+				&unit_port_set_, "out_llc_mc", false 
+			};
+
+			sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_llc_mc {
+				&unit_port_set_, "in_llc_mc"
 			};
 			
 
@@ -162,13 +179,15 @@ namespace spike_model {
 			
 
 
-			std::shared_ptr<EventManager> request_manager_;
+			//std::shared_ptr<EventManager> request_manager;
 			spike_model::NoC *noc;
 			sparta::RootTreeNode *root_node;
 			
 			
-			void receiveMessage_noc_(const std::shared_ptr<NoCMessage> &mes);
-			void receiveMessage_mc_(const std::shared_ptr<CacheRequest> &mes);
+			void receiveMessage_noc(const std::shared_ptr<NoCMessage> &mes);
+			void receiveMessage_mc(const std::shared_ptr<CacheRequest> &mes);
+			void receiveMessage_llc(const std::shared_ptr<CacheRequest> &mes);
+			void receiveMessage_llc_mc(const std::shared_ptr<CacheRequest> &mes);
 			
 			/*!
 			 * \brief Handles an instruction forwarded to the MCPU
@@ -267,6 +286,13 @@ namespace spike_model {
 					getStatisticSet(), 
 					"requests_mc", 
 					"Number of requests to MC",
+					sparta::Counter::COUNT_NORMAL
+			);
+			
+			sparta::Counter count_requests_llc				= sparta::Counter(
+					getStatisticSet(), 
+					"requests_llc", 
+					"Number of requests to the LLC",
 					sparta::Counter::COUNT_NORMAL
 			);
 	};

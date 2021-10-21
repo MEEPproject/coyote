@@ -469,6 +469,42 @@ namespace spike_model
         }
     }
     
+    void Logger::logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_llc_recv";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_llc_sent";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_llc2mc";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
+    void Logger::logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address) {
+        std::string ev="mem_tile_mc2llc";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
+            std::stringstream sstream;
+            sstream << ev << "," << id << "," << std::hex << address;
+            log(timestamp, id, 0, sstream.str());
+        }
+    }
+    
     void Logger::logMemTileNoCRecv(uint64_t timestamp, uint16_t id, uint16_t srcAddress) {
         std::string ev="mem_tile_noc_recv";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {

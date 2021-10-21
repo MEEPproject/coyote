@@ -44,8 +44,12 @@
 	  {"eventName": "MemTileMemTileOpSent", 	"eventID": "37"},
 	  {"eventName": "MemTileMCRecv",		"eventID": "38"},
 	  {"eventName": "MemTileMCSent",		"eventID": "39"},
-	  {"eventName": "MemTileNoCRecv",		"eventID": "40"},
-	  {"eventName": "MemTileNocSent",		"eventID": "41"}
+	  {"eventName": "MemTileLLCRecv",		"eventID": "40"},
+	  {"eventName": "MemTileLLCSent",		"eventID": "41"},
+	  {"eventName": "MemTileMC2LLC",		"eventID": "42"},
+	  {"eventName": "MemTileLLC2MC",		"eventID": "43"},
+	  {"eventName": "MemTileNoCRecv",		"eventID": "44"},
+	  {"eventName": "MemTileNocSent",		"eventID": "45"}
         ]
       },
       { "eventName": "destination",          "eventID": "516"},

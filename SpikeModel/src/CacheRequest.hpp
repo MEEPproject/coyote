@@ -169,6 +169,28 @@ namespace spike_model
             {
                  return l2_bank_id_;
             }
+            
+            /**
+             * \brief Configure how long the memory controller work on this memory request.
+             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
+             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
+             * (or even less), will be beneficial.
+             * \param latency: The memory controller latency for this request.
+             */
+            void set_mem_op_latency(uint latency) {
+                mem_op_latency = latency;
+            }
+            
+            /**
+             * \brief Configure how long the memory controller work on this memory request.
+             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
+             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
+             * (or even less), will be beneficial.
+             * \return: The memory controller latency for this request.
+             */
+            uint get_mem_op_latency() {
+                return mem_op_latency;
+            }
 
         private:
             AccessType type;
@@ -185,6 +207,8 @@ namespace spike_model
             bool memory_ack;
 
             bool bypass_l2;
+            
+            uint8_t mem_op_latency;
             
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest
@@ -208,7 +232,7 @@ namespace spike_model
     
     inline std::ostream& operator<<(std::ostream &str, CacheRequest const &req)
     {
-        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: 0x" << req.getCoreId();
+        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: 0x" << req.getCoreId() << ", destRegID: " << req.getDestinationRegId() << ", destRegType: " << (int)req.getDestinationRegType() << ", type: " << (int)req.getType();
         return str;
     }
 }

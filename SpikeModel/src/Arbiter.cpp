@@ -201,7 +201,6 @@ namespace spike_model
 
     size_t Arbiter::NoCQueueSize(int network_type, int input_unit)
     {
-        printf("%d, %d\n", network_type, input_unit);
         return pending_noc_msgs_[network_type][input_unit].size();
     }
 
@@ -253,7 +252,6 @@ namespace spike_model
         rr_cntr_noc_.resize((int)num_outputs_, -1);
         rr_cntr_cache_req_.resize(l2_banks_per_tile, -1);
         num_inputs_ = cores_per_tile + l2_banks_per_tile;
-        printf("Resizing to %d, %d\n", num_outputs_, num_inputs_);
         pending_noc_msgs_.resize((int)num_outputs_, std::vector<std::queue<std::shared_ptr<NoCMessage>>>(num_inputs_));
         pending_l2_msgs_.resize(l2_banks_per_tile, std::vector<std::queue<std::shared_ptr<CacheRequest>>>(cores_per_tile));
         cores_per_tile_ = cores_per_tile;

@@ -105,18 +105,26 @@ spike_model::CoreTopology_4::CoreTopology_4(){
         },
         {
             "cpu.llc^.ports.in_tile_req",
-            "cpu.memory_cpu&.ports.out_mc"
+            "cpu.memory_cpu&.ports.out_llc"
         },
         {
             "cpu.llc^.ports.out_tile_ack",
-            "cpu.memory_cpu&.ports.in_mc"
+            "cpu.memory_cpu&.ports.in_llc"
         },
         {
             "cpu.llc^.ports.out_tile_req",
-            "cpu.memory_controller#.ports.in_mcpu"
+            "cpu.memory_cpu&.ports.in_llc_mc"
         },
         {
             "cpu.llc^.ports.in_tile_ack",
+            "cpu.memory_cpu&.ports.out_llc_mc"
+        },
+        {
+            "cpu.memory_cpu&.ports.out_mc",
+            "cpu.memory_controller#.ports.in_mcpu"
+        },
+        {
+            "cpu.memory_cpu&.ports.in_mc",
             "cpu.memory_controller#.ports.out_mcpu"
         }
     };
