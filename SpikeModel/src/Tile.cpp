@@ -32,7 +32,7 @@ namespace spike_model
         sparta_assert(bank_policy_ == "page_to_bank" || bank_policy_ == "set_interleaving", 
             "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
         sparta_assert(scratchpad_policy_ == "core_to_bank" || scratchpad_policy_ == "vreg_interleaving",
-            "The top.cpu.tile*.params.scratchpad_policy must be page_to_bank or set_interleaving");
+            "The top.cpu.tile*.params.scratchpad_policy must be core_to_bank or vreg_interleaving");
         node_ = node;
         arbiter = NULL;
 
