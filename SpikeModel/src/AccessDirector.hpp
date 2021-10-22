@@ -72,7 +72,7 @@ namespace spike_model
              * \param memory_controller_mask The mask for the AND to extract the memory controller id
              */
             void setMemoryInfo(uint64_t l2_tile_size, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile,  uint16_t num_tiles, 
-                                uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask);
+                                uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask, uint16_t cores);
             
             /*!
              * \brief Get a NoCMessage representing a remote L2 Request
@@ -100,6 +100,8 @@ namespace spike_model
              * \return The NoCMessage
              */
             std::shared_ptr<NoCMessage> getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req);
+
+            uint16_t getCoresPerTile();
 
         protected:
             uint64_t line_size;
@@ -131,7 +133,9 @@ namespace spike_model
             uint64_t mc_mask;
 
             const uint8_t address_size=8; //In bytes
-             
+
+            uint16_t cores_per_tile=0;
+
             /*!              
             * \brief Calculate the home tile and bank for a request
             * \param r A Request

@@ -146,7 +146,7 @@ namespace spike_model
         else
         {
             msg->is_core = false;
-            msg->id = req->get_l2_bank_id();
+            msg->id = req->getCacheBank();
         }
         msg->type = spike_model::MessageType::NOC_MSG;
         out_port_arbiter_.send(msg, 0);
@@ -348,7 +348,7 @@ namespace spike_model
         setNumTiles(num_tiles);
         setCoresPerTile(num_cores/num_tiles);
         corresponding_mcpu=corr_mcpu;
-        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, mc_shift, mc_mask);
+        access_director->setMemoryInfo(l2_tile_size, assoc, line_size, banks_per_tile, num_tiles, num_mcs, mc_shift, mc_mask, num_cores/num_tiles);
     }
 
     void Tile::insnLatencyCallback(const std::shared_ptr<spike_model::InsnLatencyEvent>& r)

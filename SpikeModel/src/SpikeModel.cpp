@@ -227,7 +227,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     auto cache_bank_node = getRoot()->getChild(std::string("cpu.tile0.l2_bank0"));
     sparta_assert(cache_bank_node != nullptr);
 
-    spike_model::CacheBank * c_b=cache_bank_node->getResourceAs<spike_model::CacheBank>();
+    spike_model::L2CacheBank * c_b=cache_bank_node->getResourceAs<spike_model::L2CacheBank>();
 
     uint64_t bank_size=c_b->getSize();
     uint64_t bank_line=c_b->getLineSize();
@@ -241,8 +241,8 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
                                     sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
                                     sparta::utils::uint32_to_str(j));
              sparta_assert(cache_bank_node != nullptr);
-             spike_model::CacheBank * c_b=cache_bank_node->getResourceAs<spike_model::CacheBank>();
-             c_b->set_l2_bank_id(j);
+             spike_model::L2CacheBank * c_b=cache_bank_node->getResourceAs<spike_model::L2CacheBank>();
+             c_b->set_bank_id(j);
         }
     }
 

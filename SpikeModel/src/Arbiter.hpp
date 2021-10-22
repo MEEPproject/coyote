@@ -25,14 +25,14 @@
 #include "LogCapable.hpp"
 #include "NoC/NoC.hpp"
 #include "map"
-#include "CacheBank.hpp"
+#include "L2CacheBank.hpp"
 #include "ArbiterMsg.hpp"
 
 namespace spike_model
 {
     class EventManager; //Forward declarations
     class NoC;
-    class CacheBank;
+    class L2CacheBank;
 
     class Arbiter : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
@@ -89,9 +89,9 @@ namespace spike_model
 
             void setNoC(NoC *noc);
 
-            void addBank(CacheBank *bank);
+            void addBank(L2CacheBank *bank);
 
-            CacheBank* getBank(int index);
+            L2CacheBank* getBank(int index);
 
             std::shared_ptr<NoCMessage> popNoCMsg(int network_type, int input_unit);
 
@@ -123,7 +123,7 @@ namespace spike_model
             NoC *noc;
             std::vector<std::vector<std::queue<std::shared_ptr<NoCMessage>>>> pending_noc_msgs_;
             std::vector<std::vector<std::queue<std::shared_ptr<CacheRequest>>>> pending_l2_msgs_;
-            std::vector<CacheBank*> l2_banks;
+            std::vector<L2CacheBank*> l2_banks;
             size_t q_sz;
     };
 }

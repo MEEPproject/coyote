@@ -488,7 +488,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             auto l2_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
                         std::string(".l2_bank") + sparta::utils::uint32_to_str(i));
             sparta_assert(l2_node != nullptr);
-            CacheBank* bank  = l2_node->getResourceAs<spike_model::CacheBank>();
+            L2CacheBank* bank  = l2_node->getResourceAs<spike_model::L2CacheBank>();
             bank->setTile(tile);
             arbiter->addBank(bank);
         }
@@ -516,7 +516,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                         std::string(".l2_bank") + sparta::utils::uint32_to_str(num_of_l2_banks));
                 sparta_assert(bank_node != nullptr);
 
-                CacheBank * bank=bank_node->getResourceAs<spike_model::CacheBank>();
+                L2CacheBank * bank=bank_node->getResourceAs<spike_model::L2CacheBank>();
 
                 bank->setLogger(topology_->logger);
             }

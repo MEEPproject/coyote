@@ -5,7 +5,8 @@
 
 #include "sparta/simulation/ResourceFactory.hpp"
 #include "Tile.hpp"
-#include "CacheBank.hpp"
+#include "L2CacheBank.hpp"
+#include "L3CacheBank.hpp"
 #include "NoC/FunctionalNoC.hpp"
 #include "NoC/SimpleNoC.hpp"
 #include "NoC/DetailedNoC.hpp"
@@ -22,8 +23,8 @@ struct CPUFactories{
      */
 
     //! \brief Resource Factory to build a CacheBank Unit
-    sparta::ResourceFactory<spike_model::CacheBank,
-                          spike_model::CacheBank::CacheBankParameterSet> cache_bank_rf;
+    sparta::ResourceFactory<spike_model::L2CacheBank,
+                          spike_model::L2CacheBank::L2CacheBankParameterSet> cache_bank_rf;
 
     //! \brief Resource Factory to build a functional NoC Unit
     sparta::ResourceFactory<spike_model::FunctionalNoC,
@@ -53,9 +54,9 @@ struct CPUFactories{
     sparta::ResourceFactory<spike_model::MemoryBank,
                           spike_model::MemoryBank::MemoryBankParameterSet> memory_bank_rf;
 
-    //! \brief Resource Factory to build a MemoryBank Unit
-    sparta::ResourceFactory<spike_model::CacheBank,
-                          spike_model::CacheBank::CacheBankParameterSet> cache_bank_llc_rf;
+    //! \brief Resource Factory to build a L3 Cache Bank Unit
+    sparta::ResourceFactory<spike_model::L3CacheBank,
+                          spike_model::L3CacheBank::L3CacheBankParameterSet> cache_bank_llc_rf;
                           
     //! \brief Resource Factory to build a Arbiter Unit
     sparta::ResourceFactory<spike_model::Arbiter,

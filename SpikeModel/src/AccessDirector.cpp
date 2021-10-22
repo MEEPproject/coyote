@@ -280,7 +280,7 @@ namespace spike_model
         }
     }
      
-    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask)
+    void AccessDirector::setMemoryInfo(uint64_t size_kbs, uint64_t assoc, uint64_t line_size, uint64_t banks_per_tile, uint16_t num_tiles, uint64_t num_mcs, uint64_t memory_controller_shift, uint64_t memory_controller_mask, uint16_t cores)
     {
         this->line_size=line_size;
 
@@ -300,7 +300,12 @@ namespace spike_model
 
         mc_shift=memory_controller_shift;
         mc_mask=memory_controller_mask;
+        cores_per_tile=cores;
+    }
 
+    uint16_t AccessDirector::getCoresPerTile()
+    {
+        return cores_per_tile;
     }
 
     std::shared_ptr<NoCMessage> AccessDirector::getRemoteL2RequestMessage(std::shared_ptr<CacheRequest> req)
@@ -361,7 +366,7 @@ namespace spike_model
             {
                 case VRegMappingPolicy::CORE_TO_BANK:
                     //Convert to [core_id_bits,vreg_id_bits] format and get the bank_bits most significant bits
-                    destination=((r->getCoreId() << vreg_bits) | r->getDestinationRegId()) >> (vreg_bits+core_bits-bank_bits);
+                    destination=(((r->getCoreId() % getCoresPerTile()) << vreg_bits) | r->getDestinationRegId()) >> (vreg_bits+core_bits-bank_bits);
                     break;
                 case VRegMappingPolicy::VREG_INTERLEAVING:
                     break;

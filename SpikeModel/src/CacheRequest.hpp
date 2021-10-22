@@ -160,16 +160,6 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            void set_l2_bank_id(uint16_t l2_bank_id)
-            {
-                 l2_bank_id_ = l2_bank_id;
-            }
-
-            uint16_t get_l2_bank_id()
-            {
-                 return l2_bank_id_;
-            }
-            
             /**
              * \brief Configure how long the memory controller work on this memory request.
              * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
@@ -197,7 +187,6 @@ namespace spike_model
 
             uint16_t home_tile;
             uint16_t mem_tile;
-            uint16_t l2_bank_id_;
 
             uint64_t memory_controller_;
             uint64_t rank_;

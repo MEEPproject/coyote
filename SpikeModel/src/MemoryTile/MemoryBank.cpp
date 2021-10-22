@@ -52,7 +52,7 @@ namespace spike_model
                 delay=delay_write * c->getRequest()->get_mem_op_latency();  // The HBM returns <= 32B. For larger requests, the delay is adapted.
                 break;
         }
-        command_completed_event.preparePayload(c)->schedule(delay);
+        command_completed_event.preparePayload(c)->schedule(delay+1);
 
         if(trace_)
         {

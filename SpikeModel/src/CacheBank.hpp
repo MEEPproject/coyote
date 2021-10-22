@@ -26,13 +26,11 @@
 #include "ScratchpadRequest.hpp"
 
 #include "SimpleDL1.hpp"
-#include "Tile.hpp"
 
 #include "LogCapable.hpp"
 
 namespace spike_model
 {
-    //extern Arbiter arbiter;
     class CacheBank : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
     {
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
@@ -50,36 +48,15 @@ namespace spike_model
          *
          */
     public:
-        /*!
-         * \class CacheBankParameterSet
-         * \brief Parameters for CacheBank model
-         */
-        class CacheBankParameterSet : public sparta::ParameterSet
-        {
-        public:
-            //! Constructor for CacheBankParameterSet
-            CacheBankParameterSet(sparta::TreeNode* n):
-                sparta::ParameterSet(n)
-            {
-            }
-
-            PARAMETER(uint64_t, line_size, 128, "DL1 line size (power of 2)")
-            PARAMETER(uint64_t, size_kb, 2048, "Size of DL1 in KB (power of 2)")
-            PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
-            PARAMETER(uint32_t, bank_and_tile_offset, 1, "The stride for banks and tiles. It is log2'd to get the bits that need to be shifted to identify the set")
-            PARAMETER(bool, always_hit, false, "DL1 will always hit")
-            // Parameters for event scheduling
-            PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
-            PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
-            PARAMETER(uint16_t, max_outstanding_misses, 8, "Maximum misses in flight to the next level")
-        };
 
         /*!
          * \brief Constructor for CacheBank
          * \param node The node that represent the CacheBank and
          * \param p The CacheBank parameter set
          */
-        CacheBank(sparta::TreeNode* node, const CacheBankParameterSet* p);
+        CacheBank(sparta::TreeNode* node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
+                  uint16_t max_outstanding_misses, bool busy, uint64_t line_size, uint64_t size_kb,
+                  uint64_t associativity, uint32_t bank_and_tile_offset);
 
         ~CacheBank() {
             debug_logger_ << getContainer()->getLocation()
@@ -88,10 +65,6 @@ namespace spike_model
                           << " MemoryAccessInfo objects allocated/created"
                           << std::endl;
         }
-
-        //! name of this resource.
-        static const char name[];
-
 
         ////////////////////////////////////////////////////////////////////////////////
         // Type Name/Alias Declaration
@@ -164,7 +137,7 @@ namespace spike_model
         /*!
         * \brief Issue a request from the queue of pending requests
         */
-        void issueAccess_();
+        void issueAccessInternal_();
 
         /*!
         * \brief Get the size of the cache bank
@@ -193,24 +166,14 @@ namespace spike_model
             return l2_line_size_;
         }
 
-        void set_l2_bank_id(uint16_t l2_bank_id)
+        void set_bank_id(uint16_t bank_id)
         {
-            l2_bank_id_ = l2_bank_id;
+            bank_id_ = bank_id;
         }
 
-        uint16_t get_l2_bank_id()
+        uint16_t get_bank_id()
         {
-            return l2_bank_id_;
-        }
-
-        void setTile(Tile *tile)
-        {
-            this->tile = tile;
-        }
-
-        Tile* getTile()
-        {
-            return tile;
+            return bank_id_;
         }
 
         /*!
@@ -225,17 +188,26 @@ namespace spike_model
          */
         void handle(std::shared_ptr<spike_model::ScratchpadRequest> r) override;
             
-    private:
-
-        ////////////////////////////////////////////////////////////////////////////////
-        // Input Ports
-        ////////////////////////////////////////////////////////////////////////////////
+        /*!
+        * \brief Sends an acknowledgement for a serviced request
+        * \param req The request to acknowledge
+        */
+        void sendAckInternal_(const std::shared_ptr<CacheRequest> & req);
 
         sparta::DataInPort<std::shared_ptr<Request>> in_core_req_
             {&unit_port_set_, "in_tile_req"};
 
         sparta::DataInPort<std::shared_ptr<CacheRequest>> in_biu_ack_
             {&unit_port_set_, "in_tile_ack"};
+
+        virtual void scheduleIssueAccess(uint64_t ) = 0;
+
+    private:
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // Input Ports
+        ////////////////////////////////////////////////////////////////////////////////
+
 
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -248,11 +220,6 @@ namespace spike_model
         sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_biu_req_
             {&unit_port_set_, "out_tile_req", false};
 
-
-        sparta::UniqueEvent<> issue_access_event_ 
-            {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(CacheBank, issueAccess_)};
-
-        sparta::PayloadEvent<std::shared_ptr<CacheRequest> > send_ack_event_ {&unit_event_set_, "send_ack_event_", CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest> )};
 
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
@@ -277,17 +244,10 @@ namespace spike_model
 
         bool busy_;
 
-        Tile *tile;
-
         ////////////////////////////////////////////////////////////////////////////////
         // Callbacks
         ////////////////////////////////////////////////////////////////////////////////
 
-        /*!
-        * \brief Sends an acknowledgement for a serviced request
-        * \param req The request to acknowledge
-        */
-        void sendAck_(const std::shared_ptr<CacheRequest> & req);
 
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -310,7 +270,7 @@ namespace spike_model
         * \brief Update the replacement info for an address
         * \param The address to update
         */
-        void reloadCache_(uint64_t);
+        void reloadCache_(uint64_t, uint16_t);
     
         /*
         * \brief Obtain the address of the first byte in the line containing the request
@@ -403,12 +363,12 @@ namespace spike_model
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;
         uint64_t l2_line_size_;
+        uint16_t bank_id_;
 
         uint32_t bank_and_tile_offset_;
 
         long long d;
 
-        uint16_t l2_bank_id_;
 
     };
 

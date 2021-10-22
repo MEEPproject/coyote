@@ -5,38 +5,31 @@
 
 namespace spike_model
 {
-    const char CacheBank::name[] = "l2";
-
     ////////////////////////////////////////////////////////////////////////////////
     // Constructor
     ////////////////////////////////////////////////////////////////////////////////
 
-    CacheBank::CacheBank(sparta::TreeNode *node, const CacheBankParameterSet *p) :
+    CacheBank::CacheBank(sparta::TreeNode *node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
+                         uint16_t max_outstanding_misses, bool busy, uint64_t line_size, uint64_t size_kb,
+                         uint64_t associativity, uint32_t bank_and_tile_offset) :
         sparta::Unit(node),
         memory_access_allocator(2000, 1000),
-        always_hit_(p->always_hit),
-        miss_latency_(p->miss_latency),
-        hit_latency_(p->hit_latency),
-        max_outstanding_misses_(p->max_outstanding_misses),
-        busy_(false),
-        in_flight_reads_(max_outstanding_misses_, p->line_size),
+        always_hit_(always_hit),
+        miss_latency_(miss_latency),
+        hit_latency_(hit_latency),
+        max_outstanding_misses_(max_outstanding_misses),
+        busy_(busy),
+        in_flight_reads_(max_outstanding_misses, line_size),
         pending_fetch_requests_(),
         pending_load_requests_(),
         pending_store_requests_(),
         pending_scratchpad_requests_(),
         eviction_times_(),
-        l2_size_kb_ (p->size_kb),
-        l2_associativity_ (p->associativity),
-        l2_line_size_ (p->line_size),
-        bank_and_tile_offset_ (p->bank_and_tile_offset)
+        l2_size_kb_(size_kb),
+        l2_associativity_(associativity),
+        l2_line_size_(line_size),
+        bank_and_tile_offset_(bank_and_tile_offset)
     {
-
-        in_core_req_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, getAccess_, std::shared_ptr<Request>));
-
-        in_biu_ack_.registerConsumerHandler
-                (CREATE_SPARTA_HANDLER_WITH_DATA(CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
-
 
         // Cache config
         std::unique_ptr<sparta::cache::ReplacementIF> repl(new sparta::cache::TreePLRUReplacement
@@ -54,49 +47,41 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     // Receive MSS access acknowledge from Bus Interface Unit
-    void CacheBank::sendAck_(const std::shared_ptr<CacheRequest> & req)
+    void CacheBank::sendAckInternal_(const std::shared_ptr<CacheRequest> & req)
     {
-        // do sendAck every cycle
-        if(getTile()->getArbiter()->hasL2NoCQueueFreeSlot(get_l2_bank_id()))
+        bool was_stalled=in_flight_reads_.is_full();
+
+        req->setServiced();
+
+        reloadCache_(calculateLineAddress(req), req->getCacheBank());
+        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
-            bool was_stalled=in_flight_reads_.is_full();
+            auto range_misses=in_flight_reads_.equal_range(req);
 
-            req->setServiced();
+            sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
 
-            reloadCache_(calculateLineAddress(req));
-            if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
+            while(range_misses.first != range_misses.second)
             {
-                auto range_misses=in_flight_reads_.equal_range(req);
-
-                sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
-
-                while(range_misses.first != range_misses.second)
-                {
-                    range_misses.first->second->setServiced();
-                    out_core_ack_.send(range_misses.first->second);
-                    range_misses.first++;
-                }
-
-                in_flight_reads_.erase(req);
+                range_misses.first->second->setServiced();
+                out_core_ack_.send(range_misses.first->second);
+                range_misses.first++;
             }
 
-            if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
+            in_flight_reads_.erase(req);
+        }
+
+        if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
+        {
+            //ISSUE EVENT
+            if(was_stalled && !busy_)
             {
-                //ISSUE EVENT
-                if(was_stalled && !busy_)
-                {
-                    busy_=true;
-                    issue_access_event_.schedule(sparta::Clock::Cycle(0));
-                }
-            }
-            else
-            {
-                busy_ = false;
+                busy_=true;
+                scheduleIssueAccess(sparta::Clock::Cycle(0));
             }
         }
         else
         {
-            send_ack_event_.preparePayload(req)->schedule(1);
+            busy_ = false;
         }
     }
 
@@ -105,67 +90,60 @@ namespace spike_model
         req->handle(this);
     }
 
-    void CacheBank::issueAccess_()
+    void CacheBank::issueAccessInternal_()
     {
-        if(getTile()->getArbiter()->hasL2NoCQueueFreeSlot(get_l2_bank_id()))
+        bool stall=false;
+        if(pending_scratchpad_requests_.size()>0) //Scratchpad requests are handled first
         {
-            bool stall=false;
-            if(pending_scratchpad_requests_.size()>0) //Scratchpad requests are handled first
-            {
-                const std::shared_ptr<ScratchpadRequest> s=pending_scratchpad_requests_.front();
-                pending_scratchpad_requests_.pop_front(); //We always hit in the scratchpad. Nothing to check.
+            const std::shared_ptr<ScratchpadRequest> s=pending_scratchpad_requests_.front();
+            pending_scratchpad_requests_.pop_front(); //We always hit in the scratchpad. Nothing to check.
 
-                if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::ALLOCATE)
-                {
-                    l2_cache_->disableWays(s->getSize());
-                }
-                else if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::FREE)
-                {
-                    l2_cache_->enableWays(s->getSize());
-                }
-                s->setServiced();
-                out_core_ack_.send(s, hit_latency_);
-            }
-            else
+            if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::ALLOCATE)
             {
-                MemoryAccessInfoPtr m;
-                if(pending_fetch_requests_.size()>0)
-                {
-                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_fetch_requests_.front());   
-                    pending_fetch_requests_.pop_front();
-                }
-                else if(pending_load_requests_.size()>0)
-                {
-                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_load_requests_.front());  
-                    pending_load_requests_.pop_front();
-                }
-                else if(pending_store_requests_.size()>0)
-                {
-                    m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
-                    pending_store_requests_.pop_front();
-                }
-
-                handleCacheLookupReq_(m);
-
-                if(in_flight_reads_.is_full())
-                {
-                    stall=true;
-                    count_stall_++;
-                }
+                l2_cache_->disableWays(s->getSize());
             }
-
-            if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
+            else if(s->getCommand()==ScratchpadRequest::ScratchpadCommand::FREE)
             {
-                issue_access_event_.schedule(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
+                l2_cache_->enableWays(s->getSize());
             }
-            else
-            {
-                busy_=false;
-            }
+            s->setServiced();
+            out_core_ack_.send(s, hit_latency_);
         }
         else
         {
-            issue_access_event_.schedule(1); //keep checking every cycle if there is space in the Queue
+            MemoryAccessInfoPtr m;
+            if(pending_fetch_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_fetch_requests_.front());   
+                pending_fetch_requests_.pop_front();
+            }
+            else if(pending_load_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_load_requests_.front());  
+                pending_load_requests_.pop_front();
+            }
+            else if(pending_store_requests_.size()>0)
+            {
+                m=sparta::allocate_sparta_shared_pointer<MemoryAccessInfo>(memory_access_allocator, pending_store_requests_.front());
+                pending_store_requests_.pop_front();
+            }
+ 
+            handleCacheLookupReq_(m);
+
+            if(in_flight_reads_.is_full())
+            {
+                stall=true;
+                count_stall_++;
+            }
+        }
+
+        if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
+        {
+           scheduleIssueAccess(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
+        }
+        else
+        {
+            busy_=false;
         }
     }
 
@@ -176,7 +154,7 @@ namespace spike_model
         bool CACHE_HIT;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
-            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()));
+            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank());
             CACHE_HIT=true;
         }
         else
@@ -226,7 +204,7 @@ namespace spike_model
                 if(!(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::LOAD || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::FETCH) || !already_pending)
                 {
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
-                    cache_req->set_l2_bank_id(get_l2_bank_id());
+
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
 
                     //NO FURTHER ACTION IS NEEDED
@@ -297,7 +275,7 @@ namespace spike_model
     }
 
     // Reload cache line
-    void CacheBank::reloadCache_(uint64_t phyAddr)
+    void CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank)
     {
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
 
@@ -305,7 +283,7 @@ namespace spike_model
         if(l2_cache_line->isModified())
         {
             std::shared_ptr<CacheRequest> cache_req = std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0);
-            cache_req->set_l2_bank_id(get_l2_bank_id());
+            cache_req->setCacheBank(bank);
             out_biu_req_.send(cache_req, 1);
             count_wbs_+=1;
             if(trace_)
@@ -380,7 +358,7 @@ namespace spike_model
             {
                 busy_=true;
                 //ISSUE EVENT
-                issue_access_event_.schedule(sparta::Clock::Cycle(0));
+                scheduleIssueAccess(sparta::Clock::Cycle(0));
             }
         }
     }
@@ -392,7 +370,7 @@ namespace spike_model
         if(!busy_)
         {
             busy_=true;
-            issue_access_event_.schedule(sparta::Clock::Cycle(0));
+            scheduleIssueAccess(sparta::Clock::Cycle(0));
         }
     }
 

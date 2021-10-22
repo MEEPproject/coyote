@@ -166,12 +166,12 @@ namespace spike_model
         return false;
     }
 
-    void Arbiter::addBank(CacheBank* bank)
+    void Arbiter::addBank(L2CacheBank* bank)
     {
         l2_banks.push_back(bank);
     }
 
-    CacheBank* Arbiter::getBank(int index)
+    L2CacheBank* Arbiter::getBank(int index)
     {
         return l2_banks[index];
     }

@@ -18,7 +18,7 @@ meta:
     trace: false                            # (bool)            Generate a trace into paraver format
     events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
-    enable_llc: true                        # (bool)            Enable or disable the LLC attached to the Memory Tile    
+    enable_llc: true                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
     vector_bypass_l1: false                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
     vector_bypass_l2: false                 # (bool)            Vector memory accesses bypass the L2 (Ignored if MCPU enabled)
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
@@ -29,7 +29,7 @@ top:
   cpu:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 1                          # (uint16_t)        The number of cores to simulate
+      num_cores: 2                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_tiles: 1                          # (uint16_t)	    The number of tiles to simulate
@@ -56,6 +56,15 @@ top:
         params:
           q_sz: 16                          # (uint64_t)        The arbiter Queue Size
       l2_bank*:
+        params:
+          line_size: 64                     # (uint64_t)        Cache line size (power of 2)
+          size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
+          associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          always_hit: false                 # (bool)            L2 cache will always hit
+          miss_latency: 15                  # (uint16_t)        Cache miss latency
+          hit_latency: 15                   # (uint16_t)        Cache hit latency
+          max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+      llc*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
           size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
