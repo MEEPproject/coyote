@@ -6,7 +6,7 @@
 #include "dataset.h"
 
 
-void indexed_vector_load(int coreid, int ncores, long *matrix, long *indices, long nElements) {
+void reduction_sum_example(int coreid, int ncores, long *matrix, long *indices, long nElements) {
 
 	long sum_out;
 
@@ -39,6 +39,7 @@ void indexed_vector_load(int coreid, int ncores, long *matrix, long *indices, lo
 			"vredsum.vs		v16, v8, v16\n"			// v16[0] += v8[*]
 			
 			"sub			t2, t2, t3\n"			// how many elements to go?
+			"slli			t3, t3, 3\n"			// multiply the number of completed elements by 8, since each element is 8Bytes in size
 			"add			t1, t1, t3\n"			// move the index pointer
 			"bnez			t2, loop\n"				// jump to loop, if t2 != 0
 			
@@ -59,14 +60,14 @@ void indexed_vector_load(int coreid, int ncores, long *matrix, long *indices, lo
 		: "t1", "t2", "t3"
 	);
 	
-	printf("Result is %ld\n", sum_out);
+	//printf("Result is %ld\n", sum_out);
 }
 
 
 int thread_entry(int cid, int nc) {
 
 	simfence();
-	indexed_vector_load(cid, nc, matrix, indices, DIM);
+	reduction_sum_example(cid, nc, matrix, indices, DIM);
 	simfence();
 
 	exit(0);

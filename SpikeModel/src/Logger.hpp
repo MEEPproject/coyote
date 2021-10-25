@@ -352,6 +352,7 @@ namespace spike_model
             * \param address The address being contacted
             */
            void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
+           void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
             
             /*!
              * \brief A memory request is forwarded to the memory controller
@@ -360,6 +361,7 @@ namespace spike_model
              * \param address The address being contacted
              */
             void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
             
             /*!
              * \brief A memory request is forwarded to the LLC
@@ -368,6 +370,7 @@ namespace spike_model
              * \param address The address being contacted
              */
             void logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
 
             /*!
              * \brief A memory request is forwarded to the LLC
@@ -376,6 +379,7 @@ namespace spike_model
              * \param address The address being contacted
              */
             void logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
 
             /*!
              * \brief A memory request is forwarded from the LLC to the MC
@@ -384,6 +388,7 @@ namespace spike_model
              * \param address The address being contacted
              */
             void logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
 
             /*!
              * \brief A memory request is returned from the MC to the LLC
@@ -392,6 +397,7 @@ namespace spike_model
              * \param address The address being contacted
              */
             void logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
 
             /*!
              * \brief An NoC message is forwarded
@@ -399,7 +405,7 @@ namespace spike_model
              * \param id The id of the memory tile
              * \param destAddress The destination address of the NoC message
              */
-            void logMemTileNoCSent(uint64_t timestamp, uint16_t id, uint16_t destAddress);
+            void logMemTileNoCSent(uint64_t timestamp, uint16_t id, uint16_t destAddress, uint64_t address);
             
             /*!
              * \brief An NoC message has been received
@@ -407,7 +413,7 @@ namespace spike_model
              * \param id The id of the memory tile
              * \param srcAddress Where the message came from.
              */
-            void logMemTileNoCRecv(uint64_t timestamp, uint16_t id, uint16_t srcAddress);
+            void logMemTileNoCRecv(uint64_t timestamp, uint16_t id, uint16_t srcAddress, uint64_t address);
             /*!
              * \brief Close the trace
              */

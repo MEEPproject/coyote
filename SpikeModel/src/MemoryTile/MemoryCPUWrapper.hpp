@@ -215,6 +215,7 @@ namespace spike_model {
 			void sendToDestination(std::shared_ptr<CacheRequest> mes);
 			void log_sched_mem_req();
 			void log_sched_outgoing();
+			uint64_t getParentAddress(std::shared_ptr<CacheRequest> cr);
 			
 
 

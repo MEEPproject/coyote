@@ -66,8 +66,9 @@ namespace spike_model {
 		count_requests_noc++;
 		
 		if(trace_) {
-		    logger_.logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort());
-        }
+			std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(mes->getRequest());
+			logger_.logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort(), req->getAddress());
+		}
 		
 		if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
@@ -285,7 +286,7 @@ namespace spike_model {
 			out_port_llc.send(instr_for_mc, 1);
 			
 			if(trace_) {
-				logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress());
+				logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress(), getParentAddress(instr_for_mc));
 			}
 			DEBUG_MSG("Sending to LLC: " << *instr_for_mc);
 			count_requests_llc++;
@@ -295,7 +296,7 @@ namespace spike_model {
 												// a higher priority one for the same cycle, 
 												// being the scheduling phase for the higher one already finished.
 			if(trace_) {
-				logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress());
+				logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress(), getParentAddress(instr_for_mc));
 			}
 			DEBUG_MSG("Sending to MC: " << *instr_for_mc);
 			count_requests_mc++;
@@ -318,10 +319,12 @@ namespace spike_model {
 			
 			sched_outgoing.pop();
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "Sending to NoC from " << getID() << ": " << *response);
-            if(trace_) {
-			    logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort());
+			if(trace_) {
+				std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(response->getRequest());
+				logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort(), req->getAddress());
 				log_sched_outgoing();
-            }
+			}
+			
 			
 		} else {
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "NoC does not accept message: " << *response);
@@ -476,7 +479,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::receiveMessage_llc(const std::shared_ptr<CacheRequest> &mes) {
 		sched_incoming_mc.push(mes);
 		if(trace_) {
-			logger_.logMemTileLLCRecv(getClock()->currentCycle(), getID(), mes->getAddress());
+			logger_.logMemTileLLCRecv(getClock()->currentCycle(), getID(), mes->getAddress(), getParentAddress(mes));
 		}
 	}
 	
@@ -486,7 +489,7 @@ namespace spike_model {
 		count_requests_mc++;
 		
 		if(trace_) {
-			logger_.logMemTileLLC2MC(getClock()->currentCycle(), getID(), mes->getAddress());
+			logger_.logMemTileLLC2MC(getClock()->currentCycle(), getID(), mes->getAddress(), getParentAddress(mes));
 		}
 	}
 
@@ -689,6 +692,16 @@ namespace spike_model {
 		    logger_.logMemTileOccupancyOutNoC(clk, getID(), sched_outgoing.size());
 			lastLogTime.sched_outgoing = clk;
 		}
+	}
+	
+	uint64_t MemoryCPUWrapper::getParentAddress(std::shared_ptr<CacheRequest> cr) {
+		uint64_t parent_address = 0;
+		if(cr->getID() != 0) {
+			std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(cr->getID());
+			sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
+			parent_address = transaction_id->second.mcpu_instruction->getAddress();
+		}
+		return parent_address;
 	}
 }
 
