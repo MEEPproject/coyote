@@ -116,6 +116,7 @@ namespace spike_model {
 				uint32_t counter_cacheRequests;
 				uint32_t counter_scratchpadRequests;
 				uint32_t number_of_elements_per_response;
+				uint32_t vvl;	// the VVL setting, when the instruction arrived at the MemTile
 			};
 			std::unordered_map<std::uint32_t, Transaction> transaction_table;
 			
