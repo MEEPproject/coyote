@@ -520,6 +520,13 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
                 bank->setLogger(topology_->logger);
             }
+            auto arbiter_node = root_node->getChild(std::string("cpu.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
+                    std::string(".arbiter"));
+            sparta_assert(arbiter_node != nullptr);
+
+            Arbiter * arb=arbiter_node->getResourceAs<spike_model::Arbiter>();
+
+            arb->setLogger(topology_->logger);
         }
 
         for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
