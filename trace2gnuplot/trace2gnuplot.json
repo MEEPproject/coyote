@@ -43,7 +43,19 @@
 			"address_in_pos5": false
 		},
 		"mem_tile_scaop_sent": {
-			"bg": "#FFFF00",
+			"bg": "#FFAC00",
+			"pattern": 2,
+			"has_parent_op": true,
+			"address_in_pos5": false
+		},
+		"mem_tile_spop_recv": {
+			"bg": "#FFAC00",
+			"pattern": 2,
+			"has_parent_op": true,
+			"address_in_pos5": false
+		},
+		"mem_tile_spop_sent": {
+			"bg": "#FFAC00",
 			"pattern": 2,
 			"has_parent_op": true,
 			"address_in_pos5": false

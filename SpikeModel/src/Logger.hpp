@@ -318,16 +318,18 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param tile The source tile
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
-            void logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t tile);
+            void logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t tile, uint64_t parent_address);
             
             /*!
              * \brief Scratchpad operation returned to the VAS Tile
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param tile The destination tile
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
-            void logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t tile);
+            void logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t tile, uint64_t parent_address);
 
             /*!
              * \brief Memory Tile Request received by another Memory Tile
@@ -344,21 +346,23 @@ namespace spike_model
              * \param dest_id The destination memory tile
              */
             void logMemTileMTOpSent(uint64_t timestamp, uint16_t id, uint16_t dest_id, uint64_t address);
-           
-           /*!
-            * \brief A memory request is returned from the memory controller
-            * \param timestamp The timestamp for the event
-            * \param id The id of the producing memory tile
-            * \param address The address being contacted
-            */
-           void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
-           void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
+            
+            /*!
+             * \brief A memory request is returned from the memory controller
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing memory tile
+             * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
+             */
+            void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
+            void logMemTileMCRecv(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
             
             /*!
              * \brief A memory request is forwarded to the memory controller
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
             void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address);
             void logMemTileMCSent(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
@@ -368,6 +372,7 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
             void logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address);
             void logMemTileLLCRecv(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
@@ -377,6 +382,7 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
             void logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address);
             void logMemTileLLCSent(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
@@ -386,6 +392,7 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
             void logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address);
             void logMemTileLLC2MC(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);
@@ -395,6 +402,7 @@ namespace spike_model
              * \param timestamp The timestamp for the event
              * \param id The id of the producing memory tile
              * \param address The address being contacted
+             * \param parent_address The parent address that this instruction for the SP belongs to
              */
             void logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address);
             void logMemTileMC2LLC(uint64_t timestamp, uint16_t id, uint64_t address, uint64_t parent_address);

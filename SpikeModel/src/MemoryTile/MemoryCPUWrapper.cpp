@@ -192,15 +192,36 @@ namespace spike_model {
 				sched_outgoing.push(noc_message);
 				
 				if(trace_) {
-			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
 			    	log_sched_outgoing();
                 }
 				
 				DEBUG_MSG("sending SP ALLOC: " << *sp_request);
 			}
 			
-			//-- Send the request to the Vector Address Generators (VAG)
-			computeMemReqAddresses(instr);
+			//-- if it is an indexed load, load the indices
+			if(instr->get_suboperation() == MCPUInstruction::SubOperation::ORDERED_INDEX || instr->get_suboperation() == MCPUInstruction::SubOperation::UNORDERED_INDEX) {
+				
+				instruction_attributes.counter_scratchpadRequests = 1;	// one returning SP Request is expected
+				transaction_table.at(this->instructionID_counter) = instruction_attributes;
+				
+				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
+				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
+				sched_outgoing.push(noc_message);
+				
+				if(trace_) {
+			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
+			    	log_sched_outgoing();
+                }
+				
+				DEBUG_MSG("sending SP READ: " << *sp_request);	
+			} else {
+				//-- Send the request to the Vector Address Generators (VAG)
+				computeMemReqAddresses(instr);
+			}
+			
+			
 			
 		} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
 			
@@ -218,7 +239,7 @@ namespace spike_model {
 			
 				sched_outgoing.push(noc_message);
 				if(trace_) {
-				    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+				    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
 				    log_sched_outgoing();
                 }
 			
@@ -241,7 +262,7 @@ namespace spike_model {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *instr << ", parent instr: " << *parent_instr);
         if(trace_) {
-		    logger_.logMemTileSPOpRecv(getClock()->currentCycle(), getID(), instr->getSourceTile());
+			logger_.logMemTileSPOpRecv(getClock()->currentCycle(), getID(), instr->getSourceTile(), parent_instr->getAddress());
         }
 
 		switch(instr->getCommand()) {
@@ -615,7 +636,7 @@ namespace spike_model {
 					}
 					
                     if(trace_) {
-					    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), transaction_id->second.mcpu_instruction->getSourceTile());
+						logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), transaction_id->second.mcpu_instruction->getSourceTile(), transaction_id->second.mcpu_instruction->getAddress());
 						log_sched_outgoing();
                     }
 					DEBUG_MSG("\t\tReturning SP: " << *outgoing_message);

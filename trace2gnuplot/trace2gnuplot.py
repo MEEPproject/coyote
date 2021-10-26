@@ -3,6 +3,7 @@
 import argparse
 import json
 import numpy as np
+import os
 
 
 def print_gnuplot_header(file):
@@ -43,7 +44,7 @@ def print_gnuplot_footer_boxes(file, max, ymin, ymax):
 	file.write('set xrange[0:'+str(max)+']\n')
 	file.write('set yrange['+str(ymin)+':'+str(ymax)+'.2]\n')
 	file.write('plot 0, '+str(ymax)+'\n')
-	file.write('pause -1 "Hit key to continue"\n');
+	file.write('pause -1 "Hit return to exit!"\n');
 	
 def set_object(gnufile, labelID, lowerLeft, upperRight, bg, pattern):
 	lowerLeft[0] = str(lowerLeft[0])	#-- GNUPLot can only handle 32bit integers
@@ -55,17 +56,20 @@ def set_object(gnufile, labelID, lowerLeft, upperRight, bg, pattern):
 	string += ' fillcolor "'+bg+'"'
 	string += ' fill pattern '+str(pattern)+'\n'
 	gnufile.write(string);
-	print(string)
+	#print(string)
 	
 	
-def set_label(gnufile, labelID, coord, text):
+def set_label(gnufile, labelID, coord, text, width):
 	coord[0] = str(coord[0])
 	coord[1] = str(coord[1])
+	rotate = ''
+	if(width<100):
+		rotate = 'rotate by 90 '
 	string  = 'set label '+str(labelID)
 	string += ' at '+(','.join(coord))
-	string += ' "'+text.replace('_', ' ')+'" rotate by 90 front center\n'
+	string += ' "'+text.replace('_', ' ')+'"'+rotate+' front center\n'
 	gnufile.write(string)
-	print(string)
+	#print(string)
 
 def long2int(long):
 	return long & 0x7fffffff #-- MSB is signed bit
@@ -73,12 +77,19 @@ def long2int(long):
 def main(args):
 	
 	prevData = {}
+	unconfigured = []
 	maxValue = 1
 	count = 1
 	index = 0
+	bytes_processed = 0;
+	bytes_total = os.path.getsize(args.trace)
+	addresses_given = len(args.address)
+	address_active = []
 	
+	for i in range(0, len(args.address)):
+		address_active.append(0)
 	
-	with open('trace2gnuplot.json', 'r') as jsonfile:
+	with open(os.path.dirname(os.path.abspath(__file__))+'/trace2gnuplot.json', 'r') as jsonfile:
 		data = jsonfile.read()
 	config = json.loads(data)
 	jsonfile.close()
@@ -87,8 +98,6 @@ def main(args):
 	print_gnuplot_header_boxes(gnufile)
 	
 	with open(args.trace, 'r') as tracefile:
-		
-		
 		for line in tracefile:
 			data = line.strip().split(',');
 			# data[0]: time index
@@ -104,7 +113,7 @@ def main(args):
 			try:
 				index = args.address.index(data[2]);
 				#print(data[2]+' '+str(index)+' ')
-				if(config['config'][data[3]]['has_parent_op'] or config['config'][data[3]]['address_in_pos5']):
+				if(config['config'][data[3]]['has_parent_op'] and config['config'][data[3]]['address_in_pos5']):
 					try:
 						index = args.address.index(data[5])
 					except ValueError as e:
@@ -118,8 +127,14 @@ def main(args):
 				try:
 					index = args.address.index(data[5]);
 					data[2] = data[5]
+					
 				except ValueError as e:
 					continue
+			except KeyError as e:
+				if(not data[3] in unconfigured):
+					print('"'+data[3]+'" is not configured. Ignoring...')
+					unconfigured.append(data[3])
+				continue;
 				
 
 			
@@ -132,7 +147,7 @@ def main(args):
 				continue;
 			
 			set_object(gnufile, count, [int(prevData[index][0]), index], [int(data[0]), index+1], config['config'][prevData[index][3]]['bg'], config['config'][prevData[index][3]]['pattern'])		
-			set_label(gnufile, count, [int(prevData[index][0])+(int(data[0])-int(prevData[index][0]))/2.0, (index+index+1)/2.0], prevData[index][3]+' ('+ prevData[index][2]+')')
+			set_label(gnufile, count, [int(prevData[index][0])+(int(data[0])-int(prevData[index][0]))/2.0, (index+index+1)/2.0], prevData[index][3]+' ('+ prevData[index][2]+')', int(data[0])-int(prevData[index][0]))
 			prevData[index] = data
 			maxValue = data[0]
 			count = count + 1
@@ -140,7 +155,7 @@ def main(args):
 	#-- last entries
 	for i in prevData:
 		set_object(gnufile, count, [int(prevData[i][0]), i], [int(prevData[i][0]), i+1], config['config'][prevData[i][3]]['bg'], config['config'][prevData[i][3]]['pattern'])
-		set_label(gnufile, count, [int(prevData[i][0])+(int(prevData[i][0])-int(prevData[i][0]))/2.0, (2*i+1)/2.0], prevData[i][3]+' ('+prevData[i][2]+')')
+		set_label(gnufile, count, [int(prevData[i][0])+(int(prevData[i][0])-int(prevData[i][0]))/2.0, (2*i+1)/2.0], prevData[i][3]+' ('+prevData[i][2]+')', 0)
 		count = count + 1
 			
 			
@@ -156,5 +171,11 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trace', type=str, help='trace file', required=True);
 	parser.add_argument('-o', '--output', type=str, help='gnuplot file', required=True);
 	parser.add_argument('-a', '--address', type=str, nargs='+', help='address(es) to be traced', required=True);
-	args = parser.parse_args()	
+	args = parser.parse_args()
+	
+	if(not os.path.isabs(args.output)):
+		args.output = os.getcwd()+'/'+args.output
+	if(not os.path.isabs(args.trace)):
+		args.trace = os.getcwd()+'/'+args.trace
+		
 	main(args)

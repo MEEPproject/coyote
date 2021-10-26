@@ -415,21 +415,21 @@ namespace spike_model
         }
     }
     
-    void Logger::logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id) {
+    void Logger::logMemTileSPOpRecv(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t parent_address) {
         std::string ev="mem_tile_spop_recv";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
             std::stringstream sstream;
             sstream << ev << "," << id << "," << core_id;
-            log(timestamp, id, 0, sstream.str());
+            log(timestamp, id, parent_address, sstream.str());
         }
     }
     
-    void Logger::logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id) {
+    void Logger::logMemTileSPOpSent(uint64_t timestamp, uint16_t id, uint64_t core_id, uint64_t parent_address) {
         std::string ev="mem_tile_spop_sent";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp)) {
             std::stringstream sstream;
             sstream << ev << "," << id << "," << core_id;
-            log(timestamp, id, 0, sstream.str());
+            log(timestamp, id, parent_address, sstream.str());
         }
     }
     
