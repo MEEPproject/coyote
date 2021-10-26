@@ -439,8 +439,15 @@ namespace spike_model {
 		DEBUG_MSG("Returned from MC: " << *mes);
 		if(!enabled) {
 			//-- whatever we received from the MC, just forward it to the NoC
+            uint16_t destination=mes->getHomeTile();
+            if(mes->getBypassL2())
+            {
+                destination=mes->getSourceTile();
+                mes->setServiced();
+            }
+
 			std::shared_ptr<NoCMessage> outgoing_noc_message;
-			outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size, getID(), mes->getHomeTile());
+			outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MEMORY_ACK, line_size, getID(), destination);
 			sched_outgoing.push(outgoing_noc_message);
 			if(trace_) {
 				log_sched_outgoing();

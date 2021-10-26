@@ -277,14 +277,7 @@ namespace spike_model
 
     void Tile::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        if(!r->getBypassL2() || r->memoryAck())
-        {
-            access_director->putAccess(r);
-        }
-        else
-        {
-            issueMemoryControllerRequest_(r, true);
-        }
+        access_director->putAccess(r);
     }
     
     void Tile::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)

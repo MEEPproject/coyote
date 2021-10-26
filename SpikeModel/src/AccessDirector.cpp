@@ -29,34 +29,42 @@ namespace spike_model
             }
             
             r->setMemoryController(memory_controller);
-            
-            uint16_t home=calculateHome(r);
-            uint16_t bank=calculateBank(r);
-            r->setHomeTile(home);
-            r->setCacheBank(bank);
-            if(r->getHomeTile()==tile->id_)
+           
+            if(!r->getBypassL2())
             {
-                //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
-                if(tile->trace_)
+                uint16_t home=calculateHome(r);
+                uint16_t bank=calculateBank(r);
+                r->setHomeTile(home);
+                r->setCacheBank(bank);
+                if(r->getHomeTile()==tile->id_)
                 {
-                    tile->logger_.logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
-                }
+                    //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
+                    if(tile->trace_)
+                    {
+                        tile->logger_.logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
+                    }
 
-                uint64_t lapse=0;
-                if(r->getTimestamp()+1>tile->getClock()->currentCycle())
-                {
-                    lapse=(r->getTimestamp()+1)-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
+                    uint64_t lapse=0;
+                    if(r->getTimestamp()+1>tile->getClock()->currentCycle())
+                    {
+                        lapse=(r->getTimestamp()+1)-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
+                    }
+                    tile->issueLocalRequest_(r, lapse);
                 }
-                tile->issueLocalRequest_(r, lapse);
+                else
+                {
+                    if(tile->trace_)
+                    {
+                        tile->logger_.logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
+                    }
+                    //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
+                    tile->issueRemoteRequest_(r, (r->getTimestamp()+1)-tile->getClock()->currentCycle());
+                }
             }
             else
             {
-                if(tile->trace_)
-                {
-                    tile->logger_.logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
-                }
-                //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
-                tile->issueRemoteRequest_(r, (r->getTimestamp()+1)-tile->getClock()->currentCycle());
+                //printf("Bypassing\n");
+                tile->issueMemoryControllerRequest_(r, true);
             }
         }
         else
