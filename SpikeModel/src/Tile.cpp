@@ -175,12 +175,10 @@ namespace spike_model
 
     void Tile::issueBankAck_(const std::shared_ptr<CacheRequest> & req)
     {
-        uint16_t bank=req->getCacheBank();
-        //std::cout << "Issuing ack to bank " << (uint16_t)bank << " for request replied from core " << req->getCoreId() << " for address " << req->getAddress() << std::endl;
-        out_ports_l2_acks_[bank]->send(req);
+        issueLocalRequest_(req, 0);
     }
 
-    void Tile::putRequest_(const std::shared_ptr<Event> & req)
+    void Tile::putRequest_(const std::shared_ptr<Request> & req)
     {
         req->handle(this);
     }

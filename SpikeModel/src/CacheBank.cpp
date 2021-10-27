@@ -51,8 +51,6 @@ namespace spike_model
     {
         bool was_stalled=in_flight_reads_.is_full();
 
-        req->setServiced();
-
         reloadCache_(calculateLineAddress(req), req->getCacheBank());
         if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
@@ -314,51 +312,58 @@ namespace spike_model
 
     void CacheBank::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        count_cache_requests_+=1;
-
-        bool hit_on_store=false;
-        if(r->getType()==CacheRequest::AccessType::LOAD)
+        if(r->isServiced())
         {
-            //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
-            for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_store_requests_.rbegin(); rit!=pending_store_requests_.rend() && !hit_on_store; ++rit)
-            {
-                hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(r));
-            }
-        }
-
-        if(hit_on_store)
-        {
-            //AUTO HIT
-            r->setServiced();
-            out_core_ack_.send(r,1);
-            count_hit_on_store_++;
+            sendAckInternal_(r);
         }
         else
         {
-            switch(r->getType())
+            count_cache_requests_+=1;
+
+            bool hit_on_store=false;
+            if(r->getType()==CacheRequest::AccessType::LOAD)
             {
-                case CacheRequest::AccessType::FETCH:
-                    pending_fetch_requests_.push_back(r);
-                    break;
-
-                case CacheRequest::AccessType::LOAD:
-                    pending_load_requests_.push_back(r);
-                    break;
-
-                case CacheRequest::AccessType::STORE:
-                    pending_store_requests_.push_back(r);
-                    break;
-
-                case CacheRequest::AccessType::WRITEBACK:
-                    pending_store_requests_.push_back(r);
-                    break;
+                //CHECK FOR HITS ON PENDING WRITEBACK. STORES ARE NOT CHECKED. YOU NEED TO LOAD A WHOLE LINE, NOT JUST A WORD.
+                for (std::list<std::shared_ptr<CacheRequest>>::reverse_iterator rit=pending_store_requests_.rbegin(); rit!=pending_store_requests_.rend() && !hit_on_store; ++rit)
+                {
+                    hit_on_store=((*rit)->getType()==CacheRequest::AccessType::WRITEBACK && calculateLineAddress(*rit)==calculateLineAddress(r));
+                }
             }
 
-            if(!busy_ && !in_flight_reads_.is_full())
+            if(hit_on_store)
             {
-                busy_=true;
-                //ISSUE EVENT
-                scheduleIssueAccess(sparta::Clock::Cycle(0));
+                //AUTO HIT
+                r->setServiced();
+                out_core_ack_.send(r,1);
+                count_hit_on_store_++;
+            }
+            else
+            {
+                switch(r->getType())
+                {
+                    case CacheRequest::AccessType::FETCH:
+                        pending_fetch_requests_.push_back(r);
+                        break;
+
+                    case CacheRequest::AccessType::LOAD:
+                        pending_load_requests_.push_back(r);
+                        break;
+
+                    case CacheRequest::AccessType::STORE:
+                        pending_store_requests_.push_back(r);
+                        break;
+
+                    case CacheRequest::AccessType::WRITEBACK:
+                        pending_store_requests_.push_back(r);
+                        break;
+                }
+
+                if(!busy_ && !in_flight_reads_.is_full())
+                {
+                    busy_=true;
+                    //ISSUE EVENT
+                    scheduleIssueAccess(sparta::Clock::Cycle(0));
+                }
             }
         }
     }

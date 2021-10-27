@@ -17,6 +17,7 @@ namespace spike_model
         if(r->memoryAck() && !r->getBypassL2())
         {
             r->setMemoryAck(false);
+            r->setServiced();
             tile->issueBankAck_(r);
         }
         else if(!r->isServiced())
@@ -87,7 +88,7 @@ namespace spike_model
                     {
                         tile->logger_.logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
                     }
-                    tile->request_manager_->notifyAck(r);
+                    tile->request_manager_->notifyAck(r); //This should go through the arbiter
                 }
                 else
                 {
