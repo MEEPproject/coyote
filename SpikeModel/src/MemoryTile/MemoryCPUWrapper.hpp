@@ -95,7 +95,7 @@ namespace spike_model {
 			
 			uint16_t id;
 			uint32_t line_size;
-			uint32_t vvl;
+			uint32_t *vvl;
 			uint64_t latency;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
@@ -116,6 +116,7 @@ namespace spike_model {
 				uint32_t counter_cacheRequests;
 				uint32_t counter_scratchpadRequests;
 				uint32_t number_of_elements_per_response;
+				uint32_t vvl;	// the VVL setting, when the instruction arrived at the MemTile
 			};
 			std::unordered_map<std::uint32_t, Transaction> transaction_table;
 			
@@ -215,6 +216,7 @@ namespace spike_model {
 			void sendToDestination(std::shared_ptr<CacheRequest> mes);
 			void log_sched_mem_req();
 			void log_sched_outgoing();
+			uint64_t getParentAddress(std::shared_ptr<CacheRequest> cr);
 			
 
 
