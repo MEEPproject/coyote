@@ -95,7 +95,7 @@ namespace spike_model {
 			
 			uint16_t id;
 			uint32_t line_size;
-			uint32_t vvl;
+			uint32_t *vvl;
 			uint64_t latency;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;

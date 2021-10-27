@@ -48,6 +48,9 @@ namespace spike_model {
 									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
 									  ) /
 									  (size_t)num_of_registers;
+				uint16_t n_cores	= config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>();
+				this->vvl			= (uint32_t *)std::calloc(n_cores, sizeof(uint32_t));
+				sparta_assert(this->vvl != nullptr, "Could not allocate the array to hold VVL in the Memory Tile.");
 				
 				
 				DEBUG_MSG("Memory Tile is " << (this->enabled ? "enabled" : "disabled") << ".");					  
@@ -135,18 +138,16 @@ namespace spike_model {
 		count_control++;
 		
 		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth();
-		vvl = std::min(elements_per_sp, mes->getAVL());
+		vvl[mes->getCoreId()] = std::min(elements_per_sp, mes->getAVL());
 		
 		int lmul = (int)mes->getLMUL();
 		if(lmul < 0) {
-			vvl >>= lmul*(-1);
+			vvl[mes->getCoreId()] >>= lmul*(-1);
 		} else {
-			vvl <<= lmul;
+			vvl[mes->getCoreId()] <<= lmul;
 		}
 		
-		//vvl = std::min((uint64_t)8, mes->getAVL());
-		
-		mes->setVVL(vvl);
+		mes->setVVL(vvl[mes->getCoreId()]);
 		mes->setServiced();
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "MCPUSetVVL: " << *mes);
@@ -154,7 +155,7 @@ namespace spike_model {
 		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
 		if(trace_) {
-			logger_.logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl);
+			logger_.logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl[mes->getCoreId()]);
 			log_sched_outgoing();
 		}
 	}
@@ -170,7 +171,7 @@ namespace spike_model {
 		}
 		
 		instr->setID(this->instructionID_counter);
-		struct Transaction instruction_attributes = {instr, 0, 0, 1, vvl};
+		struct Transaction instruction_attributes = {instr, 0, 0, 1, vvl[instr->getCoreId()]};
 		transaction_table.insert({
 						this->instructionID_counter,
 						instruction_attributes
@@ -187,7 +188,7 @@ namespace spike_model {
 				sp_status[instr->getDestinationRegId()] = SPStatus::ALLOC_SENT;
 				
 				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
-				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
 				
@@ -206,7 +207,7 @@ namespace spike_model {
 				transaction_table.at(this->instructionID_counter) = instruction_attributes;
 				
 				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
-				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
 				
@@ -233,7 +234,7 @@ namespace spike_model {
 			
 			for(uint32_t i=0; i<instruction_attributes.counter_scratchpadRequests; ++i) {
 				std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
-				outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
+				outgoing_message->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// How many bytes to read from the SP?
 			
 			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
 			
