@@ -279,15 +279,16 @@ namespace spike_model {
 					//   1) read the indices
 					//   2) read the data
 					//   However, only the data should be stored.
-					if(transaction_id->second.counter_scratchpadRequests == 1) {
+					transaction_id->second.counter_scratchpadRequests--;
+					if(transaction_id->second.counter_scratchpadRequests == 0) {
 						computeMemReqAddresses(parent_instr);
 					}
-				
-					transaction_id->second.counter_scratchpadRequests--;
 				}
 				break;
 			case ScratchpadRequest::ScratchpadCommand::WRITE:
-				computeMemReqAddresses(parent_instr);
+				if(instr->isOperandReady()) {
+					computeMemReqAddresses(parent_instr);
+				}
 				break;
 			default:
 				sparta_assert(false, "The Memory Tile does not understand this Scratchpad command!");
