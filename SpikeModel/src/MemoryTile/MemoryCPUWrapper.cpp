@@ -48,6 +48,9 @@ namespace spike_model {
 									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
 									  ) /
 									  (size_t)num_of_registers;
+				uint16_t n_cores	= config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>();
+				this->vvl			= (uint32_t *)std::calloc(n_cores, sizeof(uint32_t));
+				sparta_assert(this->vvl != nullptr, "Could not allocate the array to hold VVL in the Memory Tile.");
 				
 				
 				DEBUG_MSG("Memory Tile is " << (this->enabled ? "enabled" : "disabled") << ".");					  
@@ -66,8 +69,9 @@ namespace spike_model {
 		count_requests_noc++;
 		
 		if(trace_) {
-		    logger_.logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort());
-        }
+			std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(mes->getRequest());
+			logger_.logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort(), req->getAddress());
+		}
 		
 		if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
@@ -134,18 +138,16 @@ namespace spike_model {
 		count_control++;
 		
 		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth();
-		vvl = std::min(elements_per_sp, mes->getAVL());
+		vvl[mes->getCoreId()] = std::min(elements_per_sp, mes->getAVL());
 		
 		int lmul = (int)mes->getLMUL();
 		if(lmul < 0) {
-			vvl >>= lmul*(-1);
+			vvl[mes->getCoreId()] >>= lmul*(-1);
 		} else {
-			vvl <<= lmul;
+			vvl[mes->getCoreId()] <<= lmul;
 		}
 		
-		//vvl = std::min((uint64_t)8, mes->getAVL());
-		
-		mes->setVVL(vvl);
+		mes->setVVL(vvl[mes->getCoreId()]);
 		mes->setServiced();
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "MCPUSetVVL: " << *mes);
@@ -153,7 +155,7 @@ namespace spike_model {
 		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
 		if(trace_) {
-			logger_.logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl);
+			logger_.logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl[mes->getCoreId()]);
 			log_sched_outgoing();
 		}
 	}
@@ -166,10 +168,10 @@ namespace spike_model {
 		count_vector++;
         if(trace_) {
 		    logger_.logMemTileVecOpRecv(getClock()->currentCycle(), getID(), instr->getCoreId(), instr->getAddress());
-        }
+		}
 		
 		instr->setID(this->instructionID_counter);
-		struct Transaction instruction_attributes = {instr, 0, 0, 1};
+		struct Transaction instruction_attributes = {instr, 0, 0, 1, vvl[instr->getCoreId()]};
 		transaction_table.insert({
 						this->instructionID_counter,
 						instruction_attributes
@@ -186,20 +188,41 @@ namespace spike_model {
 				sp_status[instr->getDestinationRegId()] = SPStatus::ALLOC_SENT;
 				
 				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
-				sp_request->setSize(vvl * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
 				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
 				
 				if(trace_) {
-			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
 			    	log_sched_outgoing();
                 }
 				
 				DEBUG_MSG("sending SP ALLOC: " << *sp_request);
 			}
 			
-			//-- Send the request to the Vector Address Generators (VAG)
-			computeMemReqAddresses(instr);
+			//-- if it is an indexed load, load the indices
+			if(instr->get_suboperation() == MCPUInstruction::SubOperation::ORDERED_INDEX || instr->get_suboperation() == MCPUInstruction::SubOperation::UNORDERED_INDEX) {
+				
+				instruction_attributes.counter_scratchpadRequests = 1;	// one returning SP Request is expected
+				transaction_table.at(this->instructionID_counter) = instruction_attributes;
+				
+				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
+				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
+				sched_outgoing.push(noc_message);
+				
+				if(trace_) {
+			    	logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
+			    	log_sched_outgoing();
+                }
+				
+				DEBUG_MSG("sending SP READ: " << *sp_request);	
+			} else {
+				//-- Send the request to the Vector Address Generators (VAG)
+				computeMemReqAddresses(instr);
+			}
+			
+			
 			
 		} else { // If it is a store, generate a ScratchpadRequest to load the data from the VAS Tile
 			
@@ -211,13 +234,13 @@ namespace spike_model {
 			
 			for(uint32_t i=0; i<instruction_attributes.counter_scratchpadRequests; ++i) {
 				std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
-				outgoing_message->setSize(vvl * (uint)instr->get_width());	// How many bytes to read from the SP?
+				outgoing_message->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// How many bytes to read from the SP?
 			
 			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
 			
 				sched_outgoing.push(noc_message);
 				if(trace_) {
-				    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile());
+				    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), instr->getSourceTile(), instr->getAddress());
 				    log_sched_outgoing();
                 }
 			
@@ -240,7 +263,7 @@ namespace spike_model {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "ScratchpadRequest: " << *instr << ", parent instr: " << *parent_instr);
         if(trace_) {
-		    logger_.logMemTileSPOpRecv(getClock()->currentCycle(), getID(), instr->getSourceTile());
+			logger_.logMemTileSPOpRecv(getClock()->currentCycle(), getID(), instr->getSourceTile(), parent_instr->getAddress());
         }
 
 		switch(instr->getCommand()) {
@@ -256,15 +279,16 @@ namespace spike_model {
 					//   1) read the indices
 					//   2) read the data
 					//   However, only the data should be stored.
-					if(transaction_id->second.counter_scratchpadRequests == 1) {
+					transaction_id->second.counter_scratchpadRequests--;
+					if(transaction_id->second.counter_scratchpadRequests == 0) {
 						computeMemReqAddresses(parent_instr);
 					}
-				
-					transaction_id->second.counter_scratchpadRequests--;
 				}
 				break;
 			case ScratchpadRequest::ScratchpadCommand::WRITE:
-				computeMemReqAddresses(parent_instr);
+				if(instr->isOperandReady()) {
+					computeMemReqAddresses(parent_instr);
+				}
 				break;
 			default:
 				sparta_assert(false, "The Memory Tile does not understand this Scratchpad command!");
@@ -285,7 +309,7 @@ namespace spike_model {
 			out_port_llc.send(instr_for_mc, 1);
 			
 			if(trace_) {
-				logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress());
+				logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress(), getParentAddress(instr_for_mc));
 			}
 			DEBUG_MSG("Sending to LLC: " << *instr_for_mc);
 			count_requests_llc++;
@@ -295,7 +319,7 @@ namespace spike_model {
 												// a higher priority one for the same cycle, 
 												// being the scheduling phase for the higher one already finished.
 			if(trace_) {
-				logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress());
+				logger_.logMemTileMCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress(), getParentAddress(instr_for_mc));
 			}
 			DEBUG_MSG("Sending to MC: " << *instr_for_mc);
 			count_requests_mc++;
@@ -318,10 +342,12 @@ namespace spike_model {
 			
 			sched_outgoing.pop();
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "Sending to NoC from " << getID() << ": " << *response);
-            if(trace_) {
-			    logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort());
+			if(trace_) {
+				std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(response->getRequest());
+				logger_.logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort(), req->getAddress());
 				log_sched_outgoing();
-            }
+			}
+			
 			
 		} else {
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "NoC does not accept message: " << *response);
@@ -348,10 +374,12 @@ namespace spike_model {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	void MemoryCPUWrapper::memOp_unit(std::shared_ptr<MCPUInstruction> instr) {
+		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
+		uint32_t local_vvl = transaction_id->second.vvl;
 				
 		//-- get the number of elements loaded by 1 memory request
 		uint number_of_elements_per_request = line_size / (uint32_t)instr->get_width();
-		int32_t remaining_elements = vvl;
+		int32_t remaining_elements = local_vvl;
 		uint32_t number_of_replies = 0;
 		uint64_t address = instr->getAddress();
 		
@@ -370,19 +398,21 @@ namespace spike_model {
 			address += line_size;
 			number_of_replies++;
 		}		
-		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
+		
 		transaction_id->second.counter_cacheRequests = number_of_replies;		// How many responses are expected from the MC?
 		transaction_id->second.counter_scratchpadRequests = number_of_replies;	// How many responses are sent back to the VAS Tile?
 		transaction_id->second.number_of_elements_per_response = 1; 			// Send out every received CacheRequest from the MC (no parasitic bytes)
 	}
 	
 	void MemoryCPUWrapper::memOp_nonUnit(std::shared_ptr<MCPUInstruction> instr) {
+		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
+		uint32_t local_vvl = transaction_id->second.vvl;
 		
 		std::vector<uint64_t> indices = instr->get_index();
 		uint64_t address = instr->getAddress();
 		
 		for(std::vector<uint64_t>::iterator it = indices.begin(); it != indices.end(); ++it) {
-			
+			DEBUG_MSG("index: 0x" << *it << ", base_address: 0x" << address << ", computed_address: 0x" << address + *it);	
 			//-- create and schedule request for the MC
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr);
 			memory_request->set_mem_op_latency(1);	// load 32 Bytes or less
@@ -390,10 +420,12 @@ namespace spike_model {
 		}
 		
 		uint32_t number_of_elements_per_response = line_size / (uint32_t)instr->get_width();
-		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(instr->getID());
-		transaction_id->second.counter_cacheRequests = vvl;																// How many responses are expected from the MC?
-		transaction_id->second.counter_scratchpadRequests = (vvl + number_of_elements_per_response - 1)/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile? (ceil(vvl/number_of_elements_per_response), but with integers)
-		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 						// How many elements fit into 1 line_size (64 Bytes)?
+		
+		transaction_id->second.counter_cacheRequests = local_vvl;				// How many responses are expected from the MC?
+		transaction_id->second.counter_scratchpadRequests = (local_vvl + number_of_elements_per_response - 1)/number_of_elements_per_response;	// How many responses are sent back to the VAS Tile? (ceil(local_vvl/number_of_elements_per_response), but with integers)
+		transaction_id->second.number_of_elements_per_response = number_of_elements_per_response; 		// How many elements fit into 1 line_size (64 Bytes)?
+	
+		DEBUG_MSG("summary: expected CRs: " << local_vvl << ", SPs to return: " << transaction_id->second.counter_scratchpadRequests << ", elements per MC response: " << number_of_elements_per_response);	
 	}
 	
 	void MemoryCPUWrapper::memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr) {
@@ -476,7 +508,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::receiveMessage_llc(const std::shared_ptr<CacheRequest> &mes) {
 		sched_incoming_mc.push(mes);
 		if(trace_) {
-			logger_.logMemTileLLCRecv(getClock()->currentCycle(), getID(), mes->getAddress());
+			logger_.logMemTileLLCRecv(getClock()->currentCycle(), getID(), mes->getAddress(), getParentAddress(mes));
 		}
 	}
 	
@@ -486,7 +518,7 @@ namespace spike_model {
 		count_requests_mc++;
 		
 		if(trace_) {
-			logger_.logMemTileLLC2MC(getClock()->currentCycle(), getID(), mes->getAddress());
+			logger_.logMemTileLLC2MC(getClock()->currentCycle(), getID(), mes->getAddress(), getParentAddress(mes));
 		}
 	}
 
@@ -582,7 +614,7 @@ namespace spike_model {
 		
 		//-- A CacheRequest that has been generated by an MCPUInstruction
 		std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(mes->getID());
-		sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
+		sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction for instruction " << *mes);
 		
 		DEBUG_MSG("\tHandled in the MCPU: parent instr: " << *(transaction_id->second.mcpu_instruction));
 		
@@ -612,7 +644,7 @@ namespace spike_model {
 					}
 					
                     if(trace_) {
-					    logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), transaction_id->second.mcpu_instruction->getSourceTile());
+						logger_.logMemTileSPOpSent(getClock()->currentCycle(), getID(), transaction_id->second.mcpu_instruction->getSourceTile(), transaction_id->second.mcpu_instruction->getAddress());
 						log_sched_outgoing();
                     }
 					DEBUG_MSG("\t\tReturning SP: " << *outgoing_message);
@@ -627,8 +659,8 @@ namespace spike_model {
 		DEBUG_MSG("\t\tCRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
 		
 		if(transaction_id->second.counter_cacheRequests == 0) {
-				transaction_table.erase(transaction_id);
-				DEBUG_MSG("\t\t\tcomplete");
+			DEBUG_MSG("\t\t\tcomplete, deleted instr: " << *(transaction_id->second.mcpu_instruction));
+			transaction_table.erase(transaction_id);
 		}
 	}
 	
@@ -689,6 +721,16 @@ namespace spike_model {
 		    logger_.logMemTileOccupancyOutNoC(clk, getID(), sched_outgoing.size());
 			lastLogTime.sched_outgoing = clk;
 		}
+	}
+	
+	uint64_t MemoryCPUWrapper::getParentAddress(std::shared_ptr<CacheRequest> cr) {
+		uint64_t parent_address = 0;
+		if(cr->getID() != 0) {
+			std::unordered_map<std::uint32_t, Transaction>::iterator transaction_id = transaction_table.find(cr->getID());
+			sparta_assert(transaction_id != transaction_table.end(), "Could not find parent instruction!");
+			parent_address = transaction_id->second.mcpu_instruction->getAddress();
+		}
+		return parent_address;
 	}
 }
 
