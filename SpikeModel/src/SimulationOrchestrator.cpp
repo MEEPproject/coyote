@@ -226,7 +226,7 @@ void SimulationOrchestrator::run()
         }
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
-        //next_event_tick=spike_model->getScheduler()->nextEventTick();
+        next_event_tick=spike_model->getScheduler()->nextEventTick();
 
         // Execute one cycle of BookSim
         if(detailed_noc_ != NULL)
