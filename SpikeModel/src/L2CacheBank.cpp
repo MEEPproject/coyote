@@ -48,6 +48,10 @@ namespace spike_model
 
     void L2CacheBank::getAccess_(const std::shared_ptr<Request> & req)
     {
+        if(req->getTimestampL2()==0)
+        {
+            req->setTimestampL2(getClock()->currentCycle());
+        }
         CacheBank::getAccess_(req);
     }
 

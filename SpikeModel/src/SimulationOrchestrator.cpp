@@ -264,6 +264,8 @@ void SimulationOrchestrator::run()
         tot+=simulated_instructions_per_core[i];
     }
     printf("Total simulated instructions %lu\n", tot);
+    std::cout << "Average memory access time: " << avg_mem_access_time <<" cycles\n";
+    std::cout << "Average time to reach the l2: " << avg_time_to_reach_l2 <<" cycles\n";
     std::cout << "The monitored section took " << timer <<" nanoseconds\n";
 }
 
@@ -463,6 +465,15 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 logger_.logResumeWithCacheBank(current_cycle, core, r->getCacheBank());
                 logger_.logResumeWithTile(current_cycle, core, r->getHomeTile());
             }
+        }
+
+        //Update average memory access time metrics
+        avg_mem_access_time=avg_mem_access_time+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time)/num_mem_accesses;
+        num_mem_accesses++;
+        if(r->getTimestampL2()!=0) //If the L2 is bypassed then this value will be 0 and the metric will not be updated
+        {
+            avg_time_to_reach_l2=avg_time_to_reach_l2+((float)(r->getTimestampL2()-r->getTimestamp())-avg_time_to_reach_l2)/num_l2_accesses;
+            num_l2_accesses++;
         }
     }
 }

@@ -132,6 +132,12 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
         bool booksim_has_packets_in_flight_;        //! Flag that indicates if booksim has packets in flight
         std::set<uint16_t> stalled_cores_for_arbiter;
+
+        float avg_mem_access_time=0;
+        uint64_t num_mem_accesses=1; //Initialized to one to calcullate a rolling average
+        float avg_time_to_reach_l2=0;
+        uint64_t num_l2_accesses=1; //Initialized to one to calcullate a rolling average
+
         /*!
          * \brief Simulate an instruction in each of the active cores
          */
