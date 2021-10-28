@@ -40,6 +40,11 @@ namespace spike_model
     {
         return col_;
     }
+    
+    bool CacheRequest::getBypassL1()
+    {
+        return bypass_l1;
+    }
             
     bool CacheRequest::getBypassL2()
     {

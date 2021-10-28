@@ -43,7 +43,7 @@ namespace spike_model
              * \param  t The type of the request
              * \note This is an incomplete cache request used for writebacks. The id of the producing core NEEDS to be set afterwards. Handle with care
              */
-            CacheRequest(uint64_t a, AccessType t): Request(a, 0, 0), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l2(false) {}
+            CacheRequest(uint64_t a, AccessType t): Request(a, 0, 0), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(false), bypass_l2(false) {}
 
 
             /*!
@@ -55,7 +55,7 @@ namespace spike_model
              * \param c The requesting core
              * \param  bypass_l2 True if the L2 has to be bypassed. Default value False
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c, bool bypass_l2=false): Request(a, pc, time, c), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l2(bypass_l2) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c, bool bypass_l1=false, bool bypass_l2=false): Request(a, pc, time, c), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(bypass_l1), bypass_l2(bypass_l2) {}
 
             /*!
              * \brief Get the type of the request
@@ -119,6 +119,12 @@ namespace spike_model
              */
             uint64_t getRow();
             
+            /*!
+             * \brief Get whether the L1 has to be bypassed
+             * \return True if the L1 has to be bypassed
+             */
+            bool getBypassL1();
+
             /*!
              * \brief Get the column that will be accessed
              * \return The address of the line
@@ -195,6 +201,7 @@ namespace spike_model
             uint64_t col_;
             bool memory_ack;
 
+            bool bypass_l1;
             bool bypass_l2;
             
             uint8_t mem_op_latency;

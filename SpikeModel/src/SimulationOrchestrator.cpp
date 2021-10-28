@@ -414,7 +414,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
 
 
         //Reload the cache and generate a writeback
-        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
+        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1())
         {
             std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
             if(wb!=nullptr)
