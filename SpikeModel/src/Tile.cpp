@@ -178,7 +178,7 @@ namespace spike_model
         issueLocalRequest_(req, 0);
     }
 
-    void Tile::putRequest_(const std::shared_ptr<Request> & req)
+    void Tile::putRequest_(const std::shared_ptr<Event> & req)
     {
         req->handle(this);
     }
