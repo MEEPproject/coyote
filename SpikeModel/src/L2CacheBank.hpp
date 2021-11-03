@@ -110,8 +110,10 @@ namespace spike_model
         void sendAck_(const std::shared_ptr<CacheRequest> & req);
         sparta::PayloadEvent<std::shared_ptr<CacheRequest> > send_ack_event_ {&unit_event_set_, "send_ack_event_", CREATE_SPARTA_HANDLER_WITH_DATA(L2CacheBank, sendAck_, std::shared_ptr<CacheRequest> )};
 
+        bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
     private:
         Tile *tile;
+        void reloadCache_(uint64_t, uint16_t);
 
     };
 } // namespace spike_model

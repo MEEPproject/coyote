@@ -226,9 +226,12 @@ namespace spike_model
         // This single slot could potentially be extended to a MMU pending miss queue
 
 
+    protected:
         // Using the same handling policies as the L1 Data Cache
         using DL1Handle = SimpleDL1::Handle;
         DL1Handle l2_cache_;
+    
+    private:
         const bool always_hit_;
         bool cache_busy_ = false;
         // Keep track of the instruction that causes current outstanding cache miss
@@ -253,7 +256,7 @@ namespace spike_model
         ////////////////////////////////////////////////////////////////////////////////
         // Regular Function/Subroutine Call
         ////////////////////////////////////////////////////////////////////////////////
-
+    protected:
         /*!
         * \brief Handle the cache access for a request
         * \param mem_access_info_ptr The access to handle
@@ -261,16 +264,17 @@ namespace spike_model
         bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
 
         /*!
-        * \brief Lookup the cache
-        * \param The access for the lookup
-        */
-        bool cacheLookup_(const MemoryAccessInfoPtr &);
-
-        /*!
         * \brief Update the replacement info for an address
         * \param The address to update
         */
         void reloadCache_(uint64_t, uint16_t);
+        
+    private:
+        /*!
+        * \brief Lookup the cache
+        * \param The access for the lookup
+        */
+        bool cacheLookup_(const MemoryAccessInfoPtr &);
     
         /*
         * \brief Obtain the address of the first byte in the line containing the request
@@ -289,6 +293,7 @@ namespace spike_model
         
         sparta::Counter count_wbs_=sparta::Counter(getStatisticSet(), "writebacks", "Number of writebacks", sparta::Counter::COUNT_NORMAL);
         
+    
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",
             "Miss ratio",
@@ -357,9 +362,11 @@ namespace spike_model
         std::list<std::shared_ptr<CacheRequest>> pending_load_requests_;
         std::list<std::shared_ptr<CacheRequest>> pending_store_requests_;
         std::list<std::shared_ptr<ScratchpadRequest>> pending_scratchpad_requests_;
-
+    
+    protected:
         std::map<uint64_t, uint64_t> eviction_times_;
 
+    private:
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;
         uint64_t l2_line_size_;

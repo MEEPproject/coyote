@@ -169,16 +169,7 @@ namespace spike_model
             count_cache_misses_++;
 
             // Update memory access info
-            if(trace_)
-            {
-                logger_.logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());
-                auto evicted_line_time=eviction_times_.find(mem_access_info_ptr->getReq()->getAddress());
-                if(evicted_line_time!=eviction_times_.end())
-                {
-                    logger_.logMissOnEvicted(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress(), getClock()->currentCycle()-evicted_line_time->second);
-                    eviction_times_.erase(evicted_line_time);
-                }
-            }
+
 
             if (cache_busy_ == false) {
                 // Cache is now busy_, no more CACHE MISS can be handled, RESET required on finish
@@ -284,22 +275,10 @@ namespace spike_model
             cache_req->setCacheBank(bank);
             out_biu_req_.send(cache_req, 1);
             count_wbs_+=1;
-            if(trace_)
-            {
-                logger_.logL2WB(getClock()->currentCycle(), 0, 0, l2_cache_line->getAddr());
-                eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
-            }
-        }
-
-        if(trace_ && l2_cache_line->isValid())
-        {
-            eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
         }
 
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
             
-
-
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "Cache reload complete!";
         }
