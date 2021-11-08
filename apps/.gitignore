@@ -1,0 +1,18 @@
+# Ignore all
+*
+
+# Unignore all with extensions (all binaries, which do not have extensions usually, remain in ignored state)
+!*.*
+
+# Unignore all dirs
+!*/
+
+dataset.h
+syscalls.s
+
+compile*.sh
+!compile.sh
+
+*.o
+*.gch
+*.s
