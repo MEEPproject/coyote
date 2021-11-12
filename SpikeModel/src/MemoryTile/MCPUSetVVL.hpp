@@ -27,7 +27,7 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Request(pc, 0, 0) {
+            MCPUSetVVL(uint64_t pc):Request(0, pc, 0) {
                 setLMUL(LMULSetting::ONE);
                 setWidth(VectorElementType::BIT64);
             }
@@ -40,11 +40,12 @@ namespace spike_model
              * \param time The timestamp when the event is submitted to sparta
              * \param c The core which submitted the event
              */
-            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(pc, time, c)
+            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(0, pc, c)
                           , avl(avl) {
                 setLMUL(LMULSetting::ONE);
                 setDestinationReg(regId);
                 setWidth(VectorElementType::BIT64);
+		setTimestamp(time);
             }
 
             /*!
