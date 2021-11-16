@@ -29,6 +29,8 @@ namespace spike_model
             uint16_t bank = req->getCacheBank();
             uint16_t core = req->getCoreId();
             addCacheRequest(req, bank, getInputIndex(true, core));
+            if(req->getSourceTile() == tile_ && !req->isServiced()) // Stats: count only if request is from this tile and is not an ACK
+                count_cache_requests_++;
         }
         else
         {
@@ -36,6 +38,7 @@ namespace spike_model
             int noc_network = nocmsg->getNoCNetwork();
             int input_unit = getInputIndex(msg->is_core, msg->id);
             addNoCMsg(nocmsg, noc_network, input_unit);
+            count_noc_messages_++; // Stats: count the number of messages to NoC
         }
     }
 
@@ -256,5 +259,6 @@ namespace spike_model
         pending_l2_msgs_.resize(l2_banks_per_tile, std::vector<std::queue<std::shared_ptr<CacheRequest>>>(cores_per_tile));
         cores_per_tile_ = cores_per_tile;
         num_l2_banks_ = l2_banks_per_tile;
+        tile_ = tile_id;
     }
 }

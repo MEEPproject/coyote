@@ -125,6 +125,21 @@ namespace spike_model
             std::vector<std::vector<std::queue<std::shared_ptr<CacheRequest>>>> pending_l2_msgs_;
             std::vector<L2CacheBank*> l2_banks;
             size_t q_sz;
+            uint16_t tile_;
+            sparta::Counter count_cache_requests_ = sparta::Counter
+            (
+                getStatisticSet(),                  // parent
+                "num_cache_requests",               // name
+                "Number of Cache Requests",         // description
+                sparta::Counter::COUNT_NORMAL       // behavior
+            );
+            sparta::Counter count_noc_messages_ = sparta::Counter
+            (
+                getStatisticSet(),                  // parent
+                "num_noc_messages",                 // name
+                "Number of NoC Messages",           // description
+                sparta::Counter::COUNT_NORMAL       // behavior
+            );
     };
 }
 #endif
