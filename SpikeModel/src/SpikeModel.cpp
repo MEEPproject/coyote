@@ -124,16 +124,16 @@ void SpikeModel::buildTree_()
     // architectural parameters
     auto    num_tiles               = upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
     auto    num_memory_cpus         = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
-    auto    num_llcs                = upt.get("top.cpu.params.num_llcs").getAs<uint16_t>();
     auto    num_memory_controllers  = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto    num_memory_banks        = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
     auto    num_l2_banks_in_tile    = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+    auto    num_llc_banks_per_mc    = upt.get("top.cpu.memory_cpu0.params.num_llc_banks").getAs<uint16_t>();
 
 
     auto cpu_factory = getCPUFactory_();
 
     // Set the ACME topology that will be built
-    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_llcs, num_memory_controllers, num_memory_banks, trace);
+    cpu_factory->setTopology(arch_topology, num_tiles, num_l2_banks_in_tile, num_memory_cpus, num_llc_banks_per_mc, num_memory_controllers, num_memory_banks, trace);
 
     // Create a single CPU
     sparta::ResourceTreeNode* cpu_tn = new sparta::ResourceTreeNode(getRoot(),
@@ -206,6 +206,7 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     auto num_memory_cpus = upt.get("top.cpu.params.num_memory_cpus").getAs<uint16_t>();
     auto num_memory_controllers = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto num_l2_banks_in_tile = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+    auto num_llc_banks_per_mc = upt.get("top.cpu.memory_cpu0.params.num_llc_banks").getAs<uint16_t>();
 
     spike_model::ServicedRequests s;
     std::vector<spike_model::Tile *> tiles;
@@ -310,12 +311,16 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         sparta_assert(tile_node != nullptr);
 
         spike_model::MemoryCPUWrapper *mcpu=tile_node->getResourceAs<spike_model::MemoryCPUWrapper>();
+	
+        auto llc_node = getRoot()->getChild(std::string("cpu.memory_cpu") + sparta::utils::uint32_to_str(i) + ".llc0");
+        sparta_assert(tile_node != nullptr);
+
+        spike_model::L3CacheBank * llc_bank=llc_node->getResourceAs<spike_model::L3CacheBank>();
 
         //mcpu->setRequestManager(m);
         mcpu->setAddressMappingInfo(mc_shift, mc_mask);
-    }
-
-     
+	mcpu->setLLCInfo(llc_bank->getSize()*num_llc_banks_per_mc, llc_bank->getAssoc());
+    } 
     return m;
 }
 

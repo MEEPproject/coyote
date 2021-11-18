@@ -21,7 +21,6 @@ namespace spike_model
 
         in_biu_ack_.registerConsumerHandler
                 (CREATE_SPARTA_HANDLER_WITH_DATA(L3CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
-
     }
 
     void L3CacheBank::scheduleIssueAccess(uint64_t cycle)

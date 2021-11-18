@@ -149,7 +149,16 @@ namespace spike_model
             * \return The bank to access
             */
             virtual uint16_t calculateBank(std::shared_ptr<spike_model::CacheRequest> r)=0;
-    
+
+
+            /*!              
+            * \brief Calculate the total size of the L2 cache in bytes
+	    * \param s The size for the current tile in KB
+	    * \param num_tiles The number of tiles in the system
+            * \return The total size of the L2 cache in bytes
+            */
+            virtual uint64_t totalSize(uint64_t s, uint16_t num_tiles)=0;
+
             /*!              
             * \brief Calculate the bank for a scratchpad request
             * \param r A ScratchpadRequest

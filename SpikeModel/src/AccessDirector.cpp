@@ -300,7 +300,7 @@ namespace spike_model
         core_bits=(uint8_t)ceil(log2(tile->num_cores_));
         core_to_bank_interleaving_bits=(uint8_t)log2(banks_per_tile/tile->num_cores_);
 
-        uint64_t s=size_kbs*num_tiles*1024;
+        uint64_t s=totalSize(size_kbs, num_tiles);
         uint64_t num_sets=s/(assoc*line_size);
         set_bits=(uint8_t)ceil(log2(num_sets));
         tag_bits=64-(set_bits+block_offset_bits);

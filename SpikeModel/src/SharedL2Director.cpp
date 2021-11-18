@@ -3,6 +3,11 @@
 
 namespace spike_model
 {
+    uint64_t SharedL2Director::totalSize(uint64_t s, uint16_t num_tiles)
+    {
+	return s*1024*num_tiles;
+    }
+
     uint16_t SharedL2Director::calculateHome(std::shared_ptr<spike_model::CacheRequest> r)
     {
         uint16_t destination=0;

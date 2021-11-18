@@ -23,13 +23,52 @@ namespace spike_model {
 			sparta::Unit(node),
 			line_size(p->line_size),
 			latency(p->latency),
+			llc_banks(p->num_llc_banks),
+			out_ports_llc(llc_banks),
+			in_ports_llc(llc_banks),
+			out_ports_llc_mc(llc_banks),
+			in_ports_llc_mc(llc_banks),
 			sched_mem_req(&controller_cycle_event_mem_req, p->latency),
 			sched_outgoing(&controller_cycle_event_outgoing_transaction, p->latency),
 			sched_incoming_mc(&controller_cycle_event_incoming_mem_req, 1) {
 				in_port_noc.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_noc, std::shared_ptr<NoCMessage>));
 				in_port_mc.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_mc, std::shared_ptr<CacheRequest>));
-				in_port_llc.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_llc, std::shared_ptr<CacheRequest>));
-				in_port_llc_mc.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_llc_mc, std::shared_ptr<CacheRequest>));
+
+
+				for(uint16_t i=0; i<llc_banks; i++)
+				{
+				    std::string out_name=std::string("out_llc") + sparta::utils::uint32_to_str(i);
+				    std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>> out=std::make_unique<sparta::DataOutPort<std::shared_ptr<Request>>> (&unit_port_set_, out_name, false);
+				    out_ports_llc[i]=std::move(out);
+
+				    out_name=std::string("out_llc_mc") + sparta::utils::uint32_to_str(i);
+				    std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> out_ack=std::make_unique<sparta::DataOutPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, out_name, false);
+				    out_ports_llc_mc[i]=std::move(out_ack);
+
+				    std::string in_name=std::string("in_llc") + sparta::utils::uint32_to_str(i);
+				    std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>> in_ack=std::make_unique<sparta::DataInPort<std::shared_ptr<Request>>> (&unit_port_set_, in_name);
+				    in_ports_llc[i]=std::move(in_ack);
+				    in_ports_llc[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_llc, std::shared_ptr<CacheRequest>));
+
+				    in_name=std::string("in_llc_mc") + sparta::utils::uint32_to_str(i);
+				    std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>> in_req=std::make_unique<sparta::DataInPort<std::shared_ptr<CacheRequest>>> (&unit_port_set_, in_name);
+				    in_ports_llc_mc[i]=std::move(in_req);
+				    in_ports_llc_mc[i]->registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryCPUWrapper, receiveMessage_llc_mc, std::shared_ptr<CacheRequest>));
+				}
+
+				if(p->llc_pol=="page_to_bank")
+				{
+				    llc_policy=spike_model::CacheDataMappingPolicy::PAGE_TO_BANK;
+				}
+				else if(p->llc_pol=="set_interleaving")
+				{
+				    llc_policy=spike_model::CacheDataMappingPolicy::SET_INTERLEAVING;
+				}
+				else
+				{
+				    printf("Unsupported cache data mapping policy\n");
+				}
+
 				instructionID_counter = 1;
 				this->id = 0;
 								
@@ -58,7 +97,7 @@ namespace spike_model {
 					DEBUG_MSG("Each register entry in the SP is " << sp_reg_size << " Bytes.");
 				}
 				
-				this->noc      = nullptr;
+				this->noc      = nullptr; 
 	}
 
 
@@ -80,7 +119,7 @@ namespace spike_model {
 			cr->set_mem_op_latency(line_size/32); // if memtile not enabled, handle only cache lines (64 Bytes)
 			
 			if(this->enabled_llc) {
-				out_port_llc.send(cr, 0);
+				out_ports_llc[calculateBank(cr)]->send(cr, 0);
 				if(trace_) {
 					logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), cr->getAddress());
 				}
@@ -306,7 +345,7 @@ namespace spike_model {
 		//-- Send to the LLC or MC
 		if(this->enabled_llc) {
 			instr_for_mc->set_mem_op_latency(line_size/32);	// Overwrite! LLC always loads 64 Bytes = 2*32 Bytes
-			out_port_llc.send(instr_for_mc, 1);
+			out_ports_llc[calculateBank(instr_for_mc)]->send(instr_for_mc, 1);
 			
 			if(trace_) {
 				logger_.logMemTileLLCSent(getClock()->currentCycle(), getID(), instr_for_mc->getAddress(), getParentAddress(instr_for_mc));
@@ -446,7 +485,7 @@ namespace spike_model {
 	void MemoryCPUWrapper::receiveMessage_mc(const std::shared_ptr<CacheRequest> &mes)	{
 
 		if(this->enabled_llc) {
-			out_port_llc_mc.send(mes, 0);
+			out_ports_llc_mc[calculateBank(mes)]->send(mes, 0);
 			
 			if(trace_) {
 				logger_.logMemTileMC2LLC(getClock()->currentCycle(), getID(), mes->getAddress());
@@ -738,6 +777,39 @@ namespace spike_model {
 			parent_address = transaction_id->second.mcpu_instruction->getAddress();
 		}
 		return parent_address;
+	}
+    	
+	uint16_t MemoryCPUWrapper::calculateBank(std::shared_ptr<spike_model::CacheRequest> r)
+	{	
+        	uint16_t destination=0;
+        
+	        if(bank_bits>0) //If more than one bank
+	        {
+	            uint8_t left=tag_bits;
+	            uint8_t right=block_offset_bits;
+	            switch(llc_policy)
+	            {
+	                case CacheDataMappingPolicy::SET_INTERLEAVING:
+	                    left+=set_bits-bank_bits;
+	                    break;
+	                case CacheDataMappingPolicy::PAGE_TO_BANK:
+	                    right+=set_bits-bank_bits;
+	                    break;
+	            }
+	            destination=(r->getAddress() << left) >> (left+right);
+	        }
+	        return destination;
+	}
+	
+	void MemoryCPUWrapper::setLLCInfo(uint64_t size_kbs, uint8_t assoc)
+	{
+		block_offset_bits=(uint8_t)(ceil(log2(line_size)));
+		bank_bits=(uint8_t)ceil(log2(llc_banks));
+
+		uint64_t s=size_kbs*1024;
+		uint64_t num_sets=s/(assoc*line_size);
+		set_bits=(uint8_t)ceil(log2(num_sets));
+		tag_bits=64-(set_bits+block_offset_bits);
 	}
 }
 

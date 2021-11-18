@@ -1,6 +1,7 @@
 
 #include "sparta/utils/SpartaAssert.hpp"
 #include "CacheBank.hpp"
+#include "L3CacheBank.hpp"
 #include <chrono>
 
 namespace spike_model

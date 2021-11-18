@@ -36,20 +36,20 @@ spike_model::CoreTopology_4::CoreTopology_4(){
                 &factories->memory_cpu_rf
             },
             {
-                "llc^",
-                "cpu",
-                "LLC ^",
-                sparta::TreeNode::GROUP_NAME_NONE,
-                sparta::TreeNode::GROUP_IDX_NONE,
-                &factories->cache_bank_llc_rf
-            },
-            {
                 "memory_controller#",
                 "cpu",
                 "Memory Controller #",
                 sparta::TreeNode::GROUP_NAME_NONE,
                 sparta::TreeNode::GROUP_IDX_NONE,
                 &factories->memory_controller_rf
+            },
+            {
+                "llc^",
+                "cpu.memory_cpu&",
+                "LLC ^",
+                sparta::TreeNode::GROUP_NAME_NONE,
+                sparta::TreeNode::GROUP_IDX_NONE,
+                &factories->cache_bank_llc_rf
             },
             {
                 "memory_bank!",
@@ -104,20 +104,20 @@ spike_model::CoreTopology_4::CoreTopology_4(){
             "cpu.memory_cpu&.ports.in_noc"
         },
         {
-            "cpu.llc^.ports.in_tile_req",
-            "cpu.memory_cpu&.ports.out_llc"
+            "cpu.memory_cpu&.llc^.ports.in_tile_req",
+            "cpu.memory_cpu&.ports.out_llc^"
         },
         {
-            "cpu.llc^.ports.out_tile_ack",
-            "cpu.memory_cpu&.ports.in_llc"
+            "cpu.memory_cpu&.llc^.ports.out_tile_ack",
+            "cpu.memory_cpu&.ports.in_llc^"
         },
         {
-            "cpu.llc^.ports.out_tile_req",
-            "cpu.memory_cpu&.ports.in_llc_mc"
+            "cpu.memory_cpu&.llc^.ports.out_tile_req",
+            "cpu.memory_cpu&.ports.in_llc_mc^"
         },
         {
-            "cpu.llc^.ports.in_tile_ack",
-            "cpu.memory_cpu&.ports.out_llc_mc"
+            "cpu.memory_cpu&.llc^.ports.in_tile_ack",
+            "cpu.memory_cpu&.ports.out_llc_mc^"
         },
         {
             "cpu.memory_cpu&.ports.out_mc",

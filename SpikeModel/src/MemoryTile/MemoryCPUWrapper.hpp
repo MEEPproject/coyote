@@ -18,6 +18,7 @@
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
 #include "ScratchpadRequest.hpp"
+#include "CacheDataMappingPolicy.hpp"
 #include "Bus.hpp"
 #include <unordered_map>
 
@@ -38,6 +39,8 @@ namespace spike_model {
 					MemoryCPUWrapperParameterSet(sparta::TreeNode* n):sparta::ParameterSet(n) { }
 					PARAMETER(uint64_t, line_size, 64, "The cache line size")
 					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
+                			PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
+                			PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
 			};
 
 			/*!
@@ -81,6 +84,13 @@ namespace spike_model {
 			 */
 			void setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask);
 
+			/*!
+                         * \brief Set the addressing information for the LLC
+                         * \param size_kbs The total size of the LLC for this memory tile in KBs
+                         * \param assoc The associativity of the LLC
+                         */
+			void setLLCInfo(uint64_t size_kbs, uint8_t assoc);
+
 		private:
 			const uint8_t num_of_registers = 32;
 			size_t sp_reg_size;
@@ -97,6 +107,8 @@ namespace spike_model {
 			uint32_t line_size;
 			uint32_t *vvl;
 			uint64_t latency;
+			uint16_t llc_banks;
+			CacheDataMappingPolicy llc_policy;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
 			bool enabled_llc;
@@ -104,6 +116,10 @@ namespace spike_model {
 			uint64_t mc_shift;
 			uint64_t mc_mask;
 			
+		    	uint8_t tag_bits;
+			uint8_t block_offset_bits;
+			uint8_t set_bits;
+			uint8_t bank_bits;
 			
 			struct LastLogTime {
 				uint64_t sched_outgoing = 0;
@@ -138,24 +154,12 @@ namespace spike_model {
 			sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_mc {
 				&unit_port_set_, "in_mc"
 			};
+			
+			std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<Request>>>> out_ports_llc;
+			std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<Request>>>> in_ports_llc;
+			std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<CacheRequest>>>> out_ports_llc_mc;
+			std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<CacheRequest>>>> in_ports_llc_mc;
 		
-			sparta::DataOutPort<std::shared_ptr<Request>> out_port_llc {
-				&unit_port_set_, "out_llc", false
-			};
-
-			sparta::DataInPort<std::shared_ptr<Request>> in_port_llc {
-				&unit_port_set_, "in_llc"
-			};
-			
-			sparta::DataOutPort<std::shared_ptr<CacheRequest>> out_port_llc_mc {
-				&unit_port_set_, "out_llc_mc", false 
-			};
-
-			sparta::DataInPort<std::shared_ptr<CacheRequest>> in_port_llc_mc {
-				&unit_port_set_, "in_llc_mc"
-			};
-			
-
 			//-- The Memory Tile Bus (for Memory requests from VAG,bypass...)
 			sparta::UniqueEvent<sparta::SchedulingPhase::Tick> controller_cycle_event_mem_req {
 			   &unit_event_set_, "controller_cycle_mem_requests", CREATE_SPARTA_HANDLER(MemoryCPUWrapper, controllerCycle_mem_requests)
@@ -219,6 +223,7 @@ namespace spike_model {
 			uint64_t getParentAddress(std::shared_ptr<CacheRequest> cr);
 			
 
+			uint16_t calculateBank(std::shared_ptr<spike_model::CacheRequest> r);
 
 			//-- reporting and logging
 			sparta::Counter count_requests_noc 				= sparta::Counter(
