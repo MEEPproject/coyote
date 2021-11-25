@@ -1,3 +1,5 @@
+#include<iostream>
+#include "sparta/utils/SpartaAssert.hpp"
 
 #ifndef __NOC_MESSAGE_TYPE_HH__
 #define __NOC_MESSAGE_TYPE_HH__
@@ -66,5 +68,45 @@ namespace spike_model
         
         count                   =12 // Number of message types
     };
+
+    inline std::ostream& operator<<(std::ostream& os, NoCMessageType nmt)
+    {
+        switch(nmt)
+        {
+            case NoCMessageType::REMOTE_L2_REQUEST: os << "REMOTE_L2_REQUEST"; return os;
+            case NoCMessageType::MEMORY_REQUEST_LOAD: os << "MEMORY_REQUEST_LOAD"; return os;
+            case NoCMessageType::MEMORY_REQUEST_STORE: os << "MEMORY_REQUEST_STORE"; return os;
+            case NoCMessageType::MEMORY_REQUEST_WB: os << "MEMORY_REQUEST_WB"; return os;
+            case NoCMessageType::REMOTE_L2_ACK: os << "REMOTE_L2_ACK"; return os;
+            case NoCMessageType::MEMORY_ACK: os << "MEMORY_ACK"; return os;
+            case NoCMessageType::MCPU_REQUEST: os << "MCPU_REQUEST"; return os;
+            case NoCMessageType::SCRATCHPAD_ACK: os << "SCRATCHPAD_ACK"; return os;
+            case NoCMessageType::SCRATCHPAD_DATA_REPLY: os << "SCRATCHPAD_DATA_REPLY"; return os;
+            case NoCMessageType::SCRATCHPAD_COMMAND: os << "SCRATCHPAD_COMMAND"; return os;
+            case NoCMessageType::MEM_TILE_REQUEST: os << "MEM_TILE_REQUEST"; return os;
+            case NoCMessageType::MEM_TILE_REPLY: os << "MEM_TILE_REPLY"; return os;
+            default: os << "UNKNOWN_NoCMessageType"; return os;
+        }
+    }
+
+    inline std::string& operator+(std::basic_string<char> str, NoCMessageType nmt)
+    {
+        switch(nmt)
+        {
+            case NoCMessageType::REMOTE_L2_REQUEST: return str.append("REMOTE_L2_REQUEST");
+            case NoCMessageType::MEMORY_REQUEST_LOAD: return str.append("MEMORY_REQUEST_LOAD");
+            case NoCMessageType::MEMORY_REQUEST_STORE: return str.append("MEMORY_REQUEST_STORE");
+            case NoCMessageType::MEMORY_REQUEST_WB: return str.append("MEMORY_REQUEST_WB");
+            case NoCMessageType::REMOTE_L2_ACK: return str.append("REMOTE_L2_ACK");
+            case NoCMessageType::MEMORY_ACK: return str.append("MEMORY_ACK");
+            case NoCMessageType::MCPU_REQUEST: return str.append("MCPU_REQUEST");
+            case NoCMessageType::SCRATCHPAD_ACK: return str.append("SCRATCHPAD_ACK");
+            case NoCMessageType::SCRATCHPAD_DATA_REPLY: return str.append("SCRATCHPAD_DATA_REPLY");
+            case NoCMessageType::SCRATCHPAD_COMMAND: return str.append("SCRATCHPAD_COMMAND");
+            case NoCMessageType::MEM_TILE_REQUEST: return str.append("MEM_TILE_REQUEST");
+            case NoCMessageType::MEM_TILE_REPLY: return str.append("MEM_TILE_REPLY");
+            default: sparta_assert(false);
+        }
+    }
 }
 #endif

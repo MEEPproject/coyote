@@ -108,64 +108,93 @@ namespace spike_model
         // Statistics
         for(auto network : noc_networks_)
         {
-            hop_count_.push_back(sparta::Counter(
+            hop_count_by_noc.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "hop_count_" + network,                                  // name
                 "Total number of packet hops in " + network + " NoC",    // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
-            count_rx_flits_.push_back(sparta::Counter(
+            count_rx_flits_by_noc.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "received_flits_" + network,                             // name
                 "Number of flits received in " + network + " NoC",       // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
-            count_tx_flits_.push_back(sparta::Counter(
+            count_tx_flits_by_noc.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "sent_flits_" + network,                                 // name
                 "Number of flits sent in " + network + " NoC",           // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
-            packet_latency_.push_back(sparta::Counter(
+            packet_latency_by_noc.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "packet_latency_" + network,                             // name
                 "Accumulated packet latency in " + network + " NoC",     // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
-            network_latency_.push_back(sparta::Counter(
+            network_latency_by_noc.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "network_latency_" + network,                            // name
                 "Accumulated network latency in " + network + " NoC",    // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
 
-            average_hop_count_.push_back(sparta::StatisticDef(
+            average_hop_count_by_noc.push_back(sparta::StatisticDef(
                 getStatisticSet(),                                      // parent
                 "average_hop_count_" + network,                         // name
                 "Average hop count in  " + network + " NoC",            // description
                 getStatisticSet(),                                      // context
                 "hop_count_" + network + "/sent_packets_"+network       // Expression
             ));
-            load_flits_.push_back(sparta::StatisticDef(
+            load_flits_by_noc.push_back(sparta::StatisticDef(
                 getStatisticSet(),                                      // parent
                 "load_flits_" + network,                                // name
                 "Load in " + network + " NoC (flit/node/cycle)",        // description
                 getStatisticSet(),                                      // context
                 "received_flits_" + network + "/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
             ));
-            avg_packet_lat_.push_back(sparta::StatisticDef(
+            avg_packet_lat_by_noc.push_back(sparta::StatisticDef(
                 getStatisticSet(),                                      // parent
                 "avg_pkt_latency_" + network,                           // name
                 "Avg. Packet Latency in " + network + " NoC",           // description
                 getStatisticSet(),                                      // context
                 "packet_latency_" + network + "/received_packets_" + network // Expression
             ));
-            avg_network_lat_.push_back(sparta::StatisticDef(
+            avg_network_lat_by_noc.push_back(sparta::StatisticDef(
                 getStatisticSet(),                                      // parent
                 "avg_net_latency_" + network,                           // name
                 "Avg. Network Latency in " + network + " NoC",           // description
                 getStatisticSet(),                                      // context
                 "network_latency_" + network + "/received_packets_" + network // Expression
+            ));
+        }
+        for(int i=0; i < static_cast<int>(NoCMessageType::count); i++)
+        {
+            packet_latency_by_type.push_back(sparta::Counter(
+                getStatisticSet(),                                                                  // parent
+                "packet_latency_" + static_cast<NoCMessageType>(i),                                 // name
+                "Accumulated packet latency for " + static_cast<NoCMessageType>(i) + " packets",    // description
+                sparta::Counter::COUNT_NORMAL                                                       // behavior
+            ));
+            network_latency_by_type.push_back(sparta::Counter(
+                getStatisticSet(),                                                                  // parent
+                "network_latency_" + static_cast<NoCMessageType>(i),                                // name
+                "Accumulated network latency for " + static_cast<NoCMessageType>(i) + " packets",   // description
+                sparta::Counter::COUNT_NORMAL                                                       // behavior
+            ));
+            avg_packet_lat_by_type.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                                                              // parent
+                "avg_pkt_latency_" + static_cast<NoCMessageType>(i),                                            // name
+                "Avg. Packet Latency for " + static_cast<NoCMessageType>(i) + " packets",                       // description
+                getStatisticSet(),                                                                              // context
+                "packet_latency_" + static_cast<NoCMessageType>(i) + "/num_" + static_cast<NoCMessageType>(i)   // Expression
+            ));
+            avg_network_lat_by_noc.push_back(sparta::StatisticDef(
+                getStatisticSet(),                                                                              // parent
+                "avg_net_latency_" + static_cast<NoCMessageType>(i),                                            // name
+                "Avg. Network Latency for " + static_cast<NoCMessageType>(i) + " packets",                      // description
+                getStatisticSet(),                                                                              // context
+                "network_latency_" + static_cast<NoCMessageType>(i) + "/num_" + static_cast<NoCMessageType>(i) // Expression
             ));
         }
     }
@@ -240,7 +269,7 @@ namespace spike_model
                 sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
 
-            // VAS -> MCPU messages
+            // VAS -> MEM messages
             case NoCMessageType::MEMORY_REQUEST_LOAD:
             case NoCMessageType::MEMORY_REQUEST_STORE:
             case NoCMessageType::MEMORY_REQUEST_WB:
@@ -262,7 +291,7 @@ namespace spike_model
         }
         pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        count_tx_flits_[mess->getNoCNetwork()] += size;
+        count_tx_flits_by_noc[mess->getNoCNetwork()] += size;
     }
 
     void DetailedNoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
@@ -276,7 +305,7 @@ namespace spike_model
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
-            // MemoryTile -> VAS messages
+            // MEM -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
@@ -290,7 +319,7 @@ namespace spike_model
                 sparta_assert(packet_id != INVALID_PKT_ID);
                 break;
                 
-            //-- MemoryTile -> MemoryTile communication
+            // MEM -> MEM messages
             case NoCMessageType::MEM_TILE_REPLY:
             case NoCMessageType::MEM_TILE_REQUEST:
                 packet_id = booksim_wrappers_[mess->getNoCNetwork()]->GeneratePacket(
@@ -308,7 +337,7 @@ namespace spike_model
         }
         pkts_map_[mess->getNoCNetwork()][packet_id] = mess;
         // Update sent flits for each network
-        count_tx_flits_[mess->getNoCNetwork()] += size;
+        count_tx_flits_by_noc[mess->getNoCNetwork()] += size;
     }
 
     bool DetailedNoC::runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle)
@@ -332,10 +361,13 @@ namespace spike_model
                     sparta_assert(mess->getClass() == pkt.c);
                     pkts_map_[n].erase(pkt.pid);
                     // Update statistics for each network
-                    hop_count_[n] += pkt.hops;
-                    count_rx_flits_[n] += pkt.ps;
-                    packet_latency_[n] += pkt.plat;
-                    network_latency_[n] += pkt.nlat;
+                    hop_count_by_noc[n] += pkt.hops;
+                    count_rx_flits_by_noc[n] += pkt.ps;
+                    packet_latency_by_noc[n] += pkt.plat;
+                    network_latency_by_noc[n] += pkt.nlat;
+                    // Update statistics for each packet type
+                    packet_latency_by_type[static_cast<int>(mess->getType())] += pkt.plat;
+                    network_latency_by_type[static_cast<int>(mess->getType())] += pkt.nlat;
                     // Send to the actual destination at NEXT_CYCLE
                     int rel_time = current_cycle + 1 - getClock()->currentCycle(); // rel_time to NEXT_CYCLE = current+1
                     sparta_assert(rel_time >= 0); // rel_time must be a cycle that sparta can run after current booksim iteration

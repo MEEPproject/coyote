@@ -95,7 +95,7 @@ namespace spike_model
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
 
-            // VAS -> MCPU messages
+            // VAS -> MEM messages
             case NoCMessageType::MEMORY_REQUEST_LOAD:
             case NoCMessageType::MEMORY_REQUEST_STORE:
             case NoCMessageType::MEMORY_REQUEST_WB:
@@ -128,7 +128,7 @@ namespace spike_model
         sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         switch(mess->getType())
         {
-            // MemoryTile -> VAS messages
+            // MEM -> VAS messages
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
@@ -141,7 +141,7 @@ namespace spike_model
                 out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
                 break;
                 
-            // MemoryTile -> MemoryTile Communication
+            // MEM -> MEM messages
             case NoCMessageType::MEM_TILE_REQUEST:
                 hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - mcpus_coordinates_[mess->getSrcPort()].first) + 
                             abs(mcpus_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second) +

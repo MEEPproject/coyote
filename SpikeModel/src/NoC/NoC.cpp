@@ -103,13 +103,13 @@ namespace spike_model
             count_rx_packets_.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "received_packets_" + network,                          // name
-                "N2umber of packets received in " + network + " NoC",    // description
+                "Number of packets received in " + network + " NoC",    // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
             count_tx_packets_.push_back(sparta::Counter(
                 getStatisticSet(),                                       // parent
                 "sent_packets_" + network,                               // name
-                "N2umber of packets sent in " + network + " NoC",        // description
+                "Number of packets sent in " + network + " NoC",        // description
                 sparta::Counter::COUNT_NORMAL                            // behavior
             ));
             
@@ -119,6 +119,15 @@ namespace spike_model
                 "Load in " + network + " NoC (pkt/node/cycle)",          // description
                 getStatisticSet(),                                       // context
                 "received_packets_" + network + "/("+std::to_string(num_tiles_+num_memory_cpus_)+"*cycles)" // Expression
+            ));
+        }
+        for(int i=0; i < static_cast<int>(NoCMessageType::count); i++)
+        {
+            count_pkts_by_pkt_type.push_back(sparta::Counter(
+                getStatisticSet(),                                          // parent
+                "num_" + static_cast<NoCMessageType>(i),                   // name
+                "Number of " + static_cast<NoCMessageType>(i) + " packets", // description
+                sparta::Counter::COUNT_NORMAL                               // behavior
             ));
         }
     }
@@ -142,32 +151,20 @@ namespace spike_model
         count_rx_packets_[mess->getNoCNetwork()]++;
         count_tx_packets_[mess->getNoCNetwork()]++;
 
-        // Packet counter by each type
+        // Packet counter by each message type
+        count_pkts_by_pkt_type[static_cast<int>(mess->getType())]++;
         switch(mess->getType())
         {
+            // VAS -> VAS messages
             case NoCMessageType::REMOTE_L2_REQUEST:
-                count_remote_l2_requests_++;
-                break;
-            case NoCMessageType::MEMORY_REQUEST_LOAD:
-                count_memory_requests_load_++;
-                break;
-            case NoCMessageType::MEMORY_REQUEST_STORE:
-                count_memory_requests_store_++;
-                break;
-            case NoCMessageType::MEMORY_REQUEST_WB:
-                count_memory_requests_wb_++;
-                break;
             case NoCMessageType::REMOTE_L2_ACK:
-                count_remote_l2_acks_++;
-                break;
+            // VAS -> MEM messages
+            case NoCMessageType::MEMORY_REQUEST_LOAD:
+            case NoCMessageType::MEMORY_REQUEST_STORE:
+            case NoCMessageType::MEMORY_REQUEST_WB:
             case NoCMessageType::MCPU_REQUEST:
-                count_mcpu_requests_++;
-                break;
             case NoCMessageType::SCRATCHPAD_ACK:
-                count_scratchpad_acks_++;
-                break;
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:
-                count_scratchpad_data_replies_++;
                 break;
             default:
                 sparta_assert(false, "Unsupported message received from a Tile!!!");
@@ -205,23 +202,17 @@ namespace spike_model
         count_rx_packets_[mess->getNoCNetwork()]++;
         count_tx_packets_[mess->getNoCNetwork()]++;
 
-        // Packet counter by each type
+        // Packet counter by each message type
+        count_pkts_by_pkt_type[static_cast<int>(mess->getType())]++;
         switch(mess->getType())
         {
+            // MEM -> VAS messages
             case NoCMessageType::MEMORY_ACK:
-                count_memory_acks_++;
-                break;
             case NoCMessageType::MCPU_REQUEST:
-                count_mcpu_requests_++;
-                break;
             case NoCMessageType::SCRATCHPAD_COMMAND:
-                count_scratchpad_commands_++;
-                break;
+            // MEM -> MEM messages
             case NoCMessageType::MEM_TILE_REQUEST:
-                count_mcpu_to_mcpu_requests_++;
-                break;
             case NoCMessageType::MEM_TILE_REPLY:
-                count_mcpu_to_mcpu_replies_++;
                 break;
             default:
                 sparta_assert(false, "Unsupported message received from a MCPU!!!");
