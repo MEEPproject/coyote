@@ -23,11 +23,13 @@ namespace spike_model
 
     void Arbiter::submit(const std::shared_ptr<ArbiterMessage> & msg)
     {
+        count_messages_++;
         if(msg->type == spike_model::MessageType::CACHE_REQUEST)
         {
             std::shared_ptr<CacheRequest> req = std::static_pointer_cast<CacheRequest>(msg->msg);
             uint16_t bank = req->getCacheBank();
             uint16_t core = req->getCoreId();
+            req->setTimestampReachArbiter(getClock()->currentCycle());
             addCacheRequest(req, bank, getInputIndex(true, core));
             if(req->getSourceTile() == tile_ && !req->isServiced()) // Stats: count only if request is from this tile and is not an ACK
                 count_cache_requests_++;
@@ -37,6 +39,7 @@ namespace spike_model
             std::shared_ptr<NoCMessage> nocmsg = std::static_pointer_cast<NoCMessage>(msg->msg);
             int noc_network = nocmsg->getNoCNetwork();
             int input_unit = getInputIndex(msg->is_core, msg->id);
+            nocmsg->getRequest()->setTimestampReachArbiter(getClock()->currentCycle());
             addNoCMsg(nocmsg, noc_network, input_unit);
             count_noc_messages_++; // Stats: count the number of messages to NoC
         }
@@ -189,6 +192,7 @@ namespace spike_model
             {
                 if(hasCacheRequest(i, j))
                 {
+                    total_time_spent_by_messages_=total_time_spent_by_messages_+(getClock()->currentCycle()-pending_l2_msgs_[i][j].front()->getTimestampReachArbiter());
                     l2_banks[i]->getAccess_(popCacheRequest(i,j));
                     rr_cntr_cache_req_[i] = j;
                     break;
@@ -225,6 +229,7 @@ namespace spike_model
                     std::shared_ptr<NoCMessage> msg = getNoCMsg(i, j);
                     if(noc->checkSpaceForPacket(true, msg))
                     {
+                        total_time_spent_by_messages_=total_time_spent_by_messages_+(getClock()->currentCycle()-pending_noc_msgs_[i][j].front()->getRequest()->getTimestampReachArbiter());
                         noc->handleMessageFromTile_(popNoCMsg(i,j));
                         rr_cntr_noc_[i] = j;
                         break;

@@ -56,6 +56,12 @@ namespace spike_model
             */
             void notifyRequestCompletion(std::shared_ptr<CacheRequest> req) override;
             
+            /*!
+            * \brief Get the current queue occupancy
+            * \return The number of requests that are currently enqueued in the scheduler. If the scheduler uses several queues. This is the aggregate value.
+            */
+            uint64_t getQueueOccupancy() override;
+
         private:
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> request_queues;
             std::queue<uint64_t> banks_to_schedule; //A bank id will be in this queue if the associated bank queue has elements and a request to the buffer is not currently in process

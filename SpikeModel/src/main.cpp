@@ -89,6 +89,7 @@ int main(int argc, char **argv)
         auto num_cores              = upt.get("top.cpu.params.num_cores").getAs<uint16_t>();
         auto num_threads_per_core   = upt.get("top.cpu.params.num_threads_per_core").getAs<uint16_t>();
         auto thread_switch_latency  = upt.get("top.cpu.params.thread_switch_latency").getAs<uint16_t>();
+        auto num_mshrs_per_core     = upt.get("top.cpu.params.num_mshrs_per_core").getAs<uint16_t>();
         auto varch                  = upt.get("top.cpu.params.varch").getAs<std::string>();
         auto lanes_per_vpu          = upt.get("top.cpu.params.lanes_per_vpu").getAs<std::uint16_t>();
         auto icache_config          = upt.get("top.cpu.params.icache_config").getAs<std::string>();
@@ -177,7 +178,7 @@ int main(int argc, char **argv)
             detailed_noc = sim->getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::DetailedNoC>();
 
         SimulationOrchestrator orchestrator(spike, sim, request_manager, num_cores,
-                               num_threads_per_core, thread_switch_latency, trace, detailed_noc);
+                               num_threads_per_core, thread_switch_latency, num_mshrs_per_core, trace, detailed_noc);
 
         if(trace)
         {

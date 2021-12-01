@@ -88,4 +88,22 @@ namespace spike_model
             banks_to_schedule.push(bank);
         }
     }
+    
+    uint64_t FifoRrMemoryAccessSchedulerAccessTypePriority::getQueueOccupancy()
+    {
+       uint64_t res=0;
+       for(auto &queue : fetch_queues)
+       {
+            res=res+queue.size();
+       }
+       for(auto &queue : load_queues)
+       {
+            res=res+queue.size();
+       }
+       for(auto &queue : store_queues)
+       {
+            res=res+queue.size();
+       }
+       return res;
+    }
 }

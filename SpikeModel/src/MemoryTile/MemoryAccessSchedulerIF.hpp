@@ -1,6 +1,8 @@
 #ifndef __MEMORY_ACCESS_SCHEDULER_HH__
 #define __MEMORY_ACCESS_SCHEDULER_HH__
 
+#include "sparta/simulation/Unit.hpp"
+
 #include <memory>
 #include "Request.hpp"
 
@@ -45,6 +47,13 @@ namespace spike_model
             * \param bank The bank which completed the request
             */
             virtual void notifyRequestCompletion(std::shared_ptr<CacheRequest> req)=0;
+
+            /*!
+            * \brief Get the current queue occupancy
+            * \return The number of requests that are currently enqueued in the scheduler. If the scheduler uses several queues. This is the aggregate value.
+            */
+            virtual uint64_t getQueueOccupancy()=0;
+
     };
 }
 #endif

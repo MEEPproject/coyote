@@ -111,6 +111,43 @@ namespace spike_model
              * \param v The visitor to handle the event
              */
             virtual void handle(EventVisitor * v)=0;
+            
+            /*!
+             * \brief Set the timestamp when the request reached the cache bank.
+             * \param t The timestamp when the request reached the cache bank.
+             */
+            void setTimestampReachCacheBank(uint64_t t) {timestamp_reach_cache_bank=t;}
+
+            /*!
+             * \brief Get the timestamp when the request reached the cache bank.
+             * \return The timestamp when the request reached the cache bank.
+             */
+            uint64_t getTimestampReachCacheBank() {return timestamp_reach_cache_bank;}
+        
+            /*!
+             * \brief Set the timestamp when the request reached the memory controller.
+             * \param t The timestamp when the request reached the memory controller.
+             */
+            void setTimestampReachMC(uint64_t t) {timestamp_reach_mc=t;}
+            
+            /*!
+             * \brief Get the timestamp when the request reached the memory controller.
+             * \return The timestamp when the request reached the memory controller.
+             */
+            uint64_t getTimestampReachMC() {return timestamp_reach_mc;}
+
+            /*!
+             * \brief Set the timestamp when the request reached the tile arbiter.
+             * \param t The timestamp when the request reached the tile arbiter.
+             */
+            void setTimestampReachArbiter(uint64_t t) {timestamp_reach_arbiter=t;}
+            
+            /*!
+             * \brief Get the timestamp when the request reached the tile arbiter.
+             * \return The timestamp when the request reached the tile arbiter.
+             */
+            uint64_t getTimestampReachArbiter() {return timestamp_reach_arbiter;}
+            
 
         private:
             uint64_t pc;
@@ -118,6 +155,10 @@ namespace spike_model
             uint16_t coreId;
             uint16_t source_tile;
             bool serviced=false;
+            
+            uint64_t timestamp_reach_cache_bank=0;
+            uint64_t timestamp_reach_mc=0;
+            uint64_t timestamp_reach_arbiter=0;
     };
     
 /*    inline std::ostream & operator<<(std::ostream & Str, Request const & req)

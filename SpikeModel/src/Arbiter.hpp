@@ -140,6 +140,15 @@ namespace spike_model
                 "Number of NoC Messages",           // description
                 sparta::Counter::COUNT_NORMAL       // behavior
             );
+            
+            sparta::Counter count_messages_=sparta::Counter(getStatisticSet(), "messages", "Number of messages", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter total_time_spent_by_messages_=sparta::Counter(getStatisticSet(), "total_time_spent_by_messages", "The total time spent by messages", sparta::Counter::COUNT_LATEST);
+
+            sparta::StatisticDef avg_latency_{
+                getStatisticSet(), "avg_latency",
+                "Average latency",
+                getStatisticSet(), "total_time_spent_by_messages/messages"
+            };
     };
 }
 #endif

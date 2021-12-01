@@ -56,8 +56,6 @@ namespace spike_model
 
     void MemoryController::receiveMessage_(const std::shared_ptr<spike_model::CacheRequest> &mes)
     {
-        count_requests_++;
-        
         uint64_t address=mes->getAddress();
 
         uint64_t rank=0;
@@ -86,6 +84,8 @@ namespace spike_model
 
         mes->setBankInfo(rank, bank, row, col);
 
+        mes->setTimestampReachMC(getClock()->currentCycle());
+
         sched->putRequest(mes, bank);
         if(trace_)
         {
@@ -104,6 +104,17 @@ namespace spike_model
     {
         //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
+        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
+        {
+            count_read_requests_++;
+            total_time_spent_by_read_requests_=total_time_spent_by_read_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+        }
+        else
+        {
+            count_write_requests_++;
+            total_time_spent_by_write_requests_=total_time_spent_by_write_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+        }
+        
         out_port_mcpu_.send(req, 0);
     }
 
@@ -136,14 +147,27 @@ namespace spike_model
     
     void MemoryController::controllerCycle_()
     {
+        uint64_t current_t=getClock()->currentCycle();
+        average_queue_occupancy_=((float)(average_queue_occupancy_*last_queue_sampling_timestamp)/current_t)+((float)sched->getQueueOccupancy()*(current_t-last_queue_sampling_timestamp))/current_t;
+        max_queue_occupancy_= (max_queue_occupancy_>=sched->getQueueOccupancy()) ? max_queue_occupancy_ : sched->getQueueOccupancy();
+        last_queue_sampling_timestamp=current_t;
         while(sched->hasIdleBanks())
         {
             uint64_t bank_to_schedule=sched->getNextBank();
             std::shared_ptr<CacheRequest> request_to_schedule=sched->getRequest(bank_to_schedule);
             if(trace_)
             {
-                logger_.logMemoryControllerOperation(getClock()->currentCycle(), request_to_schedule->getCoreId(), request_to_schedule->getPC(), request_to_schedule->getMemoryController(), request_to_schedule->getAddress());
+                logger_.logMemoryControllerOperation(current_t, request_to_schedule->getCoreId(), request_to_schedule->getPC(), request_to_schedule->getMemoryController(), request_to_schedule->getAddress());
 
+            }
+
+            if(request_to_schedule->getType()==CacheRequest::AccessType::LOAD || request_to_schedule->getType()==CacheRequest::AccessType::FETCH)
+            {
+                total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-request_to_schedule->getTimestampReachMC());
+            }
+            else
+            {
+                total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-request_to_schedule->getTimestampReachMC());
             }
             uint64_t row_to_schedule=request_to_schedule->getRow();
 

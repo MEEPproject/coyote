@@ -55,7 +55,13 @@ namespace spike_model
             * \param req The request that has been completed
             */
             void notifyRequestCompletion(std::shared_ptr<CacheRequest> req) override;
-            
+           
+            /*!
+            * \brief Get the current queue occupancy
+            * \return The number of requests that are currently enqueued in the scheduler. If the scheduler uses several queues. This is the aggregate value.
+            */
+            uint64_t getQueueOccupancy() override;
+
         private:
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> fetch_queues;
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> load_queues;

@@ -141,7 +141,42 @@ namespace spike_model
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
 
-            sparta::Counter count_requests_=sparta::Counter(getStatisticSet(), "requests", "Number of requests", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_read_requests_=sparta::Counter(getStatisticSet(), "read_requests", "Number of read requests (FETCH and LOAD)", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_write_requests_=sparta::Counter(getStatisticSet(), "write_requests", "Number of read requests (STORE & WB)", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter total_time_spent_by_read_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_read_requests", "The total time spent by read requests", sparta::Counter::COUNT_LATEST);
+            sparta::Counter total_time_spent_by_write_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_write_requests", "The total time spent by write requests", sparta::Counter::COUNT_LATEST);
+            sparta::Counter total_time_spent_in_queue_read_=sparta::Counter(getStatisticSet(), "total_time_spent_in_queue_reads", "The total time spent by read requests in the mc queue", sparta::Counter::COUNT_LATEST);
+            sparta::Counter total_time_spent_in_queue_write_=sparta::Counter(getStatisticSet(), "total_time_spent_in_queue_writes", "The total time spent by write requests in the mc queue", sparta::Counter::COUNT_LATEST);
+
+            sparta::Counter average_queue_occupancy_=sparta::Counter(getStatisticSet(), "average_queue_occupancy", "The average number of requests waiting in the memory controller queue", sparta::Counter::COUNT_LATEST);
+            sparta::Counter max_queue_occupancy_=sparta::Counter(getStatisticSet(), "max_queue_occupancy", "The maximum number of requests waiting in the memory controller queue", sparta::Counter::COUNT_LATEST);
+
+            uint64_t last_queue_sampling_timestamp=0;
+
+            sparta::StatisticDef avg_latency_read_requests_{
+                getStatisticSet(), "avg_latency_read_requests",
+                "Average latency per read request",
+                getStatisticSet(), "total_time_spent_by_read_requests/read_requests"
+            };
+            
+            sparta::StatisticDef avg_latency_write_requests_{
+                getStatisticSet(), "avg_latency_write_requests",
+                "Average latency per write request",
+                getStatisticSet(), "total_time_spent_by_write_requests/write_requests"
+            };
+            
+            sparta::StatisticDef avg_time_queued_reads{
+                getStatisticSet(), "avg_time_queued_reads",
+                "Average time in the queue per read request",
+                getStatisticSet(), "total_time_spent_in_queue_reads/read_requests"
+            };
+            
+            sparta::StatisticDef avg_time_queued_writes{
+                getStatisticSet(), "avg_time_queued_writes",
+                "Average time in the queue per write request",
+                getStatisticSet(), "total_time_spent_in_queue_writes/write_requests"
+            };
+            
 
             /*!
              * \brief Receive a message from the NoC

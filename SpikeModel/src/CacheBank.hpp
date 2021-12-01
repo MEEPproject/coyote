@@ -292,6 +292,14 @@ namespace spike_model
         sparta::Counter count_hit_on_store_=sparta::Counter(getStatisticSet(), "hits_on_store", "Number of hits on pending stores", sparta::Counter::COUNT_NORMAL);
         
         sparta::Counter count_wbs_=sparta::Counter(getStatisticSet(), "writebacks", "Number of writebacks", sparta::Counter::COUNT_NORMAL);
+            
+        sparta::Counter total_time_spent_by_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_requests", "The total time spent by requests", sparta::Counter::COUNT_LATEST);
+
+        sparta::StatisticDef avg_latency_lookup{
+            getStatisticSet(), "avg_latency",
+            "Average latency",
+            getStatisticSet(), "total_time_spent_by_requests/cache_requests"
+        };
         
     
         sparta::StatisticDef miss_ratio_{

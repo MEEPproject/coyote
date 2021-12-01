@@ -135,18 +135,6 @@ namespace spike_model
              */
             void setID(uint32_t id) {this->id = id;}
 
-            /*!
-             * \brief Set the timestamp when the request reached the l2.
-             * \param t The timestamp when the request reached the l2.
-             */
-            void setTimestampL2(uint64_t t) {timestamp_reach_l2=t;}
-
-            /*!
-             * \brief Get the timestamp when the request reached the l2.
-             * \return The timestamp when the request reached the l2.
-             */
-            uint64_t getTimestampL2() {return timestamp_reach_l2;}
-
             bool operator ==(const Request & m) const
             {
                 return m.getAddress()==getAddress();
@@ -163,8 +151,6 @@ namespace spike_model
             uint32_t id;    // used to identify the parent instruction
 
             uint16_t size;
-
-            uint64_t timestamp_reach_l2=0;
     };
 
     inline std::ostream & operator<<(std::ostream & Str, Request const & req)

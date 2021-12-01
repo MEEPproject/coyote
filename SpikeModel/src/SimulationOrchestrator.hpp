@@ -41,10 +41,13 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
          * \param spike_model The model for the architecture that will be simulated
          * \param request_manager The request manager to communicate requests to the modelled architecture
          * \param num_cores The number of simukated cores
+         * \param num_threads_per_core The numbers of thread that will run in the same core in CGMT
+         * \param thread_switch_latency The penalty of switching between threads in CGMT
+         * \param num_mshrs_per_core The number of Miss Status Holding Registers per core
          * \param trace Whether tracing is enabled or not
          * \param detailed_noc A pointer to the simulated DetailedNoC or NULL if a detailed model is not used
          */
-        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace, spike_model::DetailedNoC* detailed_noc);
+        SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc);
 
         /*!
          * \brief Triggers the simulation
@@ -127,11 +130,12 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         bool is_fetch;
 
-        size_t max_in_flight_l1_misses=8;
-
         spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
         bool booksim_has_packets_in_flight_;        //! Flag that indicates if booksim has packets in flight
         std::set<uint16_t> stalled_cores_for_arbiter;
+        
+        uint16_t max_in_flight_l1_misses;
+        std::vector<uint64_t> mshr_stalls_per_core; //(num_cores);
 
         float avg_mem_access_time=0;
         uint64_t num_mem_accesses=1; //Initialized to one to calcullate a rolling average

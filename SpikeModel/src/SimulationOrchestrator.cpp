@@ -1,6 +1,6 @@
 #include "SimulationOrchestrator.hpp"
 
-SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, bool trace, spike_model::DetailedNoC* detailed_noc):
+SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
@@ -17,7 +17,9 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     trace(trace),
     is_fetch(false),
     detailed_noc_(detailed_noc),
-    booksim_has_packets_in_flight_(false)
+    booksim_has_packets_in_flight_(false),
+    max_in_flight_l1_misses(num_mshrs_per_core),
+    mshr_stalls_per_core(num_cores)
 {
     for(uint16_t i=0;i<num_cores;i++)
     {
@@ -75,6 +77,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
         else
         {
             waiting_on_mshrs[current_core] = true;
+            mshr_stalls_per_core[current_core]++;
         }
         core_active=success;
 
@@ -260,12 +263,11 @@ void SimulationOrchestrator::run()
     uint64_t tot=0;
     for(uint16_t i=0;i<num_cores;i++)
     {
-        printf("Core %d simulated %lu instructions\n", i, simulated_instructions_per_core[i]);
+        printf("Core %d: \n\tsimulated %lu instructions\n\tStalled on mshrs %lu times.\n", i, simulated_instructions_per_core[i], mshr_stalls_per_core[i]);
         tot+=simulated_instructions_per_core[i];
     }
     printf("Total simulated instructions %lu\n", tot);
     std::cout << "Average memory access time: " << avg_mem_access_time <<" cycles\n";
-    std::cout << "Average time to reach the l2: " << avg_time_to_reach_l2 <<" cycles\n";
     std::cout << "The monitored section took " << timer <<" nanoseconds\n";
 }
 
@@ -467,13 +469,11 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             }
         }
 
-        //Update average memory access time metrics
-        avg_mem_access_time=avg_mem_access_time+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time)/num_mem_accesses;
-        num_mem_accesses++;
-        if(r->getTimestampL2()!=0) //If the L2 is bypassed then this value will be 0 and the metric will not be updated
+        if(is_load || is_store)
         {
-            avg_time_to_reach_l2=avg_time_to_reach_l2+((float)(r->getTimestampL2()-r->getTimestamp())-avg_time_to_reach_l2)/num_l2_accesses;
-            num_l2_accesses++;
+            //Update average memory access time metrics
+            avg_mem_access_time=avg_mem_access_time+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time)/num_mem_accesses;
+            num_mem_accesses++;
         }
     }
 }

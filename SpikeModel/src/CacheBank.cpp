@@ -62,6 +62,7 @@ namespace spike_model
             while(range_misses.first != range_misses.second)
             {
                 range_misses.first->second->setServiced();
+                //The total time spent by requests is not updated here. This is for acks
                 out_core_ack_.send(range_misses.first->second);
                 range_misses.first++;
             }
@@ -86,6 +87,7 @@ namespace spike_model
 
     void CacheBank::getAccess_(const std::shared_ptr<Request> & req)
     {
+        req->setTimestampReachCacheBank(getClock()->currentCycle());
         req->handle(this);
     }
 
@@ -165,6 +167,7 @@ namespace spike_model
         if (CACHE_HIT) {
                 mem_access_info_ptr->getReq()->setServiced();
                	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+                total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
         }
         else {
             count_cache_misses_++;
@@ -196,17 +199,21 @@ namespace spike_model
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
 
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
+                    total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
 
                     //NO FURTHER ACTION IS NEEDED
                     if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                     {
                         mem_access_info_ptr->getReq()->setServiced();
+                        //This reply was already accounted for regarding the stats in the outer "if"
                         out_core_ack_.send(mem_access_info_ptr->getReq());
                     }
                 }
                 else
                 {
                     count_misses_on_already_pending_++;
+                    //Nothing more to do until the ack arrives. Do not update the stats
+                    total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
                 }
 
                 if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
@@ -315,6 +322,7 @@ namespace spike_model
                 //AUTO HIT
                 r->setServiced();
                 out_core_ack_.send(r,1);
+                total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+1-r->getTimestampReachCacheBank());
                 count_hit_on_store_++;
             }
             else
