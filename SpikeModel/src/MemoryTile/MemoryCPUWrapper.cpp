@@ -24,6 +24,7 @@ namespace spike_model {
 			line_size(p->line_size),
 			latency(p->latency),
 			llc_banks(p->num_llc_banks),
+			max_vvl(p->max_vvl),
 			out_ports_llc(llc_banks),
 			in_ports_llc(llc_banks),
 			out_ports_llc_mc(llc_banks),
@@ -176,7 +177,8 @@ namespace spike_model {
 		
 		count_control++;
 		
-		uint64_t elements_per_sp = sp_reg_size / (uint64_t)mes->getWidth();
+		uint64_t elements_per_sp = max_vvl / ((uint64_t)(mes->getWidth())*8);
+		printf("Comparing %lu and %lu\n", elements_per_sp, mes->getAVL());
 		vvl[mes->getCoreId()] = std::min(elements_per_sp, mes->getAVL());
 		
 		int lmul = (int)mes->getLMUL();

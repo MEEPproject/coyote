@@ -41,6 +41,7 @@ namespace spike_model {
 					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
                 			PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
                 			PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
+                			PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
 			};
 
 			/*!
@@ -109,6 +110,7 @@ namespace spike_model {
 			uint64_t latency;
 			uint16_t llc_banks;
 			CacheDataMappingPolicy llc_policy;
+			uint32_t max_vvl;
 			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
 			bool enabled;
 			bool enabled_llc;

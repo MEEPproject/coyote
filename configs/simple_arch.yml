@@ -70,6 +70,7 @@ top:
         latency: 1                          # (uint64_t)        The latency of the MCPU
         num_llc_banks: 16                    # (uint16_t)        The number of LLCs
         llc_bank_policy: set_interleaving   # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        max_vvl: 16384                      # (uint64_t         The maximum vvl that will be returned by the MCPU (in bits)
       llc*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
