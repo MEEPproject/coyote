@@ -20,44 +20,19 @@ namespace spike_model
         
         public:
 
-            Event() = delete;
             Event(Event const&) = delete;
             Event& operator=(Event const&) = delete;
 
             /*!
              * \brief Constructor for Event
-             * \param  pc The program counter of the requesting instruction
              */
-            Event(uint64_t pc, uint16_t c): pc(pc), coreId(c){}
+            Event(): timestamp(0){}
 
             /*!
              * \brief Constructor for Event
-             * \param pc The program counter of the requesting instruction
              * \param time The timestamp for the request
-             * \param c The producing core
              */
-            Event(uint64_t pc, uint64_t time, uint16_t c): pc(pc), timestamp(time), coreId(c){}
-
-            /*!
-             * \brief Constructor for Event
-             * \param c The producing core
-             */
-            Event(uint16_t c): coreId(c){}
-
-            /*!
-             * \brief Set the source tile of the request
-             * \param source The source tile
-             */
-            void setSourceTile(uint16_t source)
-            {
-                source_tile=source;
-            }
-
-            /*!
-             * \brief Get the source tile for the request
-             * \return The source tile
-             */
-            uint16_t getSourceTile(){return source_tile;}
+            Event(uint64_t time): timestamp(time){}
 
             /*!
              * \brief Get the timestamp of the event
@@ -66,39 +41,11 @@ namespace spike_model
             uint64_t getTimestamp() const {return timestamp;}
 
             /*!
-             * \brief Get the requesting core
-             * \return The core id
-             */
-            uint64_t getCoreId() const {return coreId;}
-
-            /*!
              * \brief Set the timestamp of the request
              * \param t The timestamp
              */
             void setTimestamp(uint64_t t) {timestamp=t;}
-
-            /*!
-             * \brief Set the requesting core
-             * \param c The id of the core
-             */
-            void setCoreId(uint16_t c) {coreId=c;}
-
-            /*!
-             * \brief Get: the program counter for the requesting instruction
-             * \return The PC
-             */
-            uint64_t getPC(){return pc;}
-
-            /*!
-             * \brief Get whether the request has been serviced
-             * \return True if the request has been serviced
-             */
-            bool isServiced(){return serviced;}
-
-            /*!
-             * \brief Set the request as serviced
-             */
-            void setServiced(){serviced=true;}
+            
 
             /*
              * \brief Equality operator for instances of Request
@@ -150,11 +97,7 @@ namespace spike_model
             
 
         private:
-            uint64_t pc;
             uint64_t timestamp;
-            uint16_t coreId;
-            uint16_t source_tile;
-            bool serviced=false;
             
             uint64_t timestamp_reach_cache_bank=0;
             uint64_t timestamp_reach_mc=0;

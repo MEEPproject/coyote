@@ -1,7 +1,8 @@
 #ifndef __MCPU_INSTRUCTION_HH__
 #define __MCPU_INSTRUCTION_HH__
 
-#include "Request.hpp"
+#include "RegisterEvent.hpp"
+#include "ParentInstId.hpp"
 #include "VectorElementType.hpp"
 
 #include <iostream>
@@ -9,7 +10,7 @@
 
 
 namespace spike_model {
-	class MCPUInstruction : public Request, public std::enable_shared_from_this<MCPUInstruction> {
+	class MCPUInstruction : public RegisterEvent, public std::enable_shared_from_this<MCPUInstruction>, public ParentInstId{
 		/**
 		 * \class spike_model::Fence
 		 *
@@ -43,7 +44,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, VectorElementType w):Request(addr, pc), operation(o), width(w) {}
+			//MCPUInstruction(uint64_t pc, uint64_t addr, Operation o, VectorElementType w):Request(addr, pc), operation(o), width(w) {}
 
 			/*!
 			 * \brief Constructor for memory instruction that will be handled by the MCPU
@@ -54,7 +55,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w): Request(addr, pc, time, c), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), base_address(addr), operation(o), width(w) {}
 
 			/*!
 			 * \brief Handle the event
@@ -76,9 +77,15 @@ namespace spike_model {
 			Operation get_operation() {return operation;}
 			SubOperation get_suboperation() {return sub_operation;}
 
+            /*!
+             * \brief Get the base address of the instruction
+             * \return The base address of the instruction
+             */
+            uint64_t getAddress() const {return base_address;}
 
 
 		private:
+            uint64_t base_address;
 			std::vector<uint64_t> indices;
 			Operation operation;
 			SubOperation sub_operation = SubOperation::UNIT;

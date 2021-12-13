@@ -578,7 +578,21 @@ namespace spike_model {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//-- Helper functions
 	/////////////////////////////////////////////////////////////////////////////////////////////////
-	std::shared_ptr<ScratchpadRequest> MemoryCPUWrapper::createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command) {
+	std::shared_ptr<ScratchpadRequest> MemoryCPUWrapper::createScratchpadRequest(const std::shared_ptr<MCPUInstruction> &mes, ScratchpadRequest::ScratchpadCommand command) {
+		std::shared_ptr<ScratchpadRequest> sp_request = std::make_shared<ScratchpadRequest>(
+						mes->getAddress(),
+						command,
+						mes->getPC(),
+						mes->getTimestamp(),
+						mes->getCoreId(),
+						getID(),
+						mes->getDestinationRegId()
+		);
+		sp_request->setID(mes->getID());
+		return sp_request;
+	}
+	
+    std::shared_ptr<ScratchpadRequest> MemoryCPUWrapper::createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command) {
 		std::shared_ptr<ScratchpadRequest> sp_request = std::make_shared<ScratchpadRequest>(
 						mes->getAddress(),
 						command,

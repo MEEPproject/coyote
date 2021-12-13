@@ -2,13 +2,13 @@
 #define __MCPU_SetVVL_HH__
 
 #include "EventVisitor.hpp"
-#include "Request.hpp"
+#include "RegisterEvent.hpp"
 #include "VectorElementType.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class MCPUSetVVL : public Request, public std::enable_shared_from_this<MCPUSetVVL>
+    class MCPUSetVVL : public RegisterEvent, public std::enable_shared_from_this<MCPUSetVVL>
     {
         /**
          * \class spike_model::MCPUSetVVL
@@ -27,7 +27,7 @@ namespace spike_model
              * \brief Constructor for MCPUSetVVL
              * \param pc The program counter of the instruction that generates the event
              */
-            MCPUSetVVL(uint64_t pc):Request(0, pc, 0) {
+            MCPUSetVVL(uint64_t pc):RegisterEvent(0, pc, 0, -1, spike_model::RegisterEvent::RegType::DONT_CARE) {
                 setLMUL(LMULSetting::ONE);
                 setWidth(VectorElementType::BIT64);
             }
@@ -40,10 +40,9 @@ namespace spike_model
              * \param time The timestamp when the event is submitted to sparta
              * \param c The core which submitted the event
              */
-            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): Request(0, pc, c)
+            MCPUSetVVL(uint64_t avl, size_t regId, uint64_t pc, uint64_t time, uint16_t c): RegisterEvent(0, pc, c, regId,  spike_model::RegisterEvent::RegType::INTEGER)
                           , avl(avl) {
                 setLMUL(LMULSetting::ONE);
-                setDestinationReg(regId);
                 setWidth(VectorElementType::BIT64);
 		setTimestamp(time);
             }
@@ -69,7 +68,7 @@ namespace spike_model
              * \param r The id of the register
              */
             void setDestinationReg(size_t r) {
-                Request::setDestinationReg(r, RegType::INTEGER);
+                RegisterEvent::setDestinationReg(r, RegType::INTEGER);
             }
 
             

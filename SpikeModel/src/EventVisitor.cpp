@@ -17,10 +17,20 @@ namespace spike_model
     {
         printf("Using base event handler. This is usually undesired behavior. Might want to override\n");
     }
+    
+    void EventVisitor::handle(std::shared_ptr<spike_model::CoreEvent> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Event>(e));
+    }
+    
+    void EventVisitor::handle(std::shared_ptr<spike_model::RegisterEvent> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::CoreEvent>(e));
+    }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::Sync> e)
     {
-        handle(std::dynamic_pointer_cast<spike_model::Event>(e));
+        handle(std::dynamic_pointer_cast<spike_model::CoreEvent>(e));
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::Finish> e)
@@ -35,7 +45,7 @@ namespace spike_model
 
     void EventVisitor::handle(std::shared_ptr<spike_model::Request> e)
     {
-        handle(std::dynamic_pointer_cast<spike_model::Event>(e));
+        handle(std::dynamic_pointer_cast<spike_model::RegisterEvent>(e));
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::CacheRequest> e)
@@ -45,7 +55,7 @@ namespace spike_model
 
     void EventVisitor::handle(std::shared_ptr<spike_model::InsnLatencyEvent> e)
     {
-        handle(std::dynamic_pointer_cast<spike_model::Request>(e));
+        handle(std::dynamic_pointer_cast<spike_model::RegisterEvent>(e));
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::ScratchpadRequest> e)
@@ -55,11 +65,11 @@ namespace spike_model
 
     void EventVisitor::handle(std::shared_ptr<spike_model::MCPUSetVVL> e)
     {
-        handle(std::dynamic_pointer_cast<spike_model::Event>(e));
+        handle(std::dynamic_pointer_cast<spike_model::CoreEvent>(e));
     }
             
     void EventVisitor::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
     {
-        handle(std::dynamic_pointer_cast<spike_model::Event>(i));
+        handle(std::dynamic_pointer_cast<spike_model::RegisterEvent>(i));
     }
 }

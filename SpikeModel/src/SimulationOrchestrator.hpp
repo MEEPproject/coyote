@@ -135,6 +135,8 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::set<uint16_t> stalled_cores_for_arbiter;
         
         uint16_t max_in_flight_l1_misses;
+        std::vector<uint16_t> in_flight_requests_per_l1;
+        uint16_t available_mshrs;
         std::vector<uint64_t> mshr_stalls_per_core; //(num_cores);
 
         float avg_mem_access_time=0;
@@ -165,10 +167,17 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         uint64_t spartaDelay(uint64_t cycle);
 
         /*!
-         * \brief Submit a request to Sparta.
-         * \param r The request to submit
+         * \brief Submit an event to Sparta.
+         * \param r The event to submit
          */
         void submitToSparta(std::shared_ptr<spike_model::Event> r);
+
+        /*!
+         * \brief Submit a cache request to Sparta.
+         * \param r The request to submit
+         * \note This is equivalente to submitToSparta(std::shared_ptr<spike_model::Event> r), but it updates the number of in flight L1 misses
+         */
+        void submitToSparta(std::shared_ptr<spike_model::CacheRequest> r);
 
         /*
          * \brief Resume simulation on a core that is stalled
@@ -177,10 +186,16 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         void resumeCore(uint64_t core);
 
         /*
-         * \brief Submit the pending operations to sparta
+         * \brief Submit the pending operations of any kind to sparta
          * \param core The id of the core that will submit the operations
          */
         void submitPendingOps(uint64_t core);
+
+        /*
+         * \brief Submit the pending cache requests to sparta
+         * \param core The id of the core that will submit the cache requests
+         */
+        void submitPendingCacheRequests(uint64_t core);
         
          /*
          * \brief run the pending simfence operation

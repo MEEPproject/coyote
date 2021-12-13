@@ -1,12 +1,12 @@
 #ifndef __INSN_LATENCY_EVENT_HH__
 #define __INSN_LATENCY_EVENT_HH__
 
-#include "Request.hpp"
+#include "RegisterEvent.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class InsnLatencyEvent : public Request, public std::enable_shared_from_this<InsnLatencyEvent>
+    class InsnLatencyEvent : public RegisterEvent, public std::enable_shared_from_this<InsnLatencyEvent>
     {
         /**
          * \class spike_model::InsnLatencyEvent
@@ -20,6 +20,7 @@ namespace spike_model
 
             /*!
              * \brief Constructor for InsnLatencyEvent
+             * \param  pc The program counter of the generating instruction
              * \param  coreId The requesting core id
              * \param  srcRegId The source register id for this request
              * \param  regType The type of the register
@@ -27,11 +28,11 @@ namespace spike_model
                \param  the latency of the current instruction
                \param  availCycle The timestamp in which the reg_t would be available
              */
-            InsnLatencyEvent(uint16_t coreId, uint64_t srcRegId,
+            InsnLatencyEvent(uint64_t pc, uint16_t coreId, size_t srcRegId,
                              spike_model::Request::RegType srcRegType,
-                             uint64_t destRegId, uint64_t insn_latency,
+                             uint8_t destRegId, uint64_t insn_latency,
                              uint64_t avail_cycle):
-                             Request(coreId, destRegId),
+                             RegisterEvent(pc, 0, coreId, destRegId, spike_model::RegisterEvent::RegType::DONT_CARE),
                              avail_cycle(avail_cycle),
                              insn_latency(insn_latency),
                              srcRegId(srcRegId),
@@ -56,7 +57,7 @@ namespace spike_model
                 return insn_latency;
             }
 
-            uint64_t getSrcRegId()
+            size_t getSrcRegId()
             {
                 return srcRegId;
             }
@@ -65,11 +66,11 @@ namespace spike_model
             {
                 return srcRegType;
             }
-
+            
         private:
             uint64_t avail_cycle;
-            uint64_t insn_latency;
-            uint64_t srcRegId;
+            size_t insn_latency;
+            size_t srcRegId;
             spike_model::Request::RegType srcRegType;
     };
 }

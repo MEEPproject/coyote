@@ -2,11 +2,11 @@
 #define __SYNC_HH__
 
 #include <iostream>
-#include "Event.hpp"
+#include "CoreEvent.hpp"
 
 namespace spike_model
 {
-    class Sync : public spike_model::Event
+    class Sync : public spike_model::CoreEvent
     {
         /**
          * \class spike_model::Sync
@@ -26,7 +26,7 @@ namespace spike_model
              * \brief Constructor for Sync
              * \param pc The program counter of the instruction that finished the simulation
              */
-            Sync(uint64_t pc): Event(pc){}
+            Sync(uint64_t pc): CoreEvent(pc){}
 
             /*!
              * \brief Constructor for Sync
@@ -34,7 +34,7 @@ namespace spike_model
              * \param time The timestamp for the finish
              * \param c The finishing core
              */
-            Sync(uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c) {}
+            Sync(uint64_t pc, uint64_t time, uint16_t c): CoreEvent(pc, time, c) {}
     };
 }
 #endif

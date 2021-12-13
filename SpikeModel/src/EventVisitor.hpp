@@ -8,6 +8,8 @@
 namespace spike_model
 {
     class Event;
+    class CoreEvent;
+    class RegisterEvent;
     class Sync;
     class Request;
     class CacheRequest;
@@ -38,6 +40,18 @@ namespace spike_model
              * \param e The event to handle
              */
             virtual void handle(std::shared_ptr<spike_model::Event> e);
+            
+            /*!
+             * \brief Handles an event
+             * \param e The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::CoreEvent> e);
+            
+            /*!
+             * \brief Handles an event
+             * \param e The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::RegisterEvent> e);
             
             /*!
              * \brief Handles a sync event

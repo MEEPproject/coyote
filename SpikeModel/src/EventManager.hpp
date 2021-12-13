@@ -16,8 +16,10 @@ namespace spike_model
 {
     class Tile; //Forward declaration    
 
-    class EventManager
+    class EventManager : public spike_model::EventVisitor
     {
+        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
+
         /**
          * \class spike_model::EventManager
          *
@@ -88,6 +90,12 @@ namespace spike_model
                 serviced_requests_=s;
 //                std::cout << s.hasRequest();
             }
+             
+             /*!
+             * \brief Handles a core event
+             * \param r The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::CoreEvent> r) override;
             
     };
 }

@@ -27,9 +27,16 @@ namespace spike_model
 
     void EventManager::putRequest(std::shared_ptr<Event> req)
     {
-        uint16_t source=req->getCoreId()/cores_per_tile_;
-        req->setSourceTile(source);
-        tiles_[source]->putRequest_(req);
+//        printf("In handle\n");
+        req->handle(this);
+    }
+
+
+    void EventManager::handle(std::shared_ptr<spike_model::CoreEvent> r)
+    {
+        uint16_t source=r->getCoreId()/cores_per_tile_;
+        r->setSourceTile(source);
+        tiles_[source]->putRequest_(r);
     }
 
     void EventManager::scheduleArbiter()

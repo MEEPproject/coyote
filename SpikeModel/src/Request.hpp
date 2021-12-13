@@ -2,12 +2,13 @@
 #define __REQUEST_HH__
 
 #include "CacheDataMappingPolicy.hpp"
-#include "Event.hpp"
+#include "RegisterEvent.hpp"
+#include "ParentInstId.hpp"
 #include <iostream>
 
 namespace spike_model
 {
-    class Request : public Event
+    class Request : public RegisterEvent, public ParentInstId
     {
         /**
          * \class spike_model::Request
@@ -21,13 +22,6 @@ namespace spike_model
         friend class EventManager;
 
         public:
-            enum class RegType
-            {
-                INTEGER,
-                FLOAT,
-                VECTOR,
-                DONT_CARE,
-            };
 
             //Request(){}
             Request() = delete;
@@ -40,16 +34,16 @@ namespace spike_model
              * \param pc The program counter of the requesting instruction
              * \param c The requesting core
              */
-            Request(uint64_t a, uint64_t pc, uint16_t c): Event(pc, c), address(a){}
+            Request(uint64_t a, uint64_t pc, uint16_t c): RegisterEvent(pc, 0, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), address(a){}
 
             /*!
-             * \brief Constructor for Request
-             * \param a The requested address
-             * \param pc The program counter of the requesting instruction
-             * \param time The timestamp for the request
-             * \param c The requesting core
+             * \brief constructor for request
+             * \param a the requested address
+             * \param pc the program counter of the requesting instruction
+             * \param time the timestamp for the request
+             * \param c the requesting core
              */
-            Request(uint64_t a, uint64_t pc, uint64_t time, uint16_t c): Event(pc, time, c), address(a), id(0) {}
+            Request(uint64_t a, uint64_t pc, uint64_t time, uint16_t c): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), address(a) {}
 
             /*!
              * \brief Constructor for Request
@@ -57,24 +51,18 @@ namespace spike_model
              * \param regId The id of the destination register for the request
              * \param regType The type of the destination register for the request
              */
-            Request(uint16_t coreId, uint64_t regId, spike_model::Request::RegType regType):
-                             Event(coreId), regId(regId), regType(regType), id(0) {}
+            Request(uint16_t coreId, uint64_t regId, spike_model::RegisterEvent::RegType regType):
+                             RegisterEvent(0, 0, coreId, regId, regType), ParentInstId() {}
 
-            Request(uint16_t coreId): Event(coreId), id(0) {}
+            Request(uint16_t coreId): RegisterEvent(0, 0, coreId, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId() {}
 
-            Request(uint16_t coreId, uint64_t regId): Event(coreId), regId(regId), id(0) {}
+            Request(uint16_t coreId, uint64_t regId): RegisterEvent(0, 0, coreId, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId() {}
 
             /*!
              * \brief Get the address of the request
              * \return The address of the request
              */
             uint64_t getAddress() const {return address;}
-
-            /*!
-             * \brief Get the id of the destination register for the request
-             * \return The id for the destination register
-             */
-            size_t getDestinationRegId() const {return regId;}
 
             /*!
              * \brief Set the size of the request in bytes
@@ -102,39 +90,8 @@ namespace spike_model
              * \return The bank
              */
             uint16_t getCacheBank(){return cache_bank;}
-
-            /*!
-             * \brief Set the id and type of the destination register for the request
-             * \param r The id of the register
-             * \param t The type of the register
-             */
-            void setDestinationReg(size_t r, RegType t) {regId=r; regType=t;}
-
-            /*!
-             * \brief Get the destination register id for the request
-             * \return The id of the register
-             */
-            size_t getDestinationRegId() { return regId;}
-
-            /*!
-             * \brief Get the type of the destination register for the request
-             * \return The type of the register
-             */
-            RegType getDestinationRegType() const {return regType;}
+ 
             
-            
-            /*!
-             * \brief Get the ID of the instruction.
-             * We use that in the Memory Tile to map original instructions to generated ones.
-             */
-            uint32_t getID() {return id;}
-            
-            /*!
-             * \brief Set the ID of the instruction.
-             * \param The ID to be set.
-             */
-            void setID(uint32_t id) {this->id = id;}
-
             bool operator ==(const Request & m) const
             {
                 return m.getAddress()==getAddress();
@@ -144,12 +101,7 @@ namespace spike_model
         private:
             uint64_t address;
             uint16_t cache_bank;
-
-            size_t regId;
-            RegType regType;
-            
-            uint32_t id;    // used to identify the parent instruction
-
+ 
             uint16_t size;
     };
 
