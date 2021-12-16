@@ -439,7 +439,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 }
                 else
                 {
-                    pending_misses_per_core[current_core].push_back(r);
+                    pending_misses_per_core[current_core].push_back(wb);
                 }
             }
         }
@@ -663,6 +663,7 @@ void SimulationOrchestrator::submitPendingCacheRequests(uint64_t core)
 
         //Update the timestamp to the current cycle, which is when the miss actually happens
         miss->setTimestamp(current_cycle);
+
         submitToSparta(miss);
     }
 }
