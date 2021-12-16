@@ -23,7 +23,6 @@
 
 #include "LogCapable.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
-#include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
 #include "AddressMappingPolicy.hpp"
@@ -31,6 +30,7 @@
 namespace spike_model
 {
     class MemoryBank; //Forward declaration
+    class MemoryAccessSchedulerIF; //Forward declaration
 
     class MemoryController : public sparta::Unit, public LogCapable
     {
@@ -88,6 +88,11 @@ namespace spike_model
              * \param c The command
              */
             void notifyCompletion_(std::shared_ptr<BankCommand> c);
+ 
+            /*!
+             * \brief Notify that a timing event has been fulfilled, which might enable a new request to be selected for submission by the scheduler
+             */
+            void notifyTimingEvent();
 
             /*!
              * \brief Set up the masks and shifts to identify where the data is in the memory.
@@ -124,7 +129,7 @@ namespace spike_model
 
             bool idle_=true;
 
-            std::vector<MemoryBank *> banks;
+            std::shared_ptr<std::vector<MemoryBank *>> banks;
             
             uint64_t rank_shift;
             uint64_t bank_shift;
@@ -196,22 +201,6 @@ namespace spike_model
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
-
-            /*!
-             * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
-             * \param req The request
-             * \param bank The bank to access
-             * \return A command of the correct type to access the specified bank
-             */
-            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
-
-            /*!
-             * \brief Create a command to read the line after writing it (if write-allocate is enabled)
-             * \param req The request
-             * \param bank The bank to access
-             * \return A command for the write allocate
-             */
-            std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
     };
 }
 #endif

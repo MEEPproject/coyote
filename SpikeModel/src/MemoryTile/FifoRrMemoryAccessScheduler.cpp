@@ -2,7 +2,7 @@
 
 namespace spike_model
 {
-    FifoRrMemoryAccessScheduler::FifoRrMemoryAccessScheduler(uint64_t num_banks) : request_queues(num_banks){}
+    FifoRrMemoryAccessScheduler::FifoRrMemoryAccessScheduler(std::shared_ptr<std::vector<MemoryBank *>> b, uint64_t num_banks, bool write_allocate) : MemoryAccessSchedulerIF(b, num_banks, write_allocate), request_queues(num_banks){}
 
     void FifoRrMemoryAccessScheduler::putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
@@ -26,7 +26,7 @@ namespace spike_model
         return res;
     }
     
-    bool FifoRrMemoryAccessScheduler::hasIdleBanks()
+    bool FifoRrMemoryAccessScheduler::hasBanksToSchedule()
     {
         return banks_to_schedule.size()>0;
     }
@@ -35,10 +35,6 @@ namespace spike_model
     {
         uint64_t bank=req->getMemoryBank();
         request_queues[bank].pop();
-        if(request_queues[bank].size()>0)
-        {
-            banks_to_schedule.push(bank);
-        }
     }
             
     uint64_t FifoRrMemoryAccessScheduler::getQueueOccupancy()
@@ -49,5 +45,15 @@ namespace spike_model
             res=res+queue.size();
        }
        return res;
+    }
+    
+    std::shared_ptr<CacheRequest> FifoRrMemoryAccessScheduler::notifyCommandCompletion(std::shared_ptr<BankCommand> c)
+    {
+        std::shared_ptr<CacheRequest> serviced_request=MemoryAccessSchedulerIF::notifyCommandCompletion(c);
+        if(request_queues[c->getDestinationBank()].size()>0)
+        {
+            banks_to_schedule.push(c->getDestinationBank());
+        }
+        return serviced_request;
     }
 }

@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include "CacheRequest.hpp"
+#include "BankCommand.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
 
 namespace spike_model
@@ -20,9 +21,11 @@ namespace spike_model
  
             /*!
             * \brief Constructor for FifoRrMemoryAccessScheduler
-            * \param num_banks The number of banks handled by the scheduler
+            * \param b The banks handled by the scheduler
+            * \param num_banks The number of banks
+            * \param write_allocate True if writes need to allocate in cache
             */
-            FifoRrMemoryAccessScheduler(uint64_t num_banks);
+            FifoRrMemoryAccessScheduler(std::shared_ptr<std::vector<MemoryBank *>> banks, uint64_t num_banks, bool write_allocate);
 
             /*!
             * \brief Add a request to the scheduler
@@ -31,13 +34,6 @@ namespace spike_model
             */
             void putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank) override;
             
-            /*!
-            * \brief Get a request for a particular bank
-            * \param bank The bank for which the request is desired
-            * \return The first request for the bank in FIFO
-            */
-            std::shared_ptr<CacheRequest> getRequest(uint64_t bank) override;
-
             /*!
             * \brief Get the next bank for which a request should be handled. The bank is poped from the list.
             * \return The next bank in round-robin (out of the banks with requests)
@@ -48,19 +44,33 @@ namespace spike_model
             * \brief Check there is any bank with pending requests that is idle
             * \return True if a request for a bank can be handled
             */
-            virtual bool hasIdleBanks() override;
-            
+            virtual bool hasBanksToSchedule() override;
+             
             /*!
-            * \brief Notify that a request has been completed
-            * \param req The request that has been completed
+            * \brief Notify the completion of a command to the scheduler
+            * \return The request that has been serviced by this command. Null if no request was serviced
             */
-            void notifyRequestCompletion(std::shared_ptr<CacheRequest> req) override;
-            
+            std::shared_ptr<CacheRequest> notifyCommandCompletion(std::shared_ptr<BankCommand> c) override;
+
             /*!
             * \brief Get the current queue occupancy
             * \return The number of requests that are currently enqueued in the scheduler. If the scheduler uses several queues. This is the aggregate value.
             */
             uint64_t getQueueOccupancy() override;
+       
+       protected: 
+            /*!
+            * \brief Get a command for a particular bank
+            * \param bank The bank for which the request is desired
+            * \return A command
+            */
+            virtual std::shared_ptr<CacheRequest> getRequest(uint64_t bank) override;
+            
+            /*!
+            * \brief Notify that a request has been completed
+            * \param req The request that was completed
+            */
+            virtual void notifyRequestCompletion(std::shared_ptr<CacheRequest> req) override;
 
         private:
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> request_queues;

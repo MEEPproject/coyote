@@ -17,8 +17,8 @@ namespace spike_model
         public:
             enum class CommandType
             {
-                OPEN,
-                CLOSE,
+                ACTIVATE,
+                PRECHARGE,
                 READ,
                 WRITE
             };

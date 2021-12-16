@@ -172,6 +172,7 @@ add_executable(spike_model
   src/EventManager.cpp
   src/MemoryTile/MemoryCPUWrapper.cpp
   src/MemoryTile/MemoryController.cpp
+  src/MemoryTile/MemoryAccessSchedulerIF.cpp
   src/MemoryTile/FifoRrMemoryAccessScheduler.cpp
   src/MemoryTile/FifoRrMemoryAccessSchedulerAccessTypePriority.cpp
   src/MemoryTile/FifoCommandScheduler.cpp

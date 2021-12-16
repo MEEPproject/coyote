@@ -28,13 +28,13 @@ namespace spike_model
         uint64_t delay=0;
         switch(c->getType())
         {
-            case BankCommand::CommandType::OPEN:
+            case BankCommand::CommandType::ACTIVATE:
                 count_open_++;
                 state=BankState::OPENING;
                 delay=delay_open;
                 break;
 
-            case BankCommand::CommandType::CLOSE:
+            case BankCommand::CommandType::PRECHARGE:
                 count_close_++;
                 state=BankState::CLOSING;
                 delay=delay_close;
@@ -79,12 +79,12 @@ namespace spike_model
     {
         switch(c->getType())
         {
-            case BankCommand::CommandType::OPEN:
+            case BankCommand::CommandType::ACTIVATE:
                 state=BankState::OPEN;
-                //current_row=c->getValue();
+                current_row=c->getValue();
                 break;
 
-            case BankCommand::CommandType::CLOSE:
+            case BankCommand::CommandType::PRECHARGE:
                 state=BankState::CLOSED;
                 break;
 

@@ -17,24 +17,25 @@ namespace spike_model
     sparta::Unit(node),
     num_banks_(p->num_banks),
     write_allocate_(p->write_allocate),
-    reordering_policy_(p->reordering_policy),
-    banks()
+    reordering_policy_(p->reordering_policy)
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
         ready_commands=std::make_unique<FifoCommandScheduler>();
+
+        banks=std::make_shared<std::vector<MemoryBank *>>();
         
         if(reordering_policy_=="none")
         {
-            sched=std::make_unique<FifoRrMemoryAccessScheduler>(num_banks_);
+            sched=std::make_unique<FifoRrMemoryAccessScheduler>(banks, num_banks_, write_allocate_);
         }
         else if(reordering_policy_=="access_type")
         {
-            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
+            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(banks, num_banks_, write_allocate_);
         }
         else
         {
             std::cout << "Unsupported reordering policy. Falling back to the default policy.\n";
-            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(num_banks_);
+            sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(banks, num_banks_, write_allocate_);
         }
 
         address_mapping_policy_=spike_model::AddressMappingPolicy::OPEN_PAGE;
@@ -92,7 +93,7 @@ namespace spike_model
             logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
         }
 
-        if(idle_ & sched->hasIdleBanks())
+        if(idle_ & sched->hasBanksToSchedule())
         {
             controller_cycle_event_.schedule();
             idle_=false;
@@ -117,33 +118,6 @@ namespace spike_model
         
         out_port_mcpu_.send(req, 0);
     }
-
-    std::shared_ptr<BankCommand> MemoryController::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
-    {
-        std::shared_ptr<BankCommand> res_command;
-
-        uint64_t column_to_schedule=req->getCol();
-        if(req->getType()==CacheRequest::AccessType::STORE || req->getType()==CacheRequest::AccessType::WRITEBACK)
-        {
-            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule, req);
-        }
-        else
-        {
-            res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
-        }
-        return res_command;
-    }
-
-    std::shared_ptr<BankCommand> MemoryController::getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
-    {
-        sparta_assert(req->getType()==CacheRequest::AccessType::STORE && write_allocate_, "Allocates can only by submitted for stores and when allocation is enabled\n");
-        std::shared_ptr<BankCommand> res_command;
-
-        uint64_t column_to_schedule=req->getCol();
-        res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
-        return res_command;
-    }
-
     
     void MemoryController::controllerCycle_()
     {
@@ -151,44 +125,33 @@ namespace spike_model
         average_queue_occupancy_=((float)(average_queue_occupancy_*last_queue_sampling_timestamp)/current_t)+((float)sched->getQueueOccupancy()*(current_t-last_queue_sampling_timestamp))/current_t;
         max_queue_occupancy_= (max_queue_occupancy_>=sched->getQueueOccupancy()) ? max_queue_occupancy_ : sched->getQueueOccupancy();
         last_queue_sampling_timestamp=current_t;
-        while(sched->hasIdleBanks())
+        while(sched->hasBanksToSchedule())
         {
             uint64_t bank_to_schedule=sched->getNextBank();
-            std::shared_ptr<CacheRequest> request_to_schedule=sched->getRequest(bank_to_schedule);
+            std::shared_ptr<BankCommand> command_to_schedule=sched->getCommand(bank_to_schedule);
             if(trace_)
             {
-                logger_.logMemoryControllerOperation(current_t, request_to_schedule->getCoreId(), request_to_schedule->getPC(), request_to_schedule->getMemoryController(), request_to_schedule->getAddress());
+                logger_.logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
 
             }
-
-            if(request_to_schedule->getType()==CacheRequest::AccessType::LOAD || request_to_schedule->getType()==CacheRequest::AccessType::FETCH)
+        
+            if(command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::LOAD || command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::FETCH)
             {
-                total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-request_to_schedule->getTimestampReachMC());
+                total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
             }
             else
             {
-                total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-request_to_schedule->getTimestampReachMC());
+                total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
             }
-            uint64_t row_to_schedule=request_to_schedule->getRow();
-
-            std::shared_ptr<BankCommand> com;
-            if(banks[bank_to_schedule]->isOpen()) {
-				if(banks[bank_to_schedule]->getOpenRow()==row_to_schedule) {
-                	com=getAccessCommand_(request_to_schedule, bank_to_schedule);
-				} else {
-                    com=std::make_shared<BankCommand>(BankCommand::CommandType::CLOSE, bank_to_schedule, 0, request_to_schedule);
-				}
-			} else {
-				com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, bank_to_schedule, row_to_schedule, request_to_schedule);
-			}
-
-            ready_commands->addCommand(com);
+            ready_commands->addCommand(command_to_schedule);
         }
+
+        //Add back to the sched banks that did not get any commands
 
         if(ready_commands->hasCommands())
         {
             std::shared_ptr<BankCommand> next=ready_commands->getNextCommand();
-            banks[next->getDestinationBank()]->issue(next);
+            (*banks)[next->getDestinationBank()]->issue(next);
             if(ready_commands->hasCommands())
             {
                 controller_cycle_event_.schedule(1);
@@ -203,64 +166,29 @@ namespace spike_model
 
     void MemoryController::addBank_(MemoryBank * bank)
     {
-        banks.push_back(bank);
+        banks->push_back(bank);
+    }
+
+
+    void MemoryController::notifyTimingEvent()
+    {
+        if(idle_ && sched->hasBanksToSchedule())
+        {
+            controller_cycle_event_.schedule();
+            idle_=false;
+        } 
     }
 
     void MemoryController::notifyCompletion_(std::shared_ptr<BankCommand> c)
     {
-        std::shared_ptr<BankCommand> com=nullptr;
-        uint64_t command_bank=c->getDestinationBank();
-        switch(c->getType())
+        std::shared_ptr<CacheRequest> serviced_request=sched->notifyCommandCompletion(c);
+
+        if(serviced_request!=nullptr)
         {
-            case BankCommand::CommandType::OPEN:
-            {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
-                com=getAccessCommand_(pending_request_for_bank, command_bank);
-                break;
-            }
-
-            case BankCommand::CommandType::CLOSE:
-            {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
-                uint64_t row_to_schedule=pending_request_for_bank->getRow();
-                com=std::make_shared<BankCommand>(BankCommand::CommandType::OPEN, command_bank, row_to_schedule, pending_request_for_bank);
-                break;
-            }
-
-            case BankCommand::CommandType::READ:
-            {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
-                sched->notifyRequestCompletion(pending_request_for_bank);
-                if(pending_request_for_bank->getType()==CacheRequest::AccessType::LOAD || pending_request_for_bank->getType()==CacheRequest::AccessType::FETCH || (pending_request_for_bank->getType()==CacheRequest::AccessType::STORE && write_allocate_))
-                {
-                    issueAck_(pending_request_for_bank);
-                }
-                break;
-            }
-
-            case BankCommand::CommandType::WRITE:
-            {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
-
-                if(!write_allocate_ || c->getRequest()->getType()==CacheRequest::AccessType::WRITEBACK)
-                {
-                    sched->notifyRequestCompletion(pending_request_for_bank);
-                }
-                else
-                {
-                    com=getAllocateCommand_(pending_request_for_bank, command_bank);
-                }
-                break;
-            }
+            issueAck_(serviced_request);
         }
 
-        if(com!=nullptr)
-        {
-            ready_commands->addCommand(com);
-
-        }
-
-        if(idle_ && (sched->hasIdleBanks() || ready_commands->hasCommands()))
+        if(idle_ && (sched->hasBanksToSchedule() || ready_commands->hasCommands()))
         {
             controller_cycle_event_.schedule();
             idle_=false;
