@@ -244,7 +244,6 @@ namespace spike_model
         else {
             auto cache_line = l2_cache_->peekLine(phyAddr);
             cache_hit = (cache_line != nullptr) && cache_line->isValid();
-            
             if (cache_hit) {
                 l2_cache_->touchMRU(*cache_line);
                 //SET DIRTY BIT IF NECESSARY
@@ -286,7 +285,9 @@ namespace spike_model
         }
 
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
-            
+        
+        l2_cache_line->setModified(true);
+
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "Cache reload complete!";
         }
