@@ -129,7 +129,6 @@ void SpikeModel::buildTree_()
     auto    num_l2_banks_in_tile    = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
     auto    num_llc_banks_per_mc    = upt.get("top.cpu.memory_cpu0.params.num_llc_banks").getAs<uint16_t>();
 
-
     auto cpu_factory = getCPUFactory_();
 
     // Set the ACME topology that will be built
@@ -207,6 +206,8 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
     auto num_memory_controllers = upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
     auto num_l2_banks_in_tile = upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
     auto num_llc_banks_per_mc = upt.get("top.cpu.memory_cpu0.params.num_llc_banks").getAs<uint16_t>();
+    auto num_mem_banks_per_mc = upt.get("top.cpu.memory_controller0.params.num_banks").getAs<uint64_t>();
+    auto unused_lsbs              = upt.get("top.cpu.memory_controller0.params.unused_lsbs").getAs<uint8_t>();
 
     spike_model::ServicedRequests s;
     std::vector<spike_model::Tile *> tiles;
@@ -278,11 +279,21 @@ std::shared_ptr<spike_model::EventManager> SpikeModel::createRequestManager()
         case spike_model::AddressMappingPolicy::OPEN_PAGE:
             mc_shift=ceil(log2(bank_line));
             mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
-            break;
-
-            
+            break; 
         case spike_model::AddressMappingPolicy::CLOSE_PAGE:
             mc_shift=ceil(log2(bank_line));
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+        case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+            mc_shift=log2(num_mem_banks_per_mc)+log2(num_rows)+log2(num_cols)+unused_lsbs;
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+        case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+            mc_shift=log2(num_mem_banks_per_mc)+log2(num_rows)+log2(num_cols)+unused_lsbs;
+            mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
+            break;
+        case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+            mc_shift=log2(num_mem_banks_per_mc)+log2(num_rows)+log2(num_cols)+unused_lsbs;
             mc_mask=utils::nextPowerOf2(num_memory_controllers)-1;
             break;
     }

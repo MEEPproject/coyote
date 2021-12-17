@@ -82,15 +82,17 @@ top:
           max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
     memory_controller*:
       params:
-        num_banks: 4                        # (uint64_t)        The number of memory banks handled by this MC
+        num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
+        num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
         write_allocate: true                # (bool)            The write allocation policy
         reordering_policy: access_type      # (std::string)     The reordering policy for memory requests
-        address_policy: close_page          # (std::string)     The data mapping molicy in main memory (open_page, close_page)
+        address_policy: close_page          # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
+        unused_lsbs: 5                       # (uint8_t)         The number of bits that are unused in the address calculation
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows
-          num_columns: 32                   # (uint64_t)        The number of columns
-          column_element_size: 512           # (uint64_t)        The size of column elements
+          num_columns: 64                   # (uint64_t)        The number of columns
+          column_element_size: 32           # (uint64_t)        The size of column elements
           delay_open: 16                    # (uint64_t)        The delay to open a row
           delay_close: 16                   # (uint64_t)        The delay to close a row
           delay_read: 100                   # (uint64_t)        The delay to read 32 Bytes from main memory (HBM)

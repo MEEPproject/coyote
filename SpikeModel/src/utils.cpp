@@ -2,7 +2,7 @@
 
 namespace utils 
 {
-    uint8_t nextPowerOf2(uint64_t v)
+    uint64_t nextPowerOf2(uint64_t v)
     {
         v--;
         v |= v >> 1;

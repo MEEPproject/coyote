@@ -56,9 +56,11 @@ namespace spike_model
                 {
                 }
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
+                PARAMETER(uint64_t, num_banks_per_group, 4, "The number of banks in a bank group")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
                 PARAMETER(std::string, reordering_policy, "none", "Request reordering policy")
                 PARAMETER(std::string, address_policy, "close_page", "Request reordering policy")
+                PARAMETER(uint8_t, unused_lsbs, 5, "The number of bits that are unused in the address calculation")
             };
 
             /*!
@@ -121,11 +123,14 @@ namespace spike_model
                 {&unit_event_set_, "controller_cycle_", CREATE_SPARTA_HANDLER(MemoryController, controllerCycle_)};
 
             uint64_t num_banks_;
+            uint64_t num_banks_per_group_;
 
             bool write_allocate_;
  
             std::string reordering_policy_;
             spike_model::AddressMappingPolicy address_mapping_policy_;
+            
+            uint8_t unused_lsbs_;
 
             bool idle_=true;
 
@@ -201,6 +206,11 @@ namespace spike_model
              *  executed every cycle, provided there is work to do
              */
             void controllerCycle_();
+    
+            uint64_t calculateRow(uint64_t address);
+            uint64_t calculateRank(uint64_t address);
+            uint64_t calculateBank(uint64_t address);
+            uint64_t calculateCol(uint64_t address);
     };
 }
 #endif

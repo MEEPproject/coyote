@@ -16,8 +16,10 @@ namespace spike_model
     MemoryController::MemoryController(sparta::TreeNode *node, const MemoryControllerParameterSet *p):
     sparta::Unit(node),
     num_banks_(p->num_banks),
+    num_banks_per_group_(p->num_banks_per_group),
     write_allocate_(p->write_allocate),
-    reordering_policy_(p->reordering_policy)
+    reordering_policy_(p->reordering_policy),
+    unused_lsbs_(p->unused_lsbs)
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
         ready_commands=std::make_unique<FifoCommandScheduler>();
@@ -47,6 +49,18 @@ namespace spike_model
         {
             address_mapping_policy_=spike_model::AddressMappingPolicy::CLOSE_PAGE;
         }
+        else if(p->address_policy=="row_bank_column_bank_group_interleave")
+        {
+            address_mapping_policy_=spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE;
+        }
+        else if(p->address_policy=="row_column_bank")
+        {
+            address_mapping_policy_=spike_model::AddressMappingPolicy::ROW_COLUMN_BANK;
+        }
+        else if(p->address_policy=="bank_row_column")
+        {
+            address_mapping_policy_=spike_model::AddressMappingPolicy::BANK_ROW_COLUMN;
+        }
         else
         {
             printf("Unsupported address data mapping policy\n");
@@ -58,31 +72,31 @@ namespace spike_model
     void MemoryController::receiveMessage_(const std::shared_ptr<spike_model::CacheRequest> &mes)
     {
         uint64_t address=mes->getAddress();
-
+        
         uint64_t rank=0;
         if(rank_mask!=0)
         {
-            rank=(address >> rank_shift) & rank_mask;
+            rank=calculateRank(address);
         }
 
         uint64_t bank=0;
         if(bank_mask!=0)
         {
-            bank=(address >> bank_shift) & bank_mask;
+            bank=calculateBank(address);
         }
 
         uint64_t row=0;
         if(row_mask!=0)
         {
-            row=(address >> row_shift) & row_mask;
+            row=calculateRow(address);
         }
 
         uint64_t col=0;
         if(col_mask!=0)
         {
-            col=(address >> col_shift) & col_mask;
+            col=calculateCol(address);
         }
-
+        
         mes->setBankInfo(rank, bank, row, col);
 
         mes->setTimestampReachMC(getClock()->currentCycle());
@@ -200,6 +214,118 @@ namespace spike_model
         return address_mapping_policy_;
     }
     
+    uint64_t MemoryController::calculateRank(uint64_t address)
+    {
+        uint64_t res=0;
+        switch(address_mapping_policy_)
+        {
+            case AddressMappingPolicy::OPEN_PAGE:
+                res=(address >> rank_shift) & rank_mask;
+                break;    
+            case AddressMappingPolicy::CLOSE_PAGE:
+                res=(address >> rank_shift) & rank_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+                res=(address >> rank_shift) & rank_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+                res=(address >> rank_shift) & rank_mask;
+                break;
+            case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+                res=(address >> rank_shift) & rank_mask;
+                break;
+        }
+        return res;
+    }
+
+    uint64_t MemoryController::calculateRow(uint64_t address)
+    {
+        uint64_t res=0;
+        switch(address_mapping_policy_)
+        {
+            case AddressMappingPolicy::OPEN_PAGE:
+                res=(address >> row_shift) & row_mask;
+                break;    
+            case AddressMappingPolicy::CLOSE_PAGE:
+                res=(address >> row_shift) & row_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+                res=(address >> row_shift) & row_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+                res=(address >> row_shift) & row_mask;
+                break;
+            case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+                res=(address >> row_shift) & row_mask;
+                break;
+        }
+        return res;
+    }
+    
+    uint64_t MemoryController::calculateBank(uint64_t address)
+    {
+        uint64_t res=0;
+        switch(address_mapping_policy_)
+        {
+            case AddressMappingPolicy::OPEN_PAGE:
+                res=(address >> bank_shift) & bank_mask;
+                break;    
+            case AddressMappingPolicy::CLOSE_PAGE:
+                res=(address >> bank_shift) & bank_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+            {
+                uint64_t num_groups=num_banks_/num_banks_per_group_;
+                if(num_groups!=1)
+                {
+                    uint64_t group_low=(address >> unused_lsbs_) & 1;
+                    uint64_t bank=(address >> bank_shift) & (num_banks_per_group_-1);
+                    uint64_t group_high=(address >> (bank_shift+(uint64_t)ceil(log2(num_banks_per_group_)))) & ((uint64_t)(num_groups/2)-1);
+                    uint64_t group_shift=ceil(log2(num_banks_per_group_));
+                    res= (group_high << (group_shift+1)) | (group_low << group_shift) | bank;
+                }
+                else
+                {
+                    res=(address >> bank_shift) & (num_banks_per_group_-1);
+                }
+                break;
+            }
+            case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+                res=(address >> bank_shift) & bank_mask;
+                break;
+            case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+                res=(address >> bank_shift) & bank_mask;
+                break;
+        }
+        return res;
+
+    }
+    
+    uint64_t MemoryController::calculateCol(uint64_t address)
+    {
+        uint64_t res=0;
+        switch(address_mapping_policy_)
+        {
+            case AddressMappingPolicy::OPEN_PAGE:
+                res=(address >> col_shift) & col_mask;
+                break;    
+            case AddressMappingPolicy::CLOSE_PAGE:
+                res=(address >> col_shift) & col_mask;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+                res=((address >> col_shift) & col_mask)*2;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+                res=((address >> col_shift) & col_mask)*2;
+                break;
+            case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+                res=((address >> col_shift) & col_mask)*2;
+                break;
+        }
+        return res;
+
+    }
+
     void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size)
     {
         this->line_size=line_size;
@@ -212,22 +338,56 @@ namespace spike_model
                 bank_shift=col_shift+ceil(log2(num_banks_));
                 rank_shift=bank_shift+0;
                 row_shift=rank_shift+ceil(log2(num_rows_per_bank));
-                break;
-
                 
+                col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
+                break;    
             case AddressMappingPolicy::CLOSE_PAGE:
                 mc_shift=ceil(log2(line_size));
                 bank_shift=mc_shift+ceil(log2(num_banks_));
                 rank_shift=bank_shift+0;
                 col_shift=rank_shift+ceil(log2(num_cols_per_bank));
                 row_shift=col_shift+ceil(log2(num_rows_per_bank));
+                
+                col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
+                break;
+            case spike_model::AddressMappingPolicy::ROW_BANK_COLUMN_BANK_GROUP_INTERLEAVE:
+            {
+                uint64_t num_groups=num_banks_/num_banks_per_group_;
+                col_shift=unused_lsbs_;
+                if(num_groups!=1)
+                {
+                    col_shift++;
+                }
+                bank_shift=col_shift+ceil(log2(num_cols_per_bank))-1; //-1 because the lsbs_ of the col is not addressed
+
+                row_shift=col_shift+ceil(log2(num_cols_per_bank))-1+ceil(log2(num_banks_)); //-1 because the lsbs_ of the col is not addressed
+                if(num_groups!=1)
+                {
+                    row_shift--; // -1 because the bank bits are split
+                }
+                
+                col_mask=utils::nextPowerOf2(num_cols_per_bank/2)-1;
+                break;
+            }
+            case spike_model::AddressMappingPolicy::ROW_COLUMN_BANK:
+                bank_shift=unused_lsbs_;
+                col_shift=bank_shift+ceil(log2(num_banks_));
+                row_shift=col_shift+ceil(log2(num_cols_per_bank))-1;//-1 because the lsbs_ of the col is not addressed
+                
+                col_mask=utils::nextPowerOf2(num_cols_per_bank/2)-1;
+                break;
+            case spike_model::AddressMappingPolicy::BANK_ROW_COLUMN:
+                col_shift=unused_lsbs_;
+                row_shift=col_shift+ceil(log2(num_cols_per_bank))-1;
+                bank_shift=row_shift+ceil(log2(num_rows_per_bank));
+                
+                col_mask=utils::nextPowerOf2(num_cols_per_bank/2)-1;
                 break;
         }
         
         rank_mask=0;
         bank_mask=utils::nextPowerOf2(num_banks_)-1;
         row_mask=utils::nextPowerOf2(num_rows_per_bank)-1;
-        col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
     }    
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

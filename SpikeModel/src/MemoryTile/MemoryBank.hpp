@@ -155,8 +155,8 @@ namespace spike_model
         
             sparta::PayloadEvent<std::shared_ptr<BankCommand>, sparta::SchedulingPhase::Tick> command_completed_event {&unit_event_set_, "command_completed_", CREATE_SPARTA_HANDLER_WITH_DATA(MemoryBank, notifyCompletion, std::shared_ptr<BankCommand>)};
             
-            sparta::Counter count_open_=sparta::Counter(getStatisticSet(), "open", "Number of opens", sparta::Counter::COUNT_NORMAL);
-            sparta::Counter count_close_=sparta::Counter(getStatisticSet(), "close", "Number of closes", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_activate_=sparta::Counter(getStatisticSet(), "activate", "Number of activats", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_precharge_=sparta::Counter(getStatisticSet(), "precharge", "Number of precharges", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_read_=sparta::Counter(getStatisticSet(), "read", "Number of reads", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_write_=sparta::Counter(getStatisticSet(), "write", "Number of writes", sparta::Counter::COUNT_NORMAL);
     };

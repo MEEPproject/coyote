@@ -20,8 +20,10 @@ namespace spike_model
         uint64_t row_to_schedule=req->getRow();
 
         std::shared_ptr<BankCommand> com;
-        if((*banks)[bank]->isOpen()) {
-            if((*banks)[bank]->getOpenRow()==row_to_schedule) {
+        if((*banks)[bank]->isOpen()) 
+        {
+            if((*banks)[bank]->getOpenRow()==row_to_schedule) 
+            {
                 if(req->getType()==CacheRequest::AccessType::STORE && last_completed_command_per_bank[bank]==BankCommand::CommandType::WRITE && write_allocate)
                 {
                     com=getAllocateCommand_(req, bank);
@@ -30,10 +32,14 @@ namespace spike_model
                 {
                     com=getAccessCommand_(req, bank);
                 }
-            } else {
+            } 
+            else 
+            {
                 com=std::make_shared<BankCommand>(BankCommand::CommandType::PRECHARGE, bank, 0, req);
             }
-        } else {
+        } 
+        else 
+        {
             com=std::make_shared<BankCommand>(BankCommand::CommandType::ACTIVATE, bank, row_to_schedule, req);
         }
 

@@ -29,13 +29,13 @@ namespace spike_model
         switch(c->getType())
         {
             case BankCommand::CommandType::ACTIVATE:
-                count_open_++;
+                count_activate_++;
                 state=BankState::OPENING;
                 delay=delay_open;
                 break;
 
             case BankCommand::CommandType::PRECHARGE:
-                count_close_++;
+                count_precharge_++;
                 state=BankState::CLOSING;
                 delay=delay_close;
                 break;
