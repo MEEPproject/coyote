@@ -5,32 +5,33 @@
 namespace spike_model
 {
 
-    MemoryAccessSchedulerIF::MemoryAccessSchedulerIF(std::shared_ptr<std::vector<MemoryBank *>> b, uint64_t num_banks, bool write_allocate) : banks(b), write_allocate(write_allocate), last_completed_command_per_bank(num_banks)
-    {
-        for(size_t i=0;i<banks->size();i++)    
-        {
-            last_completed_command_per_bank[i]=BankCommand::CommandType::PRECHARGE;
-        }
-    }
+    MemoryAccessSchedulerIF::MemoryAccessSchedulerIF(std::shared_ptr<std::vector<MemoryBank *>> b, uint64_t num_banks, bool write_allocate) : 
+        banks(b), 
+        write_allocate(write_allocate),
+        pending_command(num_banks, false)
+    {}
 
     std::shared_ptr<BankCommand> MemoryAccessSchedulerIF::getCommand(uint64_t bank)
     {
+        printf("Checking bank %lu\n", bank);
         std::shared_ptr<CacheRequest> req=getRequest(bank);
 
         uint64_t row_to_schedule=req->getRow();
 
-        std::shared_ptr<BankCommand> com;
+        std::shared_ptr<BankCommand> com=nullptr;
         if((*banks)[bank]->isOpen()) 
         {
             if((*banks)[bank]->getOpenRow()==row_to_schedule) 
             {
-                if(req->getType()==CacheRequest::AccessType::STORE && last_completed_command_per_bank[bank]==BankCommand::CommandType::WRITE && write_allocate)
+                std::cout << "(" << req << ")" << req->getSizeRequestedToMemory() << "<" << req->getSize() << "?\n";
+                if(req->getSizeRequestedToMemory()<req->getSize())
                 {
-                    com=getAllocateCommand_(req, bank);
+                    std::cout << "\tNew command\n";
+                    com=getAccessCommand_(req, bank);
                 }
                 else
                 {
-                    com=getAccessCommand_(req, bank);
+                    printf("\t HERE???????????\n");
                 }
             } 
             else 
@@ -43,36 +44,41 @@ namespace spike_model
             com=std::make_shared<BankCommand>(BankCommand::CommandType::ACTIVATE, bank, row_to_schedule, req);
         }
 
+        printf("\tProducing command of type %d for request of type %d\n", (int)com->getType(), (int)req->getType());
+
+        pending_command[bank]=true;
+
+        checkRequestCompletion(com);
+        
         return com;
     }
-            
-    std::shared_ptr<CacheRequest> MemoryAccessSchedulerIF::notifyCommandCompletion(std::shared_ptr<BankCommand> c)
+    
+    void MemoryAccessSchedulerIF::checkRequestCompletion(std::shared_ptr<BankCommand> c)
     {
-        std::shared_ptr<CacheRequest> serviced_request=nullptr;
-
-        last_completed_command_per_bank[c->getDestinationBank()]=c->getType();
-
+        bool res=false;
         switch(c->getType())
         {
-
             case BankCommand::CommandType::READ:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
-                notifyRequestCompletion(pending_request_for_bank);
-                if(pending_request_for_bank->getType()==CacheRequest::AccessType::LOAD || pending_request_for_bank->getType()==CacheRequest::AccessType::FETCH || (pending_request_for_bank->getType()==CacheRequest::AccessType::STORE && write_allocate))
+                std::shared_ptr<CacheRequest> req=c->getRequest();
+
+                // If it is a fetch, load or store (with write_allocate) and all the associated commands have been submitted
+                if((req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH || (req->getType()==CacheRequest::AccessType::STORE && write_allocate && req->isAllocating())) && req->getSizeRequestedToMemory()>=req->getSize())
                 {
-                    serviced_request=pending_request_for_bank;
+                    notifyRequestCompletion(req);
+                    res=true;
                 }
                 break;
             }
 
             case BankCommand::CommandType::WRITE:
             {
-                std::shared_ptr<CacheRequest> pending_request_for_bank=c->getRequest();
+                std::shared_ptr<CacheRequest> req=c->getRequest();
 
-                if(!write_allocate || c->getRequest()->getType()==CacheRequest::AccessType::WRITEBACK)
+                if((!write_allocate || c->getRequest()->getType()==CacheRequest::AccessType::WRITEBACK) && req->getSizeRequestedToMemory()>=req->getSize())
                 {
-                    notifyRequestCompletion(pending_request_for_bank);
+                    notifyRequestCompletion(req);
+                    res=true;
                 }
                 break;
             }
@@ -82,16 +88,19 @@ namespace spike_model
                 break;
             }
         }
-
-        return serviced_request;
+        if(res)
+        {
+            printf("\t\tCommand completes");
+            c->setCompletesRequest();
+        }
     }
-    
+
     std::shared_ptr<BankCommand> MemoryAccessSchedulerIF::getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
-        std::shared_ptr<BankCommand> res_command;
+        std::shared_ptr<BankCommand> res_command=nullptr;
 
         uint64_t column_to_schedule=req->getCol();
-        if(req->getType()==CacheRequest::AccessType::STORE || req->getType()==CacheRequest::AccessType::WRITEBACK)
+        if((req->getType()==CacheRequest::AccessType::STORE && (!req->isAllocating() || !write_allocate)) || req->getType()==CacheRequest::AccessType::WRITEBACK)
         {
             res_command=std::make_shared<BankCommand>(BankCommand::CommandType::WRITE, bank, column_to_schedule, req);
         }
@@ -99,16 +108,20 @@ namespace spike_model
         {
             res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
         }
+        req->increaseSizeRequestedToMemory((*banks)[0]->getBurstSize());
         return res_command;
     }
 
-    std::shared_ptr<BankCommand> MemoryAccessSchedulerIF::getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank)
+    void MemoryAccessSchedulerIF::notifyCommandSubmission(std::shared_ptr<BankCommand> c)
     {
-        sparta_assert(req->getType()==CacheRequest::AccessType::STORE && write_allocate, "Allocates can only by submitted for stores and when allocation is enabled\n");
-        std::shared_ptr<BankCommand> res_command;
-
-        uint64_t column_to_schedule=req->getCol();
-        res_command=std::make_shared<BankCommand>(BankCommand::CommandType::READ, bank, column_to_schedule, req);
-        return res_command;
+        pending_command[c->getDestinationBank()]=false;
+        std::shared_ptr<CacheRequest> req=c->getRequest();
+        printf("Command for bank %lu submitted (%d, %d, %d, %d)\n", c->getDestinationBank(), req->getType()==CacheRequest::AccessType::STORE, write_allocate, req->getSizeRequestedToMemory()>=req->getSize(), !req->isAllocating());
+        if(req->getType()==CacheRequest::AccessType::STORE && write_allocate && req->getSizeRequestedToMemory()>=req->getSize() && !req->isAllocating())
+        {
+            printf("---------------------->Allocating\n");
+            req->setAllocate();
+        }
+        rescheduleBank(c->getDestinationBank());
     }
 }

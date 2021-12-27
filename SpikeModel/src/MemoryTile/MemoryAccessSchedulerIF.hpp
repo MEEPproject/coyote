@@ -37,7 +37,7 @@ namespace spike_model
             /*!
             * \brief Get a command for a particular bank
             * \param bank The bank for which the request is desired
-            * \return A command
+            * \return A command (or nullptr if no command is available)
             */
             std::shared_ptr<BankCommand> getCommand(uint64_t bank);
              
@@ -53,11 +53,11 @@ namespace spike_model
             */
             virtual bool hasBanksToSchedule()=0;
 
-            /*!
-            * \brief Notify the completion of a command to the scheduler
-            * \return The request that has been serviced by this command. Null if no request was serviced
-            */
-            virtual std::shared_ptr<CacheRequest> notifyCommandCompletion(std::shared_ptr<BankCommand> c);
+            /*
+             * \brief Notify that a command has been submitted to its bank
+             * \param c The command that has been submitted
+             */
+            void notifyCommandSubmission(std::shared_ptr<BankCommand> c);
 
             /*!
             * \brief Get the current queue occupancy
@@ -65,12 +65,26 @@ namespace spike_model
             */
             virtual uint64_t getQueueOccupancy()=0;
 
-            /*!
-            * \brief Check if the timing of the earlier commands allows the request to be handled now
-            * \return True if the bank is ready for the request 
-            */
-            bool isBankReady(std::shared_ptr<CacheRequest> req);
+        private:
+            std::shared_ptr<std::vector<MemoryBank *>> banks;
+            bool write_allocate;
 
+
+            /*!
+             * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
+             * \param req The request
+             * \param bank The bank to access
+             * \return A command of the correct type to access the specified bank
+             */
+            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
+    
+            /*
+             * \brief Check if a command completes its associated request
+             * \param c The command that has been submitted
+             * \return true if the request has been completed
+             */
+            void checkRequestCompletion(std::shared_ptr<BankCommand> c);
+       
        protected: 
             /*!
             * \brief Get a command for a particular bank
@@ -84,27 +98,15 @@ namespace spike_model
             * \param req The request that was completed
             */
             virtual void notifyRequestCompletion(std::shared_ptr<CacheRequest> req)=0;
-
-        private:
-            std::shared_ptr<std::vector<MemoryBank *>> banks;
-            bool write_allocate;
-            std::vector<BankCommand::CommandType> last_completed_command_per_bank;
-
+            
             /*!
-             * \brief Create a command to access the memory using the type of the associated request (READ or WRITE)
-             * \param req The request
-             * \param bank The bank to access
-             * \return A command of the correct type to access the specified bank
+             * \brief Mark a bank as ready for scheduling if it has any pending requests
+             * \param c The bank to reschedule
              */
-            std::shared_ptr<BankCommand> getAccessCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
-
-            /*!
-             * \brief Create a command to read the line after writing it (if write-allocate is enabled)
-             * \param req The request
-             * \param bank The bank to access
-             * \return A command for the write allocate
-             */
-            std::shared_ptr<BankCommand> getAllocateCommand_(std::shared_ptr<CacheRequest> req, uint64_t bank);
+            virtual void rescheduleBank(uint64_t bank)=0;
+            
+            std::vector<bool> pending_command; //pending_command[i]==true if there is a command for bank i that has been sent to the command scheduler that has not been submitted yet
+     
     };
 }
 #endif

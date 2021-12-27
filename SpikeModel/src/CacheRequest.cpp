@@ -50,4 +50,30 @@ namespace spike_model
     {
         return bypass_l2;
     }
+            
+    uint16_t CacheRequest::getSizeRequestedToMemory()
+    {
+        return size_requested_to_memory;
+    }
+ 
+    void CacheRequest::increaseSizeRequestedToMemory(uint16_t s)
+    {
+        size_requested_to_memory+=s;
+    }
+    
+    void CacheRequest::resetSizeRequestedToMemory()
+    {
+        size_requested_to_memory=0;
+    }
+
+    bool CacheRequest::isAllocating()
+    {
+        return allocating;
+    }
+
+    void CacheRequest::setAllocate()
+    {
+        resetSizeRequestedToMemory();
+        allocating=true;
+    }
 }

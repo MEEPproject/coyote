@@ -1,26 +1,25 @@
-#ifndef __FIFO_COMMAND_SCHEDULER_HH__
-#define __FIFO_COMMAND_SCHEDULER_HH__
+#ifndef __OLDEST_READY_COMMAND_SCHEDULER_HH__
+#define __OLDEST_READY_COMMAND_SCHEDULER_HH__
 
 #include <memory>
-#include <queue>
-#include <set>
+#include <list>
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 
 namespace spike_model
 {
-    class FifoCommandScheduler : public CommandSchedulerIF
+    class OldestReadyCommandScheduler : public CommandSchedulerIF
     {
         /*!
-         * \class spike_model::FifoCommandScheduler
+         * \class spike_model::OldestReadyCommandScheduler
          * \brief A simple FIFO BankCommand scheduler
          */
         public: 
             /*!
-             * \brief Constructor for FifoCommandScheduler
+             * \brief Constructor for OldestReadyCommandScheduler
              * \param latencies The DRAM memspec
              */
-            FifoCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
+            OldestReadyCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
 
             /*!
             * \brief Add a command to the scheduler
@@ -36,10 +35,10 @@ namespace spike_model
             bool hasCommands() override;
             
         private:
-            std::queue<std::shared_ptr<BankCommand>> commands;
+            std::list<std::shared_ptr<BankCommand>> commands;
 
             /*!
-            * \brief Pick the next command to submit to a bank at the current timestamp. The command will be picked FIFO (if timing requirements are met)
+            * \brief Pick the next command to submit to a bank at the current timestamp. The command will be the oldest that meets the timing requirements
             * \param currentTimestamp The timestamp for the scheduling
             * \return The next command to schedule (nullptr if no command is available).
             */

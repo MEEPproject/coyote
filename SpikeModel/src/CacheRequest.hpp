@@ -43,7 +43,7 @@ namespace spike_model
              * \param  t The type of the request
              * \note This is an incomplete cache request used for writebacks. The id of the producing core NEEDS to be set afterwards. Handle with care
              */
-            CacheRequest(uint64_t a, AccessType t): Request(a, 0, 0), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(false), bypass_l2(false) {}
+            CacheRequest(uint64_t a, AccessType t): Request(a, 0, 0), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(false), bypass_l2(false), size_requested_to_memory(0) {}
 
 
             /*!
@@ -55,7 +55,7 @@ namespace spike_model
              * \param c The requesting core
              * \param  bypass_l2 True if the L2 has to be bypassed. Default value False
              */
-            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c, bool bypass_l1=false, bool bypass_l2=false): Request(a, pc, time, c), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(bypass_l1), bypass_l2(bypass_l2) {}
+            CacheRequest(uint64_t a, AccessType t, uint64_t pc, uint64_t time, uint16_t c, bool bypass_l1=false, bool bypass_l2=false): Request(a, pc, time, c), type(t), mem_tile((uint16_t)-1), memory_ack(false), bypass_l1(bypass_l1), bypass_l2(bypass_l2), size_requested_to_memory(0) {}
 
             /*!
              * \brief Get the type of the request
@@ -188,6 +188,29 @@ namespace spike_model
                 return mem_op_latency;
             }
 
+            /*
+             * \brief Get the number of bytes that have been handled by memory for this cache request
+             * \return The number of bytes handled by memory
+             */
+            uint16_t getSizeRequestedToMemory();
+
+            /*
+             * \brief Increases the number of bytes that have been handled by memory for this cache request
+             * \param s The number of bytes to increase
+             */
+            void increaseSizeRequestedToMemory(uint16_t s);
+            
+            /*
+             * \brief Check if the request is allocating
+             * \return True if the request is allocating
+             */
+            bool isAllocating();
+
+            /*
+             * \brief Set the request as allocating
+             */
+            void setAllocate();
+
         private:
             AccessType type;
 
@@ -204,7 +227,10 @@ namespace spike_model
             bool bypass_l1;
             bool bypass_l2;
             
-            uint8_t mem_op_latency;
+            int8_t mem_op_latency;
+
+            uint16_t size_requested_to_memory;
+            bool allocating=false;
             
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest
@@ -223,7 +249,11 @@ namespace spike_model
              */
             void setMemoryController(uint64_t memory_controller);
 
-
+            
+            /*
+             * \brief Reset the number of bytes that have been handled by memory for this cache request
+             */
+            void resetSizeRequestedToMemory();
     };
     
     inline std::ostream& operator<<(std::ostream &str, CacheRequest const &req)

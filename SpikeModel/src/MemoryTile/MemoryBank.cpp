@@ -15,44 +15,61 @@ namespace spike_model
     num_rows(p->num_rows),
     num_columns(p->num_columns),
     column_element_size(p->column_element_size),
-    delay_open(p->delay_open),
-    delay_close(p->delay_close),
-    delay_read(p->delay_read),
-    delay_write(p->delay_write)
+    burst_length(p->burst_length)
     {
-
     }
 
-    void MemoryBank::issue(std::shared_ptr<BankCommand> c)
+    void MemoryBank::issue(const std::shared_ptr<BankCommand>& c)
     {
-        uint64_t delay=0;
+        //uint64_t delay=0;
         switch(c->getType())
         {
             case BankCommand::CommandType::ACTIVATE:
                 count_activate_++;
-                state=BankState::OPENING;
-                delay=delay_open;
+                current_row=c->getValue();
+                state=BankState::OPEN;
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RRDS]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RC]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RAS]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RCDRD]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RCDWR]);
+                std::cout << "ACTIVATING\n";
+                //delay=delay_open;
                 break;
 
             case BankCommand::CommandType::PRECHARGE:
                 count_precharge_++;
-                state=BankState::CLOSING;
-                delay=delay_close;
+                state=BankState::CLOSED;
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RP]);
+                std::cout << "PRECHARGING\n";
+                //delay=delay_close;
                 break;
 
             case BankCommand::CommandType::READ:
                 count_read_++;
-                state=BankState::READING;
-                delay=delay_read * c->getRequest()->get_mem_op_latency();   // The HBM returns <= 32B. For larger requests, the delay is adapted.
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::CCDS]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RTW]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RTP]);
+                //delay=delay_read * c->getRequest()->get_mem_op_latency();   // The HBM returns <= 32B. For larger requests, the delay is adapted.
+
+                data_available_event.preparePayload(c)->schedule((*latencies)[(int)MemoryController::LatencyName::RL]); //This should take into account bursts
+                std::cout << "READING\n";
+                std::cout << "[" << getClock()->currentCycle() << "] RTW in " << (*latencies)[(int)MemoryController::LatencyName::RTW] << "\n";
                 break;
 
             case BankCommand::CommandType::WRITE:
                 count_write_++;
-                state=BankState::WRITING;
-                delay=delay_write * c->getRequest()->get_mem_op_latency();  // The HBM returns <= 32B. For larger requests, the delay is adapted.
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::CCDS]);
+                //delay=(*latencies)[(int)MemoryController::LatencyName::WL]//delay_write * c->getRequest()->get_mem_op_latency();  // The HBM returns <= 32B. For larger requests, the delay is adapted.
+                
+                data_available_event.preparePayload(c)->schedule((*latencies)[(int)MemoryController::LatencyName::WL]); //This should take into account bursts
+                std::cout << "WRITING. Now " << c->getRequest() << " has "<< c->getRequest()->getSizeRequestedToMemory() << "\n";
+                break;
+
+            case BankCommand::CommandType::NUM_COMMANDS:
+                std::cout << "Messages of type NUM_COMMANDS should not be issued\n";
                 break;
         }
-        command_completed_event.preparePayload(c)->schedule(delay+1);
 
         if(trace_)
         {
@@ -65,38 +82,19 @@ namespace spike_model
         return current_row;
     }
     
-    bool MemoryBank::isReady()
-    {
-        return state==BankState::OPEN || state==BankState::CLOSED;
-    }
-    
     bool MemoryBank::isOpen()
     {
         return state==BankState::OPEN;
     }
     
-    void MemoryBank::notifyCompletion(const std::shared_ptr<BankCommand>& c)
+    void MemoryBank::notifyTimingEvent()
     {
-        switch(c->getType())
-        {
-            case BankCommand::CommandType::ACTIVATE:
-                state=BankState::OPEN;
-                current_row=c->getValue();
-                break;
-
-            case BankCommand::CommandType::PRECHARGE:
-                state=BankState::CLOSED;
-                break;
-
-            case BankCommand::CommandType::READ:
-                state=BankState::OPEN;
-                break;
-
-            case BankCommand::CommandType::WRITE:
-                state=BankState::OPEN;
-                break;
-        }
-        mc->notifyCompletion_(c);
+        mc->notifyTimingEvent();
+    }
+    
+    void MemoryBank::notifyDataAvailable(const std::shared_ptr<BankCommand>& c)
+    {
+        mc->notifyDataAvailable_(c);
     }
             
     void MemoryBank::setMemoryController(MemoryController * controller)
@@ -112,5 +110,15 @@ namespace spike_model
     uint64_t MemoryBank::getNumColumns()
     {
         return num_columns;
+    }
+    
+    void MemoryBank::setMemSpec(std::shared_ptr<std::vector<uint64_t>> spec) 
+    {
+        latencies=spec;
+    }
+            
+    uint64_t MemoryBank::getBurstSize()
+    {
+        return column_element_size*burst_length;
     }
 }

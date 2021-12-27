@@ -29,7 +29,7 @@ top:
   cpu:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 1                          # (uint16_t)        The number of cores to simulate
+      num_cores: 8                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_mshrs_per_core: 8                 # (uint16_t)        The number of MSHRs per core
@@ -85,18 +85,45 @@ top:
         num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
         num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
         write_allocate: true                # (bool)            The write allocation policy
-        reordering_policy: access_type      # (std::string)     The reordering policy for memory requests
+        request_reordering_policy: access_type      # (std::string)     The reordering policy for memory requests (fifo, access_type)
+        command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready)
         address_policy: close_page          # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
-        unused_lsbs: 5                       # (uint8_t)         The number of bits that are unused in the address calculation
+        unused_lsbs: 5                      # (uint8_t)         The number of bits that are unused in the address calculation
+        mem_spec:                           # (vector<string>)  The memory latencies
+          - "CCDL:3"
+          - "CCDS:2"
+          - "CKE:8"
+          - "QSCK:1"
+          - "FAW:16"
+          - "PL:0"
+          - "RAS:28"
+          - "RC:42"
+          - "RCDRD:12"
+          - "RCDWR:6"
+          - "REFI:3900"
+          - "REFISB:244"
+          - "RFC:220"
+          - "RFCSB:96"
+          - "RL:17"
+          - "RP:14"
+          - "RRDL:6"
+          - "RRDS:4"
+          - "RREFD:8"
+          - "RTP:5"
+          - "RTW:18"
+          - "WL:7"
+          - "WR:14"
+          - "WTRL:9"
+          - "WTRS:4"
+          - "XP:8"
+          - "XS:216"
+
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows
           num_columns: 64                   # (uint64_t)        The number of columns
           column_element_size: 32           # (uint64_t)        The size of column elements
-          delay_open: 16                    # (uint64_t)        The delay to open a row
-          delay_close: 16                   # (uint64_t)        The delay to close a row
-          delay_read: 100                   # (uint64_t)        The delay to read 32 Bytes from main memory (HBM)
-          delay_write: 100                  # (uint64_t)        The delay to write 32 Bytes from main memory (HBM)
+          burst_length: 2                   # (uint8_t)         The number of columns handled back to back as a result of a READ/WRITE
     noc:
       params:
         noc_model: functional               # (std::string)     NoC Model to simulate (functional, simple, detailed)

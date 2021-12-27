@@ -41,12 +41,7 @@ namespace spike_model
         enum class BankState
         {
             OPEN,
-            OPENING,
-            CLOSED,
-            CLOSING,
-            READING,
-            WRITING,
-            ACCESSING
+            CLOSED
         };
 
         public:
@@ -65,10 +60,7 @@ namespace spike_model
                 PARAMETER(uint64_t, num_rows, 65536, "The number of rows")
                 PARAMETER(uint64_t, num_columns, 1024, "The number of columns")
                 PARAMETER(uint64_t, column_element_size, 8, "The size of column elements")
-                PARAMETER(uint64_t, delay_open, 50, "The delay to open a row")
-                PARAMETER(uint64_t, delay_close, 50, "The delay to close a row")
-                PARAMETER(uint64_t, delay_read, 20, "The delay to read")
-                PARAMETER(uint64_t, delay_write, 20, "The delay to write")
+                PARAMETER(uint8_t, burst_length, 2, "The number of columns handled back to back as a result of a READ/WRITE")
             };
 
             /*!
@@ -93,14 +85,8 @@ namespace spike_model
              * \brief Issue a command. This will potentially trigger a state change
              * \param c The command to issue
              */
-            void issue(std::shared_ptr<BankCommand> c);
+            void issue(const std::shared_ptr<BankCommand>& c);
 
-            /*!
-             * \brief Check if the bank is ready for a new command
-             * \return True if the current state is OPEN or CLOSED
-             */
-            bool isReady();
-    
             /*!
              * \brief Check if a row is currently open
              * \return True if the state is OPEN
@@ -118,6 +104,12 @@ namespace spike_model
              * \param controller The controller
              */
             void setMemoryController(MemoryController * controller);
+
+            /*
+             * \brief Sets the memory spec latencies
+             * \param spec The latencies
+             */
+            void setMemSpec(std::shared_ptr<std::vector<uint64_t>> spec);
             
             /*!
              * \brief Get the number of rows in the bank
@@ -131,30 +123,42 @@ namespace spike_model
              */
             uint64_t getNumColumns();
 
-            //This function needs to be public to be associated to an event, but should not be called otherwise
+
+            /*!
+             * \brief Get the burst size in bytes
+             * \return The burst size in bytes
+             */
+            uint64_t getBurstSize();
+            
 
         private:
             uint64_t num_rows;
             uint64_t num_columns;
             uint64_t column_element_size;
-            uint64_t delay_open;
-            uint64_t delay_close;
-            uint64_t delay_read;
-            uint64_t delay_write;
+            uint8_t burst_length;
 
             uint64_t current_row; //TODO: This is not updated!!!
             BankState state=BankState::CLOSED;
             
             MemoryController * mc;
-            
+
+            std::shared_ptr<std::vector<uint64_t>> latencies;
+
             /*!
              * \brief Notify the completion of a command
              * \param c The command that has been completed
              */
-            void notifyCompletion(const std::shared_ptr<BankCommand>& c);
-        
-            sparta::PayloadEvent<std::shared_ptr<BankCommand>, sparta::SchedulingPhase::Tick> command_completed_event {&unit_event_set_, "command_completed_", CREATE_SPARTA_HANDLER_WITH_DATA(MemoryBank, notifyCompletion, std::shared_ptr<BankCommand>)};
+            void notifyDataAvailable(const std::shared_ptr<BankCommand>& c);
+    
+            /*
+             * \brief Notify that a DRAM timing requirement has been met
+             */
+            void notifyTimingEvent();
+       
+            sparta::PayloadEvent<std::shared_ptr<BankCommand>, sparta::SchedulingPhase::Tick> data_available_event {&unit_event_set_, "data_available_", CREATE_SPARTA_HANDLER_WITH_DATA(MemoryBank, notifyDataAvailable, std::shared_ptr<BankCommand>)};
             
+            sparta::UniqueEvent<sparta::SchedulingPhase::Tick> timing_event {&unit_event_set_, "notify_timing_", CREATE_SPARTA_HANDLER(MemoryBank, notifyTimingEvent)};
+			
             sparta::Counter count_activate_=sparta::Counter(getStatisticSet(), "activate", "Number of activats", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_precharge_=sparta::Counter(getStatisticSet(), "precharge", "Number of precharges", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_read_=sparta::Counter(getStatisticSet(), "read", "Number of reads", sparta::Counter::COUNT_NORMAL);

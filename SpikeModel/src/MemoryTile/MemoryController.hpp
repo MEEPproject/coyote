@@ -43,6 +43,38 @@ namespace spike_model
          * The addition of new commands is expected to involve limited changes to controllerCycle_() and notifyCompletion_() methods.
          */
         public:
+            enum class LatencyName
+            {
+                CCDL,
+                CCDS,
+                CKE,
+                QSCK,
+                FAW,
+                PL,
+                RAS,
+                RC,
+                RCDRD,
+                RCDWR,
+                REFI,
+                REFISB,
+                RFC,
+                RFCSB,
+                RL,
+                RP,
+                RRDL,
+                RRDS,
+                RREFD,
+                RTP,
+                RTW,
+                WL,
+                WR,
+                WTRL,
+                WTRS,
+                XP,
+                XS,
+                NUM_LATENCY_NAMES
+            };
+
             /*!
              * \class MemoryControllerParameterSet
              * \brief Parameters for MemoryController model
@@ -58,9 +90,39 @@ namespace spike_model
                 PARAMETER(uint64_t, num_banks, 8, "The number of banks handled by this memory controller")
                 PARAMETER(uint64_t, num_banks_per_group, 4, "The number of banks in a bank group")
                 PARAMETER(bool, write_allocate, true, "The write allocation policy")
-                PARAMETER(std::string, reordering_policy, "none", "Request reordering policy")
+                PARAMETER(std::string, request_reordering_policy, "fifo", "Request reordering policy")
+                PARAMETER(std::string, command_reordering_policy, "fifo", "Request reordering policy")
                 PARAMETER(std::string, address_policy, "close_page", "Request reordering policy")
                 PARAMETER(uint8_t, unused_lsbs, 5, "The number of bits that are unused in the address calculation")
+                PARAMETER(std::vector<std::string>, mem_spec, std::vector<std::string>(
+                    {
+                       "CCDL:3",
+                       "CCDS:2",
+                       "CKE:8",
+                       "QSCK:1",
+                       "FAW:16", //NOT MODELED
+                       "PL:0",
+                       "RAS:28",
+                       "RC:42",
+                       "RCDRD:12",
+                       "RCDWR:6",
+                       "REFI:3900",
+                       "REFISB:244",
+                       "RFC:220",
+                       "RFCSB:96",
+                       "RL:17",
+                       "RP:14",
+                       "RRDL:6",
+                       "RRDS:4",
+                       "RREFD:8",
+                       "RTP:5",
+                       "RTW:18",
+                       "WL:7",
+                       "WR:14",
+                       "WTRL:9",
+                       "WTRS:4",
+                       "XP:8",
+                       "XS:216"}), "The header size of each message including CRC (in bits)")
             };
 
             /*!
@@ -86,10 +148,10 @@ namespace spike_model
             void addBank_(MemoryBank * bank);
 
             /*!
-             * \brief Notify the completion of a command
+             * \brief Notify that data associated to a command is available
              * \param c The command
              */
-            void notifyCompletion_(std::shared_ptr<BankCommand> c);
+            void notifyDataAvailable_(std::shared_ptr<BankCommand> c);
  
             /*!
              * \brief Notify that a timing event has been fulfilled, which might enable a new request to be selected for submission by the scheduler
@@ -127,10 +189,11 @@ namespace spike_model
 
             bool write_allocate_;
  
-            std::string reordering_policy_;
             spike_model::AddressMappingPolicy address_mapping_policy_;
             
             uint8_t unused_lsbs_;
+            
+            std::shared_ptr<std::vector<uint64_t>> latencies;
 
             bool idle_=true;
 
@@ -150,7 +213,7 @@ namespace spike_model
 
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
-
+            
             sparta::Counter count_read_requests_=sparta::Counter(getStatisticSet(), "read_requests", "Number of read requests (FETCH and LOAD)", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_write_requests_=sparta::Counter(getStatisticSet(), "write_requests", "Number of read requests (STORE & WB)", sparta::Counter::COUNT_NORMAL);
             sparta::Counter total_time_spent_by_read_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_read_requests", "The total time spent by read requests", sparta::Counter::COUNT_LATEST);
@@ -211,6 +274,14 @@ namespace spike_model
             uint64_t calculateRank(uint64_t address);
             uint64_t calculateBank(uint64_t address);
             uint64_t calculateCol(uint64_t address);
+            
+            /*!
+             * \brief Get the latency name from a String object
+             * 
+             * \param lat representation of a latency
+             * \return 
+             */
+            LatencyName getLatencyNameFromString_(const std::string& lat);
     };
 }
 #endif

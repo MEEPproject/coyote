@@ -280,6 +280,7 @@ namespace spike_model
         {
             std::shared_ptr<CacheRequest> cache_req = std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0);
             cache_req->setCacheBank(bank);
+            cache_req->setSize(l2_line_size_);
             out_biu_req_.send(cache_req, 1);
             count_wbs_+=1;
         }

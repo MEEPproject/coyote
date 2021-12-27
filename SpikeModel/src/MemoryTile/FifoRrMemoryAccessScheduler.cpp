@@ -7,7 +7,8 @@ namespace spike_model
     void FifoRrMemoryAccessScheduler::putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         request_queues[bank].push(req);
-        if(request_queues[bank].size()==1)
+        std::cout << "[Push] Bank " << bank << " has " << request_queues[bank].size() << " requests\n";
+        if(request_queues[bank].size()==1 && !pending_command[bank])
         {
             banks_to_schedule.push(bank);
         }
@@ -35,25 +36,29 @@ namespace spike_model
     {
         uint64_t bank=req->getMemoryBank();
         request_queues[bank].pop();
+        std::cout << "[Pop] Bank " << bank << " has " << request_queues[bank].size() << " requests\n";
     }
             
     uint64_t FifoRrMemoryAccessScheduler::getQueueOccupancy()
     {
-        uint64_t res=0;
+       uint64_t res=0;
        for(auto &queue : request_queues)
        {
             res=res+queue.size();
        }
        return res;
     }
-    
-    std::shared_ptr<CacheRequest> FifoRrMemoryAccessScheduler::notifyCommandCompletion(std::shared_ptr<BankCommand> c)
+             
+    void FifoRrMemoryAccessScheduler::rescheduleBank(uint64_t bank)
     {
-        std::shared_ptr<CacheRequest> serviced_request=MemoryAccessSchedulerIF::notifyCommandCompletion(c);
-        if(request_queues[c->getDestinationBank()].size()>0)
+        if(request_queues[bank].size()>0)
         {
-            banks_to_schedule.push(c->getDestinationBank());
+            std::cout << "Rescheduling bank " << bank << "\n";
+            banks_to_schedule.push(bank);
         }
-        return serviced_request;
+        else
+        {
+            std::cout << "Not rescheduling bank (no requests)" << bank << "\n";
+        }
     }
 }

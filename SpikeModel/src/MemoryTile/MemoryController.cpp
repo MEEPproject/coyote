@@ -3,7 +3,10 @@
 #include "FifoRrMemoryAccessScheduler.hpp"
 #include "FifoRrMemoryAccessSchedulerAccessTypePriority.hpp"
 #include "FifoCommandScheduler.hpp"
+#include "OldestReadyCommandScheduler.hpp"
 #include "utils.hpp"
+
+#include <memory>
 
 namespace spike_model
 {
@@ -18,25 +21,23 @@ namespace spike_model
     num_banks_(p->num_banks),
     num_banks_per_group_(p->num_banks_per_group),
     write_allocate_(p->write_allocate),
-    reordering_policy_(p->reordering_policy),
     unused_lsbs_(p->unused_lsbs)
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
-        ready_commands=std::make_unique<FifoCommandScheduler>();
 
         banks=std::make_shared<std::vector<MemoryBank *>>();
         
-        if(reordering_policy_=="none")
+        if(p->request_reordering_policy=="fifo")
         {
             sched=std::make_unique<FifoRrMemoryAccessScheduler>(banks, num_banks_, write_allocate_);
         }
-        else if(reordering_policy_=="access_type")
+        else if(p->request_reordering_policy=="access_type")
         {
             sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(banks, num_banks_, write_allocate_);
         }
         else
         {
-            std::cout << "Unsupported reordering policy. Falling back to the default policy.\n";
+            std::cout << "Unsupported request reordering policy. Falling back to the default policy.\n";
             sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(banks, num_banks_, write_allocate_);
         }
 
@@ -66,6 +67,32 @@ namespace spike_model
             printf("Unsupported address data mapping policy\n");
         }
 
+        latencies=std::make_shared<std::vector<uint64_t>>((int)LatencyName::NUM_LATENCY_NAMES);
+
+        int name_length;
+        int size;
+        for(auto l : p->mem_spec){
+            name_length = l.find(":");
+            size = stoi(l.substr(name_length+1));
+            sparta_assert(size < std::numeric_limits<uint16_t>::max(),
+                            "The latency should be lower than " + std::to_string(std::numeric_limits<uint16_t>::max()));
+            (*latencies)[static_cast<int>(getLatencyNameFromString_(l.substr(0,name_length)))] = size;
+        
+        }
+
+        if(p->command_reordering_policy=="fifo")
+        {
+            ready_commands=std::make_unique<FifoCommandScheduler>(latencies, num_banks_);
+        }
+        else if(p->command_reordering_policy=="oldest_ready")
+        {
+            ready_commands=std::make_unique<OldestReadyCommandScheduler>(latencies, num_banks_);
+        }
+        else
+        {
+            std::cout << "Unsupported command reordering policy. Falling back to the default policy.\n";
+            ready_commands=std::make_unique<FifoCommandScheduler>(latencies, num_banks_);
+        }
     }
 
 
@@ -102,6 +129,7 @@ namespace spike_model
         mes->setTimestampReachMC(getClock()->currentCycle());
 
         sched->putRequest(mes, bank);
+        std::cout << "New request\n";
         if(trace_)
         {
             logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
@@ -143,36 +171,51 @@ namespace spike_model
         {
             uint64_t bank_to_schedule=sched->getNextBank();
             std::shared_ptr<BankCommand> command_to_schedule=sched->getCommand(bank_to_schedule);
-            if(trace_)
-            {
-                logger_.logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
 
-            }
-        
-            if(command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::LOAD || command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::FETCH)
+            if(command_to_schedule!=nullptr)
             {
-                total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                if(trace_)
+                {
+                    logger_.logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
+
+                }
+            
+                if(command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::LOAD || command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::FETCH)
+                {
+                    total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                }
+                else
+                {
+                    total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                }
+                ready_commands->addCommand(command_to_schedule);
+                std::cout << "Generating command for address " << command_to_schedule->getRequest()->getAddress() << "\n";
             }
-            else
-            {
-                total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-            }
-            ready_commands->addCommand(command_to_schedule);
         }
 
         //Add back to the sched banks that did not get any commands
 
+        idle_=true;
+
         if(ready_commands->hasCommands())
         {
-            std::shared_ptr<BankCommand> next=ready_commands->getNextCommand();
-            (*banks)[next->getDestinationBank()]->issue(next);
-            if(ready_commands->hasCommands())
+            std::shared_ptr<BankCommand> next=ready_commands->getNextCommand(current_t);
+            if(next!=nullptr)
             {
-                controller_cycle_event_.schedule(1);
-            }
-            else
-            {
-                idle_=true;
+                (*banks)[next->getDestinationBank()]->issue(next);
+                sched->notifyCommandSubmission(next);
+                std::cout << "Issuing command for address " << next->getRequest()->getAddress() << "\n";
+                uint16_t next_command_delay=1;
+                if(next->getType()==BankCommand::CommandType::ACTIVATE)
+                {
+                    next_command_delay=2; // ACTIVATES are two cycle commands
+                }
+
+                if(ready_commands->hasCommands() || sched->hasBanksToSchedule())
+                {
+                    controller_cycle_event_.schedule(next_command_delay);
+                    idle_=false;
+                }
             }
         }
     }
@@ -181,29 +224,34 @@ namespace spike_model
     void MemoryController::addBank_(MemoryBank * bank)
     {
         banks->push_back(bank);
+        bank->setMemSpec(latencies);
     }
 
 
     void MemoryController::notifyTimingEvent()
     {
-        if(idle_ && sched->hasBanksToSchedule())
+        std::cout << "\tTiming event! (" << ready_commands->hasCommands() << ", "<< sched->hasBanksToSchedule() << ")\n";
+        if(idle_ && ready_commands->hasCommands())
         {
             controller_cycle_event_.schedule();
             idle_=false;
         } 
     }
 
-    void MemoryController::notifyCompletion_(std::shared_ptr<BankCommand> c)
+    void MemoryController::notifyDataAvailable_(std::shared_ptr<BankCommand> c)
     {
-        std::shared_ptr<CacheRequest> serviced_request=sched->notifyCommandCompletion(c);
+        std::cout << "\tCompletion of request for address " << c->getRequest()->getAddress() << "\n";
 
-        if(serviced_request!=nullptr)
+        if(c->getCompletesRequest())
         {
-            issueAck_(serviced_request);
+            printf("Issuing ack\n");
+            issueAck_(c->getRequest());
         }
 
-        if(idle_ && (sched->hasBanksToSchedule() || ready_commands->hasCommands()))
+        std::cout << "\tCompletion event! (" << ready_commands->hasCommands() << ", "<< sched->hasBanksToSchedule() << ")\n";
+        if(idle_ && ((sched->hasBanksToSchedule() || ready_commands->hasCommands())))
         {
+            printf("Scheduling more\n");
             controller_cycle_event_.schedule();
             idle_=false;
         }
@@ -389,5 +437,37 @@ namespace spike_model
         bank_mask=utils::nextPowerOf2(num_banks_)-1;
         row_mask=utils::nextPowerOf2(num_rows_per_bank)-1;
     }    
+    
+    MemoryController::LatencyName MemoryController::getLatencyNameFromString_(const std::string& mess)
+    {
+        if (mess == "CCDL") return LatencyName::CCDL;
+        else if (mess == "CCDS") return LatencyName::CCDS;
+        else if (mess == "CKE") return LatencyName::CKE;
+        else if (mess == "QSCK") return LatencyName::QSCK;
+        else if (mess == "FAW") return LatencyName::FAW;
+        else if (mess == "PL") return LatencyName::PL;
+        else if (mess == "RAS") return LatencyName::RAS;
+        else if (mess == "RC") return LatencyName::RC;
+        else if (mess == "RCDRD") return LatencyName::RCDRD;
+        else if (mess == "RCDWR") return LatencyName::RCDWR;
+        else if (mess == "REFI") return LatencyName::REFI;
+        else if (mess == "REFISB") return LatencyName::REFISB;
+        else if (mess == "RFC") return LatencyName::RFC;
+        else if (mess == "RFCSB") return LatencyName::RFCSB;
+        else if (mess == "RL") return LatencyName::RL;
+        else if (mess == "RP") return LatencyName::RP;
+        else if (mess == "RRDL") return LatencyName::RRDL;
+        else if (mess == "RRDS") return LatencyName::RRDS;
+        else if (mess == "RREFD") return LatencyName::RREFD;
+        else if (mess == "RTP") return LatencyName::RTP;
+        else if (mess == "RTW") return LatencyName::RTW;
+        else if (mess == "WL") return LatencyName::WL;
+        else if (mess == "WR") return LatencyName::WR;
+        else if (mess == "WTRL") return LatencyName::WTRL;
+        else if (mess == "WTRS") return LatencyName::WTRS;
+        else if (mess == "XP") return LatencyName::XP;
+        else if (mess == "XS") return LatencyName::XS;
+        else sparta_assert(false, "Message " + mess + " not defined. See LatencyName.");
+    }
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

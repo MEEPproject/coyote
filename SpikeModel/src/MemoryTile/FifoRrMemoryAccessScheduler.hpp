@@ -47,17 +47,11 @@ namespace spike_model
             virtual bool hasBanksToSchedule() override;
              
             /*!
-            * \brief Notify the completion of a command to the scheduler
-            * \return The request that has been serviced by this command. Null if no request was serviced
-            */
-            std::shared_ptr<CacheRequest> notifyCommandCompletion(std::shared_ptr<BankCommand> c) override;
-
-            /*!
             * \brief Get the current queue occupancy
             * \return The number of requests that are currently enqueued in the scheduler. If the scheduler uses several queues. This is the aggregate value.
             */
             uint64_t getQueueOccupancy() override;
-       
+            
        protected: 
             /*!
             * \brief Get a command for a particular bank
@@ -71,6 +65,12 @@ namespace spike_model
             * \param req The request that was completed
             */
             virtual void notifyRequestCompletion(std::shared_ptr<CacheRequest> req) override;
+            
+            /*!
+             * \brief Mark a bank as ready for scheduling if it has any pending requests
+             * \param c The bank to reschedule
+             */
+            void rescheduleBank(uint64_t bank) override;
 
         private:
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> request_queues;

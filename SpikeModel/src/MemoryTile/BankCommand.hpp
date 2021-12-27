@@ -20,7 +20,8 @@ namespace spike_model
                 ACTIVATE,
                 PRECHARGE,
                 READ,
-                WRITE
+                WRITE,
+                NUM_COMMANDS
             };
 
             BankCommand() = delete;
@@ -79,10 +80,28 @@ namespace spike_model
                 return request;
             }
 
+            /*!
+             * \brief Marks this command as the one completing its associated request
+             */
+            void setCompletesRequest()
+            {
+                completes_request=true;
+            }
+
+            /*!
+             * \brief Checks if this command completes its associated request
+             */
+            bool getCompletesRequest()
+            {
+                return completes_request;
+            }
+
         private:
             CommandType type;
             uint64_t destination_bank;
             uint64_t value;
+
+            bool completes_request=false;
 
             std::shared_ptr<CacheRequest> request;
     };
