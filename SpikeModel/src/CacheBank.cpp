@@ -51,8 +51,12 @@ namespace spike_model
     void CacheBank::sendAckInternal_(const std::shared_ptr<CacheRequest> & req)
     {
         bool was_stalled=in_flight_reads_.is_full();
+        
+        if(req->getType()!=CacheRequest::AccessType::WRITEBACK)
+        {
+            reloadCache_(calculateLineAddress(req), req->getCacheBank());
+        }
 
-        reloadCache_(calculateLineAddress(req), req->getCacheBank());
         if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
             auto range_misses=in_flight_reads_.equal_range(req);
@@ -279,6 +283,7 @@ namespace spike_model
         if(l2_cache_line->isModified())
         {
             std::shared_ptr<CacheRequest> cache_req = std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0);
+            printf("This is a wb from the L2 being submitted\n");
             cache_req->setCacheBank(bank);
             cache_req->setSize(l2_line_size_);
             out_biu_req_.send(cache_req, 1);
