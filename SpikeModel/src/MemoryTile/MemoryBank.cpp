@@ -30,10 +30,9 @@ namespace spike_model
                 state=BankState::OPEN;
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RRDS]);
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RC]);
-                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RAS]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RAS]+(*latencies)[(int)MemoryController::LatencyName::RP]);
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RCDRD]);
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RCDWR]);
-                std::cout << "ACTIVATING\n";
                 //delay=delay_open;
                 break;
 
@@ -41,7 +40,6 @@ namespace spike_model
                 count_precharge_++;
                 state=BankState::CLOSED;
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::RP]);
-                std::cout << "PRECHARGING\n";
                 //delay=delay_close;
                 break;
 
@@ -53,21 +51,20 @@ namespace spike_model
                 //delay=delay_read * c->getRequest()->get_mem_op_latency();   // The HBM returns <= 32B. For larger requests, the delay is adapted.
 
                 data_available_event.preparePayload(c)->schedule((*latencies)[(int)MemoryController::LatencyName::RL]); //This should take into account bursts
-                std::cout << "READING\n";
-                std::cout << "[" << getClock()->currentCycle() << "] RTW in " << (*latencies)[(int)MemoryController::LatencyName::RTW] << "\n";
                 break;
 
             case BankCommand::CommandType::WRITE:
                 count_write_++;
                 timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::CCDS]);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::WR]+(*latencies)[(int)MemoryController::LatencyName::WL]+burst_length);
+                timing_event.schedule((*latencies)[(int)MemoryController::LatencyName::WTRL]+(*latencies)[(int)MemoryController::LatencyName::WL]+burst_length);
                 //delay=(*latencies)[(int)MemoryController::LatencyName::WL]//delay_write * c->getRequest()->get_mem_op_latency();  // The HBM returns <= 32B. For larger requests, the delay is adapted.
                 
                 data_available_event.preparePayload(c)->schedule((*latencies)[(int)MemoryController::LatencyName::WL]); //This should take into account bursts
-                std::cout << "WRITING. Now " << c->getRequest() << " has "<< c->getRequest()->getSizeRequestedToMemory() << "\n";
                 break;
 
             case BankCommand::CommandType::NUM_COMMANDS:
-                std::cout << "Messages of type NUM_COMMANDS should not be issued\n";
+                std::cout << "Commands of type NUM_COMMANDS should not be issued\n";
                 break;
         }
 
@@ -120,5 +117,10 @@ namespace spike_model
     uint64_t MemoryBank::getBurstSize()
     {
         return column_element_size*burst_length;
+    }
+    
+    uint8_t MemoryBank::getBurstLength()
+    {
+        return burst_length;
     }
 }

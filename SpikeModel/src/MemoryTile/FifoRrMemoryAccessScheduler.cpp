@@ -7,7 +7,6 @@ namespace spike_model
     void FifoRrMemoryAccessScheduler::putRequest(std::shared_ptr<CacheRequest> req, uint64_t bank)
     {
         request_queues[bank].push(req);
-        std::cout << "[Push] Bank " << bank << " has " << request_queues[bank].size() << " requests\n";
         if(request_queues[bank].size()==1 && !pending_command[bank])
         {
             banks_to_schedule.push(bank);
@@ -36,7 +35,6 @@ namespace spike_model
     {
         uint64_t bank=req->getMemoryBank();
         request_queues[bank].pop();
-        std::cout << "[Pop] Bank " << bank << " has " << request_queues[bank].size() << " requests\n";
     }
             
     uint64_t FifoRrMemoryAccessScheduler::getQueueOccupancy()
@@ -53,12 +51,7 @@ namespace spike_model
     {
         if(request_queues[bank].size()>0)
         {
-            std::cout << "Rescheduling bank " << bank << "\n";
             banks_to_schedule.push(bank);
-        }
-        else
-        {
-            std::cout << "Not rescheduling bank (no requests)" << bank << "\n";
         }
     }
 }

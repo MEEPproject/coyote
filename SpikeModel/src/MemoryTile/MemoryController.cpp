@@ -129,7 +129,6 @@ namespace spike_model
         mes->setTimestampReachMC(getClock()->currentCycle());
 
         sched->putRequest(mes, bank);
-        std::cout << "New request\n";
         if(trace_)
         {
             logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
@@ -145,7 +144,6 @@ namespace spike_model
 
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
-        //std::cout << "Issuing ack from memory controller to request from core " << mes->getRequest()->getCoreId() << " for address " << mes->getRequest()->getAddress() << "\n";
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
         if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
         {
@@ -189,7 +187,6 @@ namespace spike_model
                     total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
                 }
                 ready_commands->addCommand(command_to_schedule);
-                std::cout << "Generating command for address " << command_to_schedule->getRequest()->getAddress() << "\n";
             }
         }
 
@@ -204,7 +201,6 @@ namespace spike_model
             {
                 (*banks)[next->getDestinationBank()]->issue(next);
                 sched->notifyCommandSubmission(next);
-                std::cout << "Issuing command for address " << next->getRequest()->getAddress() << "\n";
                 uint16_t next_command_delay=1;
                 if(next->getType()==BankCommand::CommandType::ACTIVATE)
                 {
@@ -225,12 +221,12 @@ namespace spike_model
     {
         banks->push_back(bank);
         bank->setMemSpec(latencies);
+        ready_commands->setBurstLength(bank->getBurstLength());
     }
 
 
     void MemoryController::notifyTimingEvent()
     {
-        std::cout << "\tTiming event! (" << ready_commands->hasCommands() << ", "<< sched->hasBanksToSchedule() << ")\n";
         if(idle_ && ready_commands->hasCommands())
         {
             controller_cycle_event_.schedule();
@@ -240,18 +236,13 @@ namespace spike_model
 
     void MemoryController::notifyDataAvailable_(std::shared_ptr<BankCommand> c)
     {
-        std::cout << "\tCompletion of request for address " << c->getRequest()->getAddress() << "\n";
-
         if(c->getCompletesRequest())
         {
-            printf("Issuing ack\n");
             issueAck_(c->getRequest());
         }
 
-        std::cout << "\tCompletion event! (" << ready_commands->hasCommands() << ", "<< sched->hasBanksToSchedule() << ")\n";
         if(idle_ && ((sched->hasBanksToSchedule() || ready_commands->hasCommands())))
         {
-            printf("Scheduling more\n");
             controller_cycle_event_.schedule();
             idle_=false;
         }

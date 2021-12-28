@@ -36,6 +36,12 @@ namespace spike_model
             std::shared_ptr<BankCommand> getNextCommand(uint64_t currentTimestamp);
             
             /*!
+            * \brief Set the burts length of the banks handled by this scheduler
+            * \param l The burst length
+            */
+            void setBurstLength(uint8_t l);
+
+            /*!
             * \brief Check if the scheduler has more commands
             * \return True if the scheduler has more commands
             */
@@ -48,9 +54,12 @@ namespace spike_model
             std::shared_ptr<std::vector<uint64_t>> latencies;
             std::vector<uint64_t> last_timestamp_per_command_type;
             std::vector<uint64_t> last_read_timestamp_per_bank;
+            std::vector<uint64_t> last_write_timestamp_per_bank;
             std::vector<uint64_t> last_activate_timestamp_per_bank;
             std::vector<bool> access_after_activate_per_bank;
             std::vector<uint64_t> last_precharge_timestamp_per_bank;
+
+            uint8_t burst_length;
 
             /*!
             * \brief Pick the next command to submit to a bank at the current timestamp

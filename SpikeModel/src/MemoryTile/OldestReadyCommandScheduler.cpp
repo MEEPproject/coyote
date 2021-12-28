@@ -20,15 +20,6 @@ namespace spike_model
             {
                 res=*it;
                 commands.erase(it);
-                printf("Returning command for bank %lu\n", res->getDestinationBank());
-                printf("The list now is:\n\t[");
-                std::list<std::shared_ptr<BankCommand>>::iterator it2 = commands.begin();
-                while(it2 != commands.end())
-                {
-                    printf("%lu, ", (*it2)->getDestinationBank());
-                    it2++;
-                }
-                printf("]\n");
             }
             else
             {

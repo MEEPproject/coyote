@@ -13,7 +13,6 @@ namespace spike_model
 
     std::shared_ptr<BankCommand> MemoryAccessSchedulerIF::getCommand(uint64_t bank)
     {
-        printf("Checking bank %lu\n", bank);
         std::shared_ptr<CacheRequest> req=getRequest(bank);
 
         uint64_t row_to_schedule=req->getRow();
@@ -23,16 +22,7 @@ namespace spike_model
         {
             if((*banks)[bank]->getOpenRow()==row_to_schedule) 
             {
-                std::cout << "(" << req << ")" << req->getSizeRequestedToMemory() << "<" << req->getSize() << "?\n";
-                if(req->getSizeRequestedToMemory()<req->getSize())
-                {
-                    std::cout << "\tNew command\n";
-                    com=getAccessCommand_(req, bank);
-                }
-                else
-                {
-                    printf("\t HERE???????????\n");
-                }
+                com=getAccessCommand_(req, bank);
             } 
             else 
             {
@@ -43,8 +33,6 @@ namespace spike_model
         {
             com=std::make_shared<BankCommand>(BankCommand::CommandType::ACTIVATE, bank, row_to_schedule, req);
         }
-
-        printf("\tProducing command of type %d for request of type %d\n", (int)com->getType(), (int)req->getType());
 
         pending_command[bank]=true;
 
@@ -90,7 +78,6 @@ namespace spike_model
         }
         if(res)
         {
-            printf("\t\tCommand completes");
             c->setCompletesRequest();
         }
     }
@@ -116,10 +103,8 @@ namespace spike_model
     {
         pending_command[c->getDestinationBank()]=false;
         std::shared_ptr<CacheRequest> req=c->getRequest();
-        printf("Command for bank %lu submitted (%d, %d, %d, %d)\n", c->getDestinationBank(), req->getType()==CacheRequest::AccessType::STORE, write_allocate, req->getSizeRequestedToMemory()>=req->getSize(), !req->isAllocating());
         if(req->getType()==CacheRequest::AccessType::STORE && write_allocate && req->getSizeRequestedToMemory()>=req->getSize() && !req->isAllocating())
         {
-            printf("---------------------->Allocating\n");
             req->setAllocate();
         }
         rescheduleBank(c->getDestinationBank());

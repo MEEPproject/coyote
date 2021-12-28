@@ -130,6 +130,12 @@ namespace spike_model
              */
             uint64_t getBurstSize();
             
+            /*!
+             * \brief Get the burst length
+             * \return The burst size in bytes
+             */
+            uint8_t getBurstLength();
+            
 
         private:
             uint64_t num_rows;
