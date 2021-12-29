@@ -364,7 +364,7 @@ namespace spike_model
                 }
         };
 
-        InFlightMissList in_flight_reads_;
+        InFlightMissList in_flight_misses_;
         uint16_t max_in_flight_wbs;
         uint16_t num_in_flight_wbs;
         std::shared_ptr<CacheRequest> pending_wb;

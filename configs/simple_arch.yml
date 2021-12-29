@@ -89,7 +89,9 @@ top:
         write_allocate: true                # (bool)            The write allocation policy
         request_reordering_policy: access_type      # (std::string)     The reordering policy for memory requests (fifo, access_type)
         command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready)
-        address_policy: close_page          # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
+        address_policy: row_bank_column_bank_group_interleave 
+                                            # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
+
         unused_lsbs: 5                      # (uint8_t)         The number of bits that are unused in the address calculation
         mem_spec:                           # (vector<string>)  The memory latencies
           - "CCDL:3"
