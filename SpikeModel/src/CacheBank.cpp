@@ -11,7 +11,7 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     CacheBank::CacheBank(sparta::TreeNode *node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
-                         uint16_t max_outstanding_misses, bool busy, uint64_t line_size, uint64_t size_kb,
+                         uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, uint64_t line_size, uint64_t size_kb,
                          uint64_t associativity, uint32_t bank_and_tile_offset) :
         sparta::Unit(node),
         memory_access_allocator(2000, 1000),
@@ -21,6 +21,9 @@ namespace spike_model
         max_outstanding_misses_(max_outstanding_misses),
         busy_(busy),
         in_flight_reads_(max_outstanding_misses, line_size),
+        max_in_flight_wbs(max_in_flight_wbs),
+        num_in_flight_wbs(0),
+        pending_wb(nullptr),
         pending_fetch_requests_(),
         pending_load_requests_(),
         pending_store_requests_(),
@@ -50,34 +53,50 @@ namespace spike_model
     // Receive MSS access acknowledge from Bus Interface Unit
     void CacheBank::sendAckInternal_(const std::shared_ptr<CacheRequest> & req)
     {
-        bool was_stalled=in_flight_reads_.is_full();
+        bool was_stalled=(in_flight_reads_.is_full() || pending_wb!=nullptr);
         
         if(req->getType()!=CacheRequest::AccessType::WRITEBACK)
         {
             reloadCache_(calculateLineAddress(req), req->getCacheBank());
-        }
 
-        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
-        {
-            auto range_misses=in_flight_reads_.equal_range(req);
-
-            sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
-
-            while(range_misses.first != range_misses.second)
+            if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
             {
-                range_misses.first->second->setServiced();
-                //The total time spent by requests is not updated here. This is for acks
-                out_core_ack_.send(range_misses.first->second);
-                range_misses.first++;
-            }
+                auto range_misses=in_flight_reads_.equal_range(req);
 
-            in_flight_reads_.erase(req);
+                sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
+
+                while(range_misses.first != range_misses.second)
+                {
+                    range_misses.first->second->setServiced();
+                    //The total time spent by requests is not updated here. This is for acks
+                    out_core_ack_.send(range_misses.first->second);
+                    range_misses.first++;
+                }
+
+                in_flight_reads_.erase(req);
+            }
+            else //STORE
+            {
+                out_core_ack_.send(req);
+            }
+        }
+        else
+        {
+            if(num_in_flight_wbs==max_in_flight_wbs && pending_wb!=nullptr) //If it was stalled due to WBs
+            {
+                out_biu_req_.send(pending_wb, 1);                
+                pending_wb=nullptr;
+            }
+            else
+            {
+                num_in_flight_wbs--;
+            }
         }
 
         if(pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)
         {
             //ISSUE EVENT
-            if(was_stalled && !busy_)
+            if(was_stalled && !busy_ && !in_flight_reads_.is_full() && pending_wb==nullptr)
             {
                 busy_=true;
                 scheduleIssueAccess(sparta::Clock::Cycle(0));
@@ -142,7 +161,7 @@ namespace spike_model
             }
         }
 
-        if(!stall && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
+        if(!stall && pending_wb==nullptr && (pending_fetch_requests_.size()+pending_load_requests_.size()+pending_store_requests_.size()+pending_scratchpad_requests_.size()>0)) //IF THERE ARE PENDING REQUESTS, SCHEDULE NEXT ISSUE
         {
            scheduleIssueAccess(sparta::Clock::Cycle(hit_latency_)); //THE NEXT ACCESS CAN BE ISSUED AFTER THE SEARCH IN THE L2 HAS FINISHED (EITHER HIT OR MISS)
         }
@@ -206,12 +225,12 @@ namespace spike_model
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
 
                     //NO FURTHER ACTION IS NEEDED
-                    if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
+/*                    if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
                     {
                         mem_access_info_ptr->getReq()->setServiced();
                         //This reply was already accounted for regarding the stats in the outer "if"
                         out_core_ack_.send(mem_access_info_ptr->getReq());
-                    }
+                    }*/
                 }
                 else
                 {
@@ -285,8 +304,16 @@ namespace spike_model
             std::shared_ptr<CacheRequest> cache_req = std::make_shared<spike_model::CacheRequest> (l2_cache_line->getAddr(), CacheRequest::AccessType::WRITEBACK, 0, getClock()->currentCycle(), 0);
             cache_req->setCacheBank(bank);
             cache_req->setSize(l2_line_size_);
-            out_biu_req_.send(cache_req, 1);
-            count_wbs_+=1;
+            if(num_in_flight_wbs<max_in_flight_wbs)
+            {
+                out_biu_req_.send(cache_req, 1);
+                count_wbs_+=1;
+                num_in_flight_wbs++;
+            }
+            else
+            {
+                pending_wb=cache_req;
+            }
         }
 
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
@@ -352,7 +379,7 @@ namespace spike_model
                         break;
                 }
 
-                if(!busy_ && !in_flight_reads_.is_full())
+                if(!busy_ && !in_flight_reads_.is_full() && pending_wb==nullptr)
                 {
                     busy_=true;
                     //ISSUE EVENT

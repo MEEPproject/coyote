@@ -70,6 +70,7 @@ namespace spike_model
             PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
             PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
             PARAMETER(uint16_t, max_outstanding_misses, 8, "Maximum misses in flight to the next level")
+            PARAMETER(uint16_t, max_outstanding_wbs, 1, "Maximum number of in flight wbs")
         };
 
         /*!

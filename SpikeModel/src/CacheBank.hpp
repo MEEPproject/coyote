@@ -55,7 +55,7 @@ namespace spike_model
          * \param p The CacheBank parameter set
          */
         CacheBank(sparta::TreeNode* node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
-                  uint16_t max_outstanding_misses, bool busy, uint64_t line_size, uint64_t size_kb,
+                  uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, uint64_t line_size, uint64_t size_kb,
                   uint64_t associativity, uint32_t bank_and_tile_offset);
 
         ~CacheBank() {
@@ -365,6 +365,9 @@ namespace spike_model
         };
 
         InFlightMissList in_flight_reads_;
+        uint16_t max_in_flight_wbs;
+        uint16_t num_in_flight_wbs;
+        std::shared_ptr<CacheRequest> pending_wb;
 
         std::list<std::shared_ptr<CacheRequest>> pending_fetch_requests_;
         std::list<std::shared_ptr<CacheRequest>> pending_load_requests_;

@@ -29,7 +29,7 @@ top:
   cpu:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 8                          # (uint16_t)        The number of cores to simulate
+      num_cores: 1                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_mshrs_per_core: 8                 # (uint16_t)        The number of MSHRs per core
@@ -64,6 +64,7 @@ top:
           miss_latency: 15                  # (uint16_t)        Cache miss latency
           hit_latency: 15                   # (uint16_t)        Cache hit latency
           max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
     memory_cpu*:
       params:
         line_size: 64                       # (uint64_t)        Cache line size (power of 2)
@@ -80,6 +81,7 @@ top:
           miss_latency: 15                  # (uint16_t)        Cache miss latency
           hit_latency: 15                   # (uint16_t)        Cache hit latency
           max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
     memory_controller*:
       params:
         num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
