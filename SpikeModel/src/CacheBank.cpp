@@ -328,7 +328,14 @@ namespace spike_model
         }
         else
         {
-            count_cache_requests_+=1;
+            if(r->getType()==CacheRequest::AccessType::LOAD || r->getType()==CacheRequest::AccessType::FETCH)
+            {
+                count_cache_reads_+=1;
+            }
+            else
+            {
+                count_cache_writes_+=1;
+            }
 
             bool hit_on_store=false;
             if(r->getType()==CacheRequest::AccessType::LOAD)

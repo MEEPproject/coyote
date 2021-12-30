@@ -284,7 +284,8 @@ namespace spike_model
         uint64_t calculateLineAddress(std::shared_ptr<CacheRequest> r);
 
         //An unordered set indexed by the bits of an instruction and containing all its pending (mmu/cache) accesses
-        sparta::Counter count_cache_requests_=sparta::Counter(getStatisticSet(), "cache_requests", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_reads_=sparta::Counter(getStatisticSet(), "cache_reads", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_writes_=sparta::Counter(getStatisticSet(), "cache_writes", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_scratchpad_requests_=sparta::Counter(getStatisticSet(), "scratchpad_requests", "Number of scratchpad requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_misses_on_already_pending_=sparta::Counter(getStatisticSet(), "misses_on_already_pending", "Number of misses on addreses that have already been requested", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
@@ -298,14 +299,14 @@ namespace spike_model
         sparta::StatisticDef avg_latency_lookup{
             getStatisticSet(), "avg_latency",
             "Average latency",
-            getStatisticSet(), "total_time_spent_by_requests/cache_requests"
+            getStatisticSet(), "total_time_spent_by_requests/(cache_reads+cache_writes)"
         };
         
     
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",
             "Miss ratio",
-            getStatisticSet(), "cache_misses/cache_requests"
+            getStatisticSet(), "cache_misses/(cache_reads+cache_writes)"
         };
 
         class CacheRequestHash
