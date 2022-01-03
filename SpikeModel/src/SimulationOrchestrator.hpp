@@ -50,6 +50,11 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc);
 
         /*!
+         * \brief Destructor for SimulationOrchestrator
+         */
+        ~SimulationOrchestrator();
+
+        /*!
          * \brief Triggers the simulation
          */
         void run();
@@ -139,8 +144,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         uint16_t available_mshrs;
         std::vector<uint64_t> mshr_stalls_per_core; //(num_cores);
 
-        float avg_mem_access_time=0;
-        uint64_t num_mem_accesses=1; //Initialized to one to calcullate a rolling average
+        float avg_mem_access_time_l1_miss=0;
         float avg_time_to_reach_l2=0;
         uint64_t num_l2_accesses=1; //Initialized to one to calcullate a rolling average
 
@@ -209,5 +213,6 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
 
         bool hasArbiterQueueFreeSlot(uint16_t core);
 
+        void memoryAccessLatencyReport();
 };
 #endif

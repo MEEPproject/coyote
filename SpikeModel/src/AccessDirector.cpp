@@ -39,6 +39,15 @@ namespace spike_model
                 r->setCacheBank(bank);
                 if(r->getHomeTile()==tile->id_)
                 {
+                    if(r->getHomeTile()==r->getSourceTile())
+                    {
+                        tile->count_local_requests_++;
+                    }
+                    else
+                    {
+                        tile->count_remote_requests_++;
+                    }
+
                     //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
                     if(tile->trace_)
                     {
@@ -48,7 +57,7 @@ namespace spike_model
                     uint64_t lapse=0;
                     if(r->getTimestamp()+1>tile->getClock()->currentCycle())
                     {
-                        lapse=(r->getTimestamp()+1)-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
+                        lapse=(r->getTimestamp())-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
                     }
                     tile->issueLocalRequest_(r, lapse);
                 }

@@ -45,7 +45,11 @@ public:
 
     spike_model::Logger& getLogger();
 
-    //virtual void run(uint64_t run_time) override;
+    double getAvgArbiterLatency();
+    double getAvgL2Latency();
+    double getAvgNoCLatency();
+    double getAvgLLCLatency();
+    double getAvgMemoryControllerLatency();
 
 private:
 

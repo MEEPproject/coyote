@@ -224,6 +224,8 @@ namespace spike_model
 
             sparta::PayloadEvent<std::shared_ptr<InsnLatencyEvent>, sparta::SchedulingPhase::PostTick> insn_latency_event_ {&unit_event_set_, "insn_latency_event_", CREATE_SPARTA_HANDLER_WITH_DATA(Tile, insnLatencyCallback, std::shared_ptr<InsnLatencyEvent>)};
 
+            sparta::Counter count_local_requests_=sparta::Counter(getStatisticSet(), "requests_from_local_cores", "Number of cache requests from local cores", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_remote_requests_=sparta::Counter(getStatisticSet(), "requests_from_remote_cores", "Number of cache requests from remote cores", sparta::Counter::COUNT_NORMAL);
 
             uint64_t cntr;
             uint64_t l2_bank_size_kbs;

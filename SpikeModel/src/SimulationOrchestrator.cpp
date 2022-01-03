@@ -19,7 +19,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     detailed_noc_(detailed_noc),
     booksim_has_packets_in_flight_(false),
     max_in_flight_l1_misses(num_mshrs_per_core),
-    in_flight_requests_per_l1(num_cores/num_threads_per_core),
+    in_flight_requests_per_l1(num_cores/num_threads_per_core,0),
     mshr_stalls_per_core(num_cores)
 {
     for(uint16_t i=0;i<num_cores;i++)
@@ -31,7 +31,6 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     {
         runnable_cores.push_back(i);
         runnable_after.push_back(0);
-        in_flight_requests_per_l1.push_back(0);
     }
 
     thread_barrier_cnt = 0;
@@ -41,6 +40,46 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
     waiting_on_mshrs.resize(num_cores,false);
+}
+
+SimulationOrchestrator::~SimulationOrchestrator()
+{
+    //PRINTS THE SPARTA STATISTICS
+    spike_model->saveReports();
+
+    uint64_t tot=0;
+    for(uint16_t i=0;i<num_cores;i++)
+    {
+        printf("Core %d: \n\tsimulated %lu instructions\n\tStalled on mshrs %lu times.\n", i, simulated_instructions_per_core[i], mshr_stalls_per_core[i]);
+        tot+=simulated_instructions_per_core[i];
+    }
+    printf("Total simulated instructions %lu\n", tot);
+    
+    memoryAccessLatencyReport();
+}
+
+void SimulationOrchestrator::memoryAccessLatencyReport()
+{
+    uint64_t num_l1_hits=spike->getNumL1DataHits();
+    uint64_t num_mem_accesses=num_l1_hits+num_l2_accesses;
+   
+    double avg_mem_access_time=(1*((double)num_l1_hits/num_mem_accesses))+(avg_mem_access_time_l1_miss*((double)num_l2_accesses/num_mem_accesses));
+
+    std::cout << "Average memory access time: " << avg_mem_access_time <<" cycles\n";
+
+    double avg_arbiter_latency=spike_model->getAvgArbiterLatency();
+    double avg_l2_latency=spike_model->getAvgL2Latency();
+    double avg_noc_latency=spike_model->getAvgNoCLatency();
+    double avg_llc_latency=spike_model->getAvgLLCLatency();
+    double avg_memory_controller_latency=spike_model->getAvgMemoryControllerLatency();
+
+    std::cout << "Average memory access time breakdown (for accesses that miss all along the memory hierarchy):\n";
+    std::cout << "\tArbiter: " << avg_arbiter_latency << "\n";
+    std::cout << "\tL2: " << avg_l2_latency << "\n";
+    std::cout << "\tNoC: " << avg_noc_latency << "\n";
+    std::cout << "\tLLC: " << avg_llc_latency << "\n";
+    std::cout << "\tMemory controller: " << avg_memory_controller_latency << "\n";
+    //std::cout << "The monitored section took " << timer <<" nanoseconds\n";
 }
 
 uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
@@ -249,20 +288,7 @@ void SimulationOrchestrator::run()
             //Advance clock to next
             current_cycle++;
         }
-    }
-
-    //PRINTS THE SPARTA STATISTICS
-    spike_model->saveReports();
-
-    uint64_t tot=0;
-    for(uint16_t i=0;i<num_cores;i++)
-    {
-        printf("Core %d: \n\tsimulated %lu instructions\n\tStalled on mshrs %lu times.\n", i, simulated_instructions_per_core[i], mshr_stalls_per_core[i]);
-        tot+=simulated_instructions_per_core[i];
-    }
-    printf("Total simulated instructions %lu\n", tot);
-    std::cout << "Average memory access time: " << avg_mem_access_time <<" cycles\n";
-    std::cout << "The monitored section took " << timer <<" nanoseconds\n";
+    } 
 }
 
 void SimulationOrchestrator::selectRunnableThreads()
@@ -296,6 +322,7 @@ void SimulationOrchestrator::selectRunnableThreads()
 
 void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
 {
+    r->setTimestamp(current_cycle);
     in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core]++;
     request_manager->putRequest(r);
 }
@@ -414,6 +441,13 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             can_run=spike->ackRegister(r->getCoreId(), r->getDestinationRegType(),
                                        r->getDestinationRegId(), current_cycle);
         }
+            
+        if(is_load || is_store)
+        {
+            //Update average memory access time metrics
+            avg_mem_access_time_l1_miss=avg_mem_access_time_l1_miss+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time_l1_miss)/num_l2_accesses;
+            num_l2_accesses++;
+        }
 
         if(waiting_on_mshrs[core])
         {
@@ -475,13 +509,6 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                     logger_.logResumeWithCacheBank(current_cycle, core, r->getCacheBank());
                     logger_.logResumeWithTile(current_cycle, core, r->getHomeTile());
                 }
-            }
-
-            if(is_load || is_store)
-            {
-                //Update average memory access time metrics
-                avg_mem_access_time=avg_mem_access_time+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time)/num_mem_accesses;
-                num_mem_accesses++;
             }
         }
     }
@@ -575,7 +602,9 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
             pending_get_vec_len[current_core] = r;
         }
         else
+        {
             submitToSparta(r);
+        }
     }
     else
     {
@@ -619,7 +648,9 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction
         pending_mcpu_insn[current_core] = i;
     }
     else
+    {
         submitToSparta(i);
+    }
 }
 
 //latency and fetch

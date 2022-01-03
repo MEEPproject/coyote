@@ -348,3 +348,172 @@ spike_model::Logger& SpikeModel::getLogger()
 {
     return getCPUFactory_()->getLogger();
 }
+
+double SpikeModel::getAvgArbiterLatency()
+{
+    const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
+    auto num_tiles=upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    double res=0;
+
+    double num_local_requests=0;
+    double num_remote_requests=0;
+    for(std::size_t i = 0; i < num_tiles; ++i)
+    {
+        sparta::CounterBase* c_local=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".stats.requests_from_local_cores"));
+        sparta::CounterBase* c_remote=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".stats.requests_from_remote_cores"));
+        sparta_assert(c_local!=nullptr && c_remote!=nullptr);
+
+        num_local_requests+=c_local->get();
+        num_remote_requests+=c_remote->get();
+    }
+    uint64_t total_requests=num_local_requests+num_remote_requests;
+    res=total_requests;
+
+    double avg_latency=0;
+    for(std::size_t i = 0; i < num_tiles; ++i)
+    {
+        sparta::CounterBase* c_time=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".arbiter.stats.total_time_spent_by_messages"));
+        sparta::CounterBase* c_mes=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".arbiter.stats.messages"));
+
+        avg_latency+=(double)c_time->get()/c_mes->get();
+    }
+    avg_latency=avg_latency/num_tiles;
+
+    res=((num_local_requests/total_requests)*4*avg_latency)+((num_remote_requests/total_requests)*5*avg_latency);
+
+    return res;
+}
+
+double SpikeModel::getAvgL2Latency()
+{
+    const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
+    auto num_tiles=upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    auto num_l2_banks=upt.get("top.cpu.tile0.params.num_l2_banks").getAs<uint16_t>();
+    
+    double count_requests=0;
+    double count_times=0;
+    for(std::size_t i = 0; i < num_tiles; ++i)
+    {
+        for(std::size_t j = 0; j < num_l2_banks; ++j)
+        {
+            sparta::CounterBase* c_time = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.total_time_spent_by_requests"));
+            sparta::CounterBase* c_reads = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_reads"));
+            sparta::CounterBase* c_writes = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_writes"));
+            count_requests+=c_reads->get()+c_writes->get();
+            count_times+=c_time->get();
+
+        }
+    }
+    return count_times/count_requests;
+}
+
+double SpikeModel::getAvgNoCLatency()
+{
+    const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
+    auto noc_model=upt.get("top.cpu.noc.params.noc_model").getAs<std::string>();
+    
+    auto num_tiles=upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
+    
+    uint64_t num_remote_requests=0;
+    uint64_t num_local_requests=0;
+    
+    for(std::size_t i = 0; i < num_tiles; ++i)
+    {
+        sparta::CounterBase* c_local=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".stats.requests_from_local_cores"));
+        sparta::CounterBase* c_remote=getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.tile")+sparta::utils::uint32_to_str(i)+std::string(".stats.requests_from_remote_cores"));
+        sparta_assert(c_local!=nullptr && c_remote!=nullptr);
+
+        num_local_requests+=c_local->get();
+        num_remote_requests+=c_remote->get();
+    }
+    uint64_t total_requests=num_local_requests+num_remote_requests;
+
+    double res=0;
+    if (noc_model == "functional")
+    {
+        double avg_latency=upt.get("top.cpu.noc.params.packet_latency").getAs<std::uint64_t>();
+        res=((num_local_requests/total_requests)*2*avg_latency)+((num_remote_requests/total_requests)*4*avg_latency);
+    }
+    else if (noc_model == "simple")
+    {
+        double hop_latency=upt.get("top.cpu.noc.params.latency_per_hop").getAs<std::uint16_t>();
+        double average_hop_count=getRoot()->getChildAs<sparta::CounterBase>(std::string("top.cpu.noc.stats.average_hop_count_DATA_TRANSFER"))->get();
+        double avg_latency=average_hop_count*hop_latency;
+        res=((num_local_requests/total_requests)*2*avg_latency)+((num_local_requests/total_requests)*4*avg_latency);
+    }
+    else if (noc_model == "detailed")
+    {
+        double avg_latency_data=upt.get("top.cpu.noc.params.packet_latency_DATA_TRANSFER").getAs<std::uint16_t>();
+        double avg_latency_address=upt.get("top.cpu.noc.params.packet_latency_ADDRESS_ONLY").getAs<std::uint16_t>();
+        res=((num_local_requests/total_requests)*(avg_latency_data+avg_latency_address)) + ((num_local_requests/total_requests)*2*(avg_latency_data+avg_latency_address));
+    }
+    return res;
+}
+
+double SpikeModel::getAvgLLCLatency()
+{
+    const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
+    auto num_memory_controllers=upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
+    auto num_llc_banks=upt.get("top.cpu.memory_cpu0.params.num_llc_banks").getAs<uint16_t>();
+    
+    double count_requests=0;
+    double count_times=0;
+    for(std::size_t i = 0; i < num_memory_controllers; ++i)
+    {
+        for(std::size_t j = 0; j < num_llc_banks; ++j)
+        {
+            sparta::CounterBase* c_time = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_cpu") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".llc") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.total_time_spent_by_requests"));
+            sparta::CounterBase* c_reads = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_cpu") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".llc") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_reads"));
+            sparta::CounterBase* c_writes = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_cpu") +
+                                    sparta::utils::uint32_to_str(i) + std::string(".llc") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_writes"));
+            count_requests+=c_reads->get()+c_writes->get();
+            count_times+=c_time->get();
+
+        }
+    }
+    return count_times/count_requests;
+
+}
+
+double SpikeModel::getAvgMemoryControllerLatency()
+{
+    const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
+    auto num_memory_controllers=upt.get("top.cpu.params.num_memory_controllers").getAs<uint16_t>();
+    
+    double count_reads=0;
+    double count_writes=0;
+    double count_time_writes=0;
+    double count_time_reads=0;
+    for(std::size_t i = 0; i < num_memory_controllers; ++i)
+    {
+        sparta::CounterBase* c_time_r = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_controller") +
+                                sparta::utils::uint32_to_str(i) + std::string(".stats.total_time_spent_by_load_requests"));
+        sparta::CounterBase* c_time_w = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_controller") +
+                                sparta::utils::uint32_to_str(i) + std::string(".stats.total_time_spent_by_store_requests"));
+        sparta::CounterBase* c_reads = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_controller") +
+                                sparta::utils::uint32_to_str(i) + std::string(".stats.load_requests"));
+        sparta::CounterBase* c_writes = getRoot()->getChildAs<sparta::CounterBase>(std::string("cpu.memory_controller") +
+                                sparta::utils::uint32_to_str(i) + std::string(".stats.store_requests"));
+        count_reads+=c_reads->get();
+        count_writes+=c_writes->get();
+        count_time_reads+=c_time_r->get();
+        count_time_writes+=c_time_w->get();
+    }
+    double avg_reads=count_time_reads/count_reads;
+    double avg_writes=count_time_writes/count_writes;
+
+    double total_requests=count_reads+count_writes;
+
+    return (avg_reads*count_reads/total_requests) + (avg_writes*count_writes/total_requests);
+}

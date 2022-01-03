@@ -127,7 +127,6 @@ namespace spike_model
         mes->setBankInfo(rank, bank, row, col);
 
         mes->setTimestampReachMC(getClock()->currentCycle());
-
         sched->putRequest(mes, bank);
         if(trace_)
         {
@@ -145,15 +144,24 @@ namespace spike_model
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
-        if(req->getType()==CacheRequest::AccessType::LOAD || req->getType()==CacheRequest::AccessType::FETCH)
+        switch(req->getType())
         {
-            count_read_requests_++;
-            total_time_spent_by_read_requests_=total_time_spent_by_read_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
-        }
-        else
-        {
-            count_write_requests_++;
-            total_time_spent_by_write_requests_=total_time_spent_by_write_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+            case CacheRequest::AccessType::LOAD:
+                count_load_requests_++;
+                total_time_spent_by_load_requests_=total_time_spent_by_load_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                break;
+            case CacheRequest::AccessType::FETCH:
+                count_fetch_requests_++;
+                total_time_spent_by_fetch_requests_=total_time_spent_by_fetch_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                break;
+            case CacheRequest::AccessType::STORE:
+                count_store_requests_++;
+                total_time_spent_by_store_requests_=total_time_spent_by_store_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                break;
+            case CacheRequest::AccessType::WRITEBACK:
+                count_wb_requests_++;
+                total_time_spent_by_wb_requests_=total_time_spent_by_wb_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                break;
         }
         
         out_port_mcpu_.send(req, 0);
@@ -178,13 +186,20 @@ namespace spike_model
 
                 }
             
-                if(command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::LOAD || command_to_schedule->getRequest()->getType()==CacheRequest::AccessType::FETCH)
+                switch(command_to_schedule->getRequest()->getType())
                 {
-                    total_time_spent_in_queue_read_=total_time_spent_in_queue_read_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-                }
-                else
-                {
-                    total_time_spent_in_queue_write_=total_time_spent_in_queue_write_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                    case CacheRequest::AccessType::LOAD:
+                        total_time_spent_in_queue_load_=total_time_spent_in_queue_load_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                        break;
+                    case CacheRequest::AccessType::FETCH:
+                        total_time_spent_in_queue_fetch_=total_time_spent_in_queue_fetch_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                        break;
+                    case CacheRequest::AccessType::STORE:
+                        total_time_spent_in_queue_store_=total_time_spent_in_queue_store_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                        break;
+                    case CacheRequest::AccessType::WRITEBACK:
+                        total_time_spent_in_queue_wb_=total_time_spent_in_queue_wb_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
+                        break;
                 }
                 ready_commands->addCommand(command_to_schedule);
             }

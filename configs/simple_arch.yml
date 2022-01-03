@@ -148,6 +148,6 @@ top:
           - "SCRATCHPAD_COMMAND:8"
           - "MEM_TILE_REQUEST:8"
           - "MEM_TILE_REPLY:8"
-        packet_latency: 30                  # (uint16_t)        The average latency for each packet
+        packet_latency: 5                   # (uint16_t)        The average latency for each packet
 
 ...

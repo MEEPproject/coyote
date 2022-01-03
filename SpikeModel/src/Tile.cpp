@@ -170,7 +170,7 @@ namespace spike_model
         msg->is_core = true;
         msg->id = req->getCoreId();
         msg->type = spike_model::MessageType::CACHE_REQUEST;
-        out_port_arbiter_.send(msg, lapse + latency_);
+        out_port_arbiter_.send(msg, lapse + latency_ - 1); //The arbiter already delivers messages at a rate of 1 per cycle, so it has an implicit latency of 1
     }
 
     void Tile::issueBankAck_(const std::shared_ptr<CacheRequest> & req)
