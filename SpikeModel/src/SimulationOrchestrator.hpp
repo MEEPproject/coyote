@@ -140,7 +140,7 @@ class SimulationOrchestrator : public spike_model::LogCapable, public spike_mode
         std::set<uint16_t> stalled_cores_for_arbiter;
         
         uint16_t max_in_flight_l1_misses;
-        std::vector<uint16_t> in_flight_requests_per_l1;
+        std::vector<std::set<uint64_t>> in_flight_requests_per_l1;
         uint16_t available_mshrs;
         std::vector<uint64_t> mshr_stalls_per_core; //(num_cores);
 
