@@ -28,7 +28,6 @@ namespace spike_model
         //If there is only one access total in the queues for the bank, mark the bank as scheduleable
         if(fetch_queues[bank].size()+load_queues[bank].size()+store_queues[bank].size()==1 && !pending_command[bank])
         {
-            printf("Pushing bank %lu(2)\n", bank);
             banks_to_schedule.push(bank);
         }
     }
@@ -108,7 +107,6 @@ namespace spike_model
     {
         if(fetch_queues[bank].size()+load_queues[bank].size()+store_queues[bank].size()>0)
         {
-            printf("Pushing bank %lu\n", bank);
             banks_to_schedule.push(bank);
         }
 

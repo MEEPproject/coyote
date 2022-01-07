@@ -178,7 +178,6 @@ namespace spike_model {
 		count_control++;
 		
 		uint64_t elements_per_sp = max_vvl / ((uint64_t)(mes->getWidth())*8);
-		printf("Comparing %lu and %lu\n", elements_per_sp, mes->getAVL());
 		vvl[mes->getCoreId()] = std::min(elements_per_sp, mes->getAVL());
 		
 		int lmul = (int)mes->getLMUL();
