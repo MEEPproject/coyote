@@ -170,10 +170,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
 void SimulationOrchestrator::handleSpartaEvents()
 {
     //GET NEXT EVENT
-    if(next_event_tick==sparta::Scheduler::INDEFINITE)
-    {
-        next_event_tick=spike_model->getScheduler()->nextEventTick();
-    }
+    next_event_tick=spike_model->getScheduler()->nextEventTick();
 
     //HANDLE ALL THE EVENTS FOR THE CURRENT CYCLE
     if(next_event_tick==current_cycle)
