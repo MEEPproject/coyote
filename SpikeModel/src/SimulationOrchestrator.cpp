@@ -241,7 +241,6 @@ void SimulationOrchestrator::run()
     //Simulation will end when there are neither pending events nor more instructions to simulate
     while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
     {
-        //printf("---Current %lu, next %lu. Bools: %lu, %lu. Insts: %lu\n", current_cycle, next_event_tick, active_cores.size(), stalled_cores.size(), simulated_instructions_per_core[0]);
         simulateInstInActiveCores();
         handleSpartaEvents();
         //auto t1 = std::chrono::high_resolution_clock::now();
@@ -320,8 +319,13 @@ void SimulationOrchestrator::selectRunnableThreads()
 void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
 {
     r->setTimestamp(current_cycle);
-    in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(r->getAddress());
-    request_manager->putRequest(r);
+
+    //Submit writebacks or requests of other types that have not been already submitted
+    if(r->getType()==spike_model::CacheRequest::AccessType::WRITEBACK || in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].find(r->getAddress())==in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].end())
+    {
+        request_manager->putRequest(r);
+    }
+    in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
 }
 
 void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> r)
@@ -360,13 +364,11 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         {
             core_active=false;
             waiting_on_mshrs[current_core] = true;
-//            std::cout << "MSHR StalL!";
             mshr_stalls_per_core[current_core]++;
             pending_misses_per_core[current_core].push_back(r);
         }
         else
         {
-            //printf("Doing something\n");
             if(r->getType()==spike_model::CacheRequest::AccessType::FETCH)
             {
                 //Fetch misses are serviced. Subsequent, misses will be submitted later.
@@ -388,7 +390,6 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
     else
     {
         uint16_t core=r->getCoreId();
-        in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
         bool is_fetch=r->getType()==spike_model::CacheRequest::AccessType::FETCH;
         bool is_load=r->getType()==spike_model::CacheRequest::AccessType::LOAD;
         bool is_store=r->getType()==spike_model::CacheRequest::AccessType::STORE;
@@ -431,21 +432,31 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 }
             }
         }
+        
 
-
-        if(is_load)
-        {
-            can_run=spike->ackRegister(r->getCoreId(), r->getDestinationRegType(),
-                                       r->getDestinationRegId(), current_cycle);
-        }
-            
+        //Stores may bring lines that are pending for a load
         if(is_load || is_store)
         {
             //Update average memory access time metrics
             avg_mem_access_time_l1_miss=avg_mem_access_time_l1_miss+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time_l1_miss)/num_l2_accesses;
             num_l2_accesses++;
-        }
 
+            std::multimap<uint64_t, std::shared_ptr<spike_model::CacheRequest>>::iterator it,it_start,it_end;
+
+            it_start=in_flight_requests_per_l1[core/num_threads_per_core].lower_bound(r->getAddress());
+            it_end=in_flight_requests_per_l1[core/num_threads_per_core].upper_bound(r->getAddress());
+
+            for (it=it_start; it!=it_end; ++it)
+            {
+                std::shared_ptr<spike_model::CacheRequest> serviced_request=(*it).second;
+                if(serviced_request->getType()==spike_model::CacheRequest::AccessType::LOAD)
+                {
+                    can_run=spike->ackRegister(serviced_request->getCoreId(), serviced_request->getDestinationRegType(), serviced_request->getDestinationRegId(), current_cycle);
+                }
+            }
+        }
+        in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+            
         if(waiting_on_mshrs[core])
         {
             submitPendingCacheRequests(core);
@@ -510,8 +521,8 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         }
     }
 
-    void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
-    {
+void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
+{
     core_active=false;
     core_finished=true;
 }
@@ -693,6 +704,11 @@ void SimulationOrchestrator::submitPendingCacheRequests(uint64_t core)
         miss->setTimestamp(current_cycle);
 
         submitToSparta(miss);
+    }
+
+    if(pending_misses_per_core[core].size()>0)
+    {
+        waiting_on_mshrs[current_core] = true;
     }
 }
 
