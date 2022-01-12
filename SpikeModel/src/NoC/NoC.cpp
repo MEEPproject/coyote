@@ -144,6 +144,7 @@ namespace spike_model
 
     uint8_t NoC::getNetworkForMessage(const NoCMessageType mess) {return message_to_network_and_class_[mess].first;}
     uint8_t NoC::getClassForMessage(const NoCMessageType mess) {return message_to_network_and_class_[mess].second;}
+    const std::string NoC::getNetworkName(const uint8_t noc) {return noc_networks_[noc];}
 
     void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {

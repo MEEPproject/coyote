@@ -91,6 +91,7 @@ namespace spike_model
 
         static uint8_t getNetworkForMessage(const NoCMessageType mess);
         static uint8_t getClassForMessage(const NoCMessageType mess);
+        const std::string getNetworkName(const uint8_t noc);
         /*!
          * \brief Check the injection queue space in NoC for a packet
          * \param injectedByTile Indicates that the source of the messages is a VAS tile

@@ -413,6 +413,7 @@ double SpikeModel::getAvgL2Latency()
     return count_times/count_requests;
 }
 
+// Returns the avg. RTT
 double SpikeModel::getAvgNoCLatency()
 {
     const auto& upt=getSimulationConfiguration()->getUnboundParameterTree();
@@ -420,8 +421,8 @@ double SpikeModel::getAvgNoCLatency()
     
     auto num_tiles=upt.get("top.cpu.params.num_tiles").getAs<uint16_t>();
     
-    uint64_t num_remote_requests=0;
-    uint64_t num_local_requests=0;
+    double num_remote_requests=0; // Is used in float operations
+    double num_local_requests=0; // Is used in float operations
     
     for(std::size_t i = 0; i < num_tiles; ++i)
     {
@@ -438,20 +439,33 @@ double SpikeModel::getAvgNoCLatency()
     if (noc_model == "functional")
     {
         double avg_latency=upt.get("top.cpu.noc.params.packet_latency").getAs<std::uint64_t>();
-        res=((num_local_requests/total_requests)*2*avg_latency)+((num_remote_requests/total_requests)*4*avg_latency);
+        res=((num_local_requests/total_requests)*2*avg_latency)+((num_remote_requests/total_requests)*4*avg_latency); 
+        // Local is *2 because there are 1 packet with request and 1 with reply and remote is *4 because *2 is to reach memory and *2 to reach its home tile
     }
     else if (noc_model == "simple")
     {
+        auto noc = getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::SimpleNoC>();
+        std::string remote_l2_request_noc = noc->getNetworkName(spike_model::NoC::getNetworkForMessage(spike_model::NoCMessageType::REMOTE_L2_REQUEST));
+        std::string remote_l2_ack_noc     = noc->getNetworkName(spike_model::NoC::getNetworkForMessage(spike_model::NoCMessageType::REMOTE_L2_ACK));
+        std::string mem_request_noc       = noc->getNetworkName(spike_model::NoC::getNetworkForMessage(spike_model::NoCMessageType::MEMORY_REQUEST_LOAD));
+        std::string mem_ack_noc           = noc->getNetworkName(spike_model::NoC::getNetworkForMessage(spike_model::NoCMessageType::MEMORY_ACK));
+
         double hop_latency=upt.get("top.cpu.noc.params.latency_per_hop").getAs<std::uint16_t>();
-        double average_hop_count=getRoot()->getChildAs<sparta::CounterBase>(std::string("top.cpu.noc.stats.average_hop_count_DATA_TRANSFER"))->get();
-        double avg_latency=average_hop_count*hop_latency;
-        res=((num_local_requests/total_requests)*2*avg_latency)+((num_local_requests/total_requests)*4*avg_latency);
+        double avg_hop_count_local = 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.hop_count_" + mem_request_noc))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.sent_packets_" + mem_request_noc))->get()
+                                   + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.hop_count_" + mem_ack_noc))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.sent_packets_" + mem_ack_noc))->get();
+        double avg_hop_count_remote = avg_hop_count_local
+                                    + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.hop_count_" + remote_l2_request_noc))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.sent_packets_" + remote_l2_request_noc))->get()
+                                    + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.hop_count_" + remote_l2_ack_noc))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.sent_packets_" + remote_l2_ack_noc))->get();
+        res=((num_local_requests/total_requests)*avg_hop_count_local*hop_latency)+((num_remote_requests/total_requests)*avg_hop_count_remote*hop_latency);
     }
     else if (noc_model == "detailed")
     {
-        double avg_latency_data=upt.get("top.cpu.noc.params.packet_latency_DATA_TRANSFER").getAs<std::uint16_t>();
-        double avg_latency_address=upt.get("top.cpu.noc.params.packet_latency_ADDRESS_ONLY").getAs<std::uint16_t>();
-        res=((num_local_requests/total_requests)*(avg_latency_data+avg_latency_address)) + ((num_local_requests/total_requests)*2*(avg_latency_data+avg_latency_address));
+        double avg_latency_local = 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.packet_latency_MEMORY_REQUEST_LOAD"))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.num_MEMORY_REQUEST_LOAD"))->get()
+                                 + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.packet_latency_MEMORY_ACK"))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.num_MEMORY_ACK"))->get();
+        double avg_latency_remote = avg_latency_local
+                                  + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.packet_latency_REMOTE_L2_REQUEST"))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.num_REMOTE_L2_REQUEST"))->get()
+                                  + 1.0 * getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.packet_latency_REMOTE_L2_ACK"))->get()/getRoot()->getChildAs<sparta::Counter>(std::string("cpu.noc.stats.num_REMOTE_L2_ACK"))->get();
+        res=((num_local_requests/total_requests)*avg_latency_local) + ((num_remote_requests/total_requests)*avg_latency_remote);
     }
     return res;
 }

@@ -143,6 +143,7 @@ namespace spike_model
                 
             // MEM -> MEM messages
             case NoCMessageType::MEM_TILE_REQUEST:
+            case NoCMessageType::MEM_TILE_REPLY:
                 hop_count = abs(mcpus_coordinates_[mess->getDstPort()].first - mcpus_coordinates_[mess->getSrcPort()].first) + 
                             abs(mcpus_coordinates_[mess->getDstPort()].second - mcpus_coordinates_[mess->getSrcPort()].second) +
                             DESTINATION_ROUTER;
