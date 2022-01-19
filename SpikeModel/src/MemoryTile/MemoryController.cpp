@@ -130,7 +130,7 @@ namespace spike_model
         sched->putRequest(mes, bank);
         if(trace_)
         {
-            logger_.logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
+            logger_->logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
         }
 
         if(idle_ & sched->hasBanksToSchedule())
@@ -182,7 +182,7 @@ namespace spike_model
             {
                 if(trace_)
                 {
-                    logger_.logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
+                    logger_->logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
 
                 }
             

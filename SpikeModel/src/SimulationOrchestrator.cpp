@@ -98,7 +98,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
 
         if(trace && simulated_instructions_per_core[current_core]%1000==0)
         {
-           logger_.logKI(current_cycle, current_core); 
+           logger_->logKI(current_cycle, current_core); 
         }
 
         std::list<std::shared_ptr<spike_model::Event>> new_spike_events;
@@ -161,7 +161,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
             }
             if(trace_)
             {
-                logger_.logStall(current_cycle, current_core, 0);
+                logger_->logStall(current_cycle, current_core, 0);
             }
         }
     }
@@ -500,7 +500,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
             resumeCore(core);
             if(trace_)
             {
-                logger_.logResumeWithAddress(current_cycle, core, r->getAddress());
+                logger_->logResumeWithAddress(current_cycle, core, r->getAddress());
 
                 /*if(r->memoryAck())
                 {
@@ -512,10 +512,10 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 {
                         printf("Out\n");
                     }*/
-                    logger_.logResumeWithMC(current_cycle, core, r->getMemoryController());
-                    logger_.logResumeWithMemBank(current_cycle, core, r->getMemoryBank());
-                    logger_.logResumeWithCacheBank(current_cycle, core, r->getCacheBank());
-                    logger_.logResumeWithTile(current_cycle, core, r->getHomeTile());
+                    logger_->logResumeWithMC(current_cycle, core, r->getMemoryController());
+                    logger_->logResumeWithMemBank(current_cycle, core, r->getMemoryBank());
+                    logger_->logResumeWithCacheBank(current_cycle, core, r->getCacheBank());
+                    logger_->logResumeWithTile(current_cycle, core, r->getHomeTile());
                 }
             }
         }
@@ -568,7 +568,7 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
                 resumeCore(i);
                 if(trace_)
                 {
-                    logger_.logResume(current_cycle, i);
+                    logger_->logResume(current_cycle, i);
                 }
                 //The below condition makes sure that the thread from the core-group
                 //in which 'core' belongs, is also made active
@@ -625,7 +625,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
             resumeCore(core);
             if(trace_)
             {
-                logger_.logResume(current_cycle, core);
+                logger_->logResume(current_cycle, core);
             }
         }
     }
@@ -644,7 +644,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadReque
         resumeCore(core);
         if(trace_)
         {
-            logger_.logResume(current_cycle, core);
+            logger_->logResume(current_cycle, core);
         }
     }
 }
@@ -687,7 +687,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
             resumeCore(core);
             if(trace_)
             {
-                logger_.logResume(current_cycle, r->getCoreId());
+                logger_->logResume(current_cycle, r->getCoreId());
             }
         }
     }

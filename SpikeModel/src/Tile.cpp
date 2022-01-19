@@ -197,7 +197,7 @@ namespace spike_model
                     //std::cout << "Issuing local l2 request for remote request for core " << mes->getRequest()->getCoreId() << " for @ " << mes->getRequest()->getAddress() << " from tile " << id_ << "\n";
                     /*if(trace_)
                     {
-                        logger_.logSurrogateBankRequest(getclock()->currentcycle(), mes->getCoreId(), mes->getPC(), mes->getHomeTile(), mes->getAddress());
+                        logger_->logSurrogateBankRequest(getclock()->currentcycle(), mes->getCoreId(), mes->getPC(), mes->getHomeTile(), mes->getAddress());
                     }*/
                     break;
 
@@ -211,15 +211,15 @@ namespace spike_model
                     //std::cout << "Handling remote ack\n";
                     /*if(trace_)
                     {
-                        logger_.logTileRecAckForwarded(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
-                        logger_.logMissServiced(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                        logger_->logTileRecAckForwarded(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                        logger_->logMissServiced(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
                     }*/
                     break;
 
                 case NoCMessageType::MEMORY_ACK:
                     /*if(trace_)
                     {
-                        logger_.logTileRecAck(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
+                        logger_->logTileRecAck(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getAddress());
                     }*/
                     break;
 

@@ -66,11 +66,11 @@ namespace spike_model
     bool L2CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr) {
         if(trace_)
         {
-            logger_.logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());
+            logger_->logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());
             auto evicted_line_time=eviction_times_.find(mem_access_info_ptr->getReq()->getAddress());
             if(evicted_line_time!=eviction_times_.end())
             {
-                logger_.logMissOnEvicted(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress(), getClock()->currentCycle()-evicted_line_time->second);
+                logger_->logMissOnEvicted(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress(), getClock()->currentCycle()-evicted_line_time->second);
                 eviction_times_.erase(evicted_line_time);
             }
         }
@@ -86,7 +86,7 @@ namespace spike_model
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
         if(trace_) {
             if(l2_cache_line->isModified()) {
-                logger_.logL2WB(getClock()->currentCycle(), 0, 0, l2_cache_line->getAddr());
+                logger_->logL2WB(getClock()->currentCycle(), 0, 0, l2_cache_line->getAddr());
                 eviction_times_[l2_cache_line->getAddr()]=getClock()->currentCycle();
             }
             if(l2_cache_line->isValid()) {

@@ -23,12 +23,12 @@ namespace spike_model
             void setLogger(Logger & l)
             {
                 trace_=true;
-                logger_=l;
+                logger_= &l;
             }
 
         protected:
             bool trace_=false;
-            Logger logger_;
+            Logger* logger_;
     };
 }
 #endif

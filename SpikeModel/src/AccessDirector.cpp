@@ -51,7 +51,7 @@ namespace spike_model
                     //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
                     if(tile->trace_)
                     {
-                        tile->logger_.logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
+                        tile->logger_->logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
                     }
 
                     uint64_t lapse=0;
@@ -65,7 +65,7 @@ namespace spike_model
                 {
                     if(tile->trace_)
                     {
-                        tile->logger_.logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
+                        tile->logger_->logRemoteBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getHomeTile(), r->getAddress());
                     }
                     //std::cout << "Issuing remote l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse << "\n";
                     tile->issueRemoteRequest_(r, (r->getTimestamp()+1)-tile->getClock()->currentCycle());
@@ -83,7 +83,7 @@ namespace spike_model
             {
                 if(tile->trace_)
                 {
-                    tile->logger_.logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
+                    tile->logger_->logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
                 }
                 tile->request_manager_->notifyAck(r);
             }
@@ -95,7 +95,7 @@ namespace spike_model
                     //std::cout << "Notifying to manager\n";
                     if(tile->trace_)
                     {
-                        tile->logger_.logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
+                        tile->logger_->logMissServiced(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress());
                     }
                     tile->request_manager_->notifyAck(r); //This should go through the arbiter
                 }
@@ -104,7 +104,7 @@ namespace spike_model
                     //std::cout << "Sending ack to remote\n";
                     if(tile->trace_)
                     {
-                        tile->logger_.logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
+                        tile->logger_->logTileSendAck(tile->getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSourceTile(), r->getAddress());
                     }
 	            std::shared_ptr<ArbiterMessage> msg = std::make_shared<ArbiterMessage>();
                     msg->msg = getDataForwardMessage(r);
