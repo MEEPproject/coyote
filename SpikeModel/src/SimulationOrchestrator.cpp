@@ -325,7 +325,9 @@ void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRe
     {
         request_manager->putRequest(r);
     }
-    in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
+
+    if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
+        in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
 }
 
 void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> r)
@@ -455,7 +457,9 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
                 }
             }
         }
-        in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+
+        if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK)
+            in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
             
         if(waiting_on_mshrs[core])
         {
