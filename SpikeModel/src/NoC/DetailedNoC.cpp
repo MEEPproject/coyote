@@ -376,8 +376,8 @@ namespace spike_model
                     else
                         out_ports_tiles_[mess->getDstPort()]->send(mess, rel_time);       // to TILE
                 } 
-                else // If there is no retired packet, BookSim may not have an event on the next cycle
-                    run_booksim_at_next_cycle[n] = booksim_wrappers_[n]->CheckInFlightPackets();
+                else // If there is no retired packet, BookSim may not have an event on the next cycle: check if there are packets or credits in flight.
+                    run_booksim_at_next_cycle[n] = booksim_wrappers_[n]->CheckInFlightPackets() || booksim_wrappers_[n]->CheckInFlightCredits();
             }
         }
         else // Advance BookSim simulation time
@@ -394,6 +394,7 @@ namespace spike_model
         bool any_network_needs_to_run_at_next_cycle = false;
         for(uint8_t n=0; n < noc_networks_.size() && !any_network_needs_to_run_at_next_cycle; ++n)
             any_network_needs_to_run_at_next_cycle |= run_booksim_at_next_cycle[n];
+
         return any_network_needs_to_run_at_next_cycle;
     }
 
