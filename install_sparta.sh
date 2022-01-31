@@ -4,10 +4,12 @@ if [ -z "$1" ]; then
 	threads="1"
 fi
 
-git clone https://github.com/sparcians/map.git || { cd map;git pull;cd ..; } 
+# Pick specific commit to ensure the compatibility with Coyote code
+
+git clone https://github.com/sparcians/map.git || { cd map;git checkout 533e178;cd ..; } 
 
 cd map/sparta
-git pull
+git checkout 533e178
 mkdir release
 cd release
 cmake .. -DCMAKE_BUILD_TYPE=Release
