@@ -24,7 +24,15 @@ namespace spike_model
         sparta_assert(params->network_width.isVector(), "The top.cpu.noc.params.network_width must be a vector");
         sparta_assert(params->network_width.getNumValues() == noc_networks_.size(),
             "The number of elements in top.cpu.noc.params.network_width must be: " << noc_networks_.size());
-
+ 	for(auto network : noc_networks_)
+                {
+                	min_space_in_inj_queue_.push_back(sparta::Counter(
+                	        	        		 getStatisticSet(),                                      // parent
+                	        	        		 "min_space_in_inj_queue" + network,                     // name
+                	        	        		 "Minimum space seen in" + network + " injection queues",// description
+                	   sparta::Counter::COUNT_LATEST                           // behavior
+                	 ));
+                }
         // Parse BookSim configuration to extract information and checks
         Booksim::BookSimConfig booksim_config;
         booksim_config.ParseFile(booksim_configuration_);
@@ -76,8 +84,10 @@ namespace spike_model
         }
 
         // Get the injection queue size
-        min_space_in_inj_queue_ = booksim_config.GetInt("injection_queue_size");
-
+	for(uint8_t network_id=0; network_id < noc_networks_.size(); ++network_id)
+        {
+        	min_space_in_inj_queue_[network_id] = booksim_config.GetInt("injection_queue_size");
+	}
         // Fill the mcpu_ and tile_to_network and network_is_mcpu vectors
         uint16_t mcpu = 0;
         uint16_t tile = 0;
@@ -239,8 +249,8 @@ namespace spike_model
         if(SPARTA_EXPECT_FALSE(pkt_size > inj_queue_size))
             spaceForPacket = false;
         // Save the min space available at injection queues
-        if(inj_queue_size < (int) min_space_in_inj_queue_)
-            min_space_in_inj_queue_ = inj_queue_size;
+        if(inj_queue_size < (int) min_space_in_inj_queue_[network])
+            min_space_in_inj_queue_[network] = inj_queue_size;
 
         return spaceForPacket;
     }

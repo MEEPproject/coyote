@@ -101,13 +101,7 @@ namespace spike_model
         std::vector<sparta::Counter>            packet_latency_by_type;     //! The accumulated packet latency for each packet type
         std::vector<sparta::Counter>            network_latency_by_noc;     //! The accumulated network latency in each NoC
         std::vector<sparta::Counter>            network_latency_by_type;     //! The accumulated network latency for each packet type
-        sparta::Counter                         min_space_in_inj_queue_ = sparta::Counter
-        (
-            getStatisticSet(),                                  // parent
-            "min_space_in_inj_queue",                           // name
-            "Minimum space seen in injection queues",           // description
-            sparta::Counter::COUNT_LATEST                       // behavior
-        );                                                                  //! The minimum space seen in any injection queue
+        std::vector<sparta::Counter>            min_space_in_inj_queue_;    //! The minimum space seen in any injection queue
         std::vector<sparta::StatisticDef>       average_hop_count_by_noc;   //! The average hop count for each NoC (counts crossed routers)
         std::vector<sparta::StatisticDef>       load_flits_by_noc;          //! Load in each NoC as flits/nodes/cycles
         std::vector<sparta::StatisticDef>       avg_packet_lat_by_noc;      //! Average packet latency in each NoC
