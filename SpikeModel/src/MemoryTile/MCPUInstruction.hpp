@@ -55,7 +55,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w, uint64_t vs3, uint64_t rs1, uint64_t rs2, uint64_t vd, uint64_t vs2): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), base_address(addr), operation(o), width(w), vs3(vs3), rs1(rs1), rs2(rs2), vd(vd), vs2(vs2) {}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w, uint64_t insn_bits): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), base_address(addr), operation(o), width(w), insn_bits(insn_bits) {}
 
 			/*!
 			 * \brief Handle the event
@@ -82,11 +82,7 @@ namespace spike_model {
              * \return The base address of the instruction
              */
             uint64_t getAddress() const {return base_address;}
-            uint64_t getvs3() const {return vs3;}
-            uint64_t getrs1() const {return rs1;}
-            uint64_t getrs2() const {return rs2;}
-            uint64_t getvd() const {return vd;}
-            uint64_t getvs2() const {return vs2;}
+            uint64_t getInsnBits() const {return insn_bits;}
 
 
 		private:
@@ -95,7 +91,7 @@ namespace spike_model {
 			Operation operation;
 			SubOperation sub_operation = SubOperation::UNIT;
 			VectorElementType width;		 // 8, 16, 32, or 64 bit memory operation
-                        uint64_t vs3, rs1, rs2, vd, vs2;
+                        uint64_t insn_bits;
 	};
 	
 	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
