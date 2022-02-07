@@ -95,7 +95,7 @@ namespace spike_model {
 	};
 	
 	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
-		str << "0x" << std::hex << instr.getAddress() << " @ " << instr.getTimestamp() << " Op: 0x" << (uint)instr.get_operation() << " SubOp: 0x" << (uint)instr.get_suboperation() << ", width: 0x" << (uint)instr.get_width() << ", coreID: 0x" << instr.getCoreId() << ", destReg: 0x" << instr.getDestinationRegId() << ", ID: 0x" << instr.getID() << ", PC: " << instr.getPC();
+		str << "0x" << std::hex << instr.getAddress() << " @ " << instr.getTimestamp() << " Op: 0x" << (uint)instr.get_operation() << " SubOp: 0x" << (uint)instr.get_suboperation() << ", width: 0x" << (uint)instr.get_width() << ", coreID: 0x" << instr.getCoreId() << ", destReg: 0x" << instr.getDestinationRegId() << ", ID: 0x" << instr.getID() << ", PC: " << instr.getPC() << ", instr: 0x" << instr.getInsnBits();
 		return str;
 	}
 }
