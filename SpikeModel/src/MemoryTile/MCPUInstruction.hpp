@@ -55,7 +55,7 @@ namespace spike_model {
 			 * \param o The type of operation
 			 * \param w The width of the vector element
 			 */
-			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), base_address(addr), operation(o), width(w) {}
+			MCPUInstruction(uint64_t pc, uint64_t time, uint16_t c, uint64_t addr, Operation o, VectorElementType w, uint64_t insn_bits): RegisterEvent(pc, time, c, -1, spike_model::RegisterEvent::RegType::DONT_CARE), ParentInstId(), base_address(addr), operation(o), width(w), insn_bits(insn_bits) {}
 
 			/*!
 			 * \brief Handle the event
@@ -82,18 +82,20 @@ namespace spike_model {
              * \return The base address of the instruction
              */
             uint64_t getAddress() const {return base_address;}
+            uint64_t getInsnBits() const {return insn_bits;}
 
 
 		private:
-            uint64_t base_address;
+                        uint64_t base_address;
 			std::vector<uint64_t> indices;
 			Operation operation;
 			SubOperation sub_operation = SubOperation::UNIT;
 			VectorElementType width;		 // 8, 16, 32, or 64 bit memory operation
+                        uint64_t insn_bits;
 	};
 	
 	inline std::ostream& operator<<(std::ostream &str, MCPUInstruction &instr) {
-		str << "0x" << std::hex << instr.getAddress() << " @ " << instr.getTimestamp() << " Op: 0x" << (uint)instr.get_operation() << " SubOp: 0x" << (uint)instr.get_suboperation() << ", width: 0x" << (uint)instr.get_width() << ", coreID: 0x" << instr.getCoreId() << ", destReg: 0x" << instr.getDestinationRegId() << ", ID: 0x" << instr.getID() << ", PC: " << instr.getPC();
+		str << "0x" << std::hex << instr.getAddress() << " @ " << instr.getTimestamp() << " Op: 0x" << (uint)instr.get_operation() << " SubOp: 0x" << (uint)instr.get_suboperation() << ", width: 0x" << (uint)instr.get_width() << ", coreID: 0x" << instr.getCoreId() << ", destReg: 0x" << instr.getDestinationRegId() << ", ID: 0x" << instr.getID() << ", PC: " << instr.getPC() << ", instr: 0x" << instr.getInsnBits();
 		return str;
 	}
 }
