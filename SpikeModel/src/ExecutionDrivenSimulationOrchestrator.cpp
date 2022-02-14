@@ -1,6 +1,10 @@
 #include "ExecutionDrivenSimulationOrchestrator.hpp"
 
+<<<<<<< HEAD:SpikeModel/src/ExecutionDrivenSimulationOrchestrator.cpp
 ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::DetailedNoC* detailed_noc):
+=======
+ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc):
+>>>>>>> First working implementation of traces for L2 unit testing:SpikeModel/src/ExecutionDrivenSimulationOrchestrator.cpp
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
