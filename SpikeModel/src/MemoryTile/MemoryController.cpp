@@ -124,6 +124,7 @@ namespace spike_model
 
     void MemoryController::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
+        printf("Handling\n");
         uint64_t address=r->getAddress();
         
         uint64_t rank=0;
