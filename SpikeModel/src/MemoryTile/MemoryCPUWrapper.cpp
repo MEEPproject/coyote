@@ -5,7 +5,7 @@
 //#define DEBUG_MEMTILE
 
 #ifdef DEBUG_MEMTILE
-	#define DEBUG_MSG(str) do {std::cout << getClock()->currentCycle() << ": " << name << ": " << __func__ << ": " << str << std::endl;} while(0)
+	#define DEBUG_MSG(str) do {std::cout << getClock()->currentCycle() << ": " << name << " (" << getID() << "): " << __func__ << ": " << str << std::endl;} while(0)
 	#define DEBUG_MSG_COLOR(color, str) do {std::cout << color; DEBUG_MSG(str); std::cout << SPARTA_UNMANAGED_COLOR_NORMAL;} while(0)
 #else
 	#define DEBUG_MSG(str) do {} while(0)
@@ -157,7 +157,7 @@ namespace spike_model {
 		} else {
 			count_received_other_memtile++;
 			if(mes->isServiced()) {					//-- this transaction has been completed by a different memory tile.
-				
+				DEBUG_MSG("\tServiced by a different Memory Tile");
 				handleReplyMessageFromMC(mes);
                 if(trace_) {
 				    logger_->logMemTileMTOpRecv(getClock()->currentCycle(), getID(), calcDestMemTile(mes->getAddress()), mes->getAddress());
@@ -425,11 +425,12 @@ namespace spike_model {
 		
 		
 		while(remaining_elements > 0) {
-			DEBUG_MSG("elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", address: " << address);
 			
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
 			memory_request->set_mem_op_latency(line_size/32);	// load 64 Bytes
+			
+			DEBUG_MSG("elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", CR: " << *memory_request);
 									
 			//-- schedule this request for the MC
 			sendToDestination(memory_request);
@@ -738,8 +739,8 @@ namespace spike_model {
 					mes,
 					NoCMessageType::MEM_TILE_REQUEST,
 					line_size,
-					destMemTile,
-					getID()
+					getID(),
+					destMemTile
 			);
 			count_send_other_memtile++;
 			sched_outgoing.push(noc_message);

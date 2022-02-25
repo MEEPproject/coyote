@@ -256,9 +256,9 @@ namespace spike_model
             void resetSizeRequestedToMemory();
     };
     
-    inline std::ostream& operator<<(std::ostream &str, CacheRequest const &req)
+    inline std::ostream& operator<<(std::ostream &str, CacheRequest &req)
     {
-        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: 0x" << req.getCoreId() << ", destRegID: " << req.getDestinationRegId() << ", destRegType: " << (int)req.getDestinationRegType() << ", type: " << (int)req.getType();
+        str << "0x" << std::hex << req.getAddress() << " @ " << req.getTimestamp() << ", coreID: 0x" << req.getCoreId() << ", destRegID: " << req.getDestinationRegId() << ", destRegType: " << (int)req.getDestinationRegType() << ", type: " << (int)req.getType() << ", memTile: " << (int)req.getMemTile() << ", serviced: " << req.isServiced();
         return str;
     }
 }
