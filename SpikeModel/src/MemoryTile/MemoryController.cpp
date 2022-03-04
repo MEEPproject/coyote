@@ -235,6 +235,27 @@ namespace spike_model
                 std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> hit: " << (float)time_load_hit/num_load_hit << "(" << num_load_hit << ", " << time_to_service << ")\n";
             }
         }
+        else
+        {
+            if(req->getClosesMemoryRow())
+            {
+                num_load_miss++;
+                time_load_miss+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> miss: " << (float)time_load_miss/num_load_miss << "(" << num_load_miss << ", " << time_to_service << ")\n";
+            }
+            else if(req->getMissesMemoryRow())
+            {
+                num_load_closed++;
+                time_load_closed+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> closed: " << (float)time_load_closed/num_load_closed << "(" << num_load_closed << ", " << time_to_service << ")\n";
+            }
+            else
+            {
+                num_load_hit++;
+                time_load_hit+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> hit: " << (float)time_load_hit/num_load_hit << "(" << num_load_hit << ", " << time_to_service << ")\n";
+            }
+        }
     }
     
     void MemoryController::controllerCycle_()
