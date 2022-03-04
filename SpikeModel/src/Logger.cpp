@@ -80,24 +80,46 @@ namespace spike_model
         logResumeWithAddress(timestamp, id, 0);
     }
 
-    void Logger::logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    void Logger::logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
     {
         std::string ev="l2_read";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev  << std::hex << address;
-            log(timestamp, id, pc, "l2_read,"+sstream.str());
+            sstream <<  ev  << "," << size << "," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
         }
     }
 
-    void Logger::logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    void Logger::logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
     {
         std::string ev="l2_write";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev  << std::hex << address;
+            sstream <<  ev  << "," << size << "," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
+    }
+    
+    void Logger::logLLCRead(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
+    {
+        std::string ev="llc_read";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev  << "," << size << "," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
+    }
+
+    void Logger::logLLCWrite(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
+    {
+        std::string ev="llc_write";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev  << "," << size << "," << std::hex << address;
             log(timestamp, id, pc, sstream.str());
         }
     }
@@ -122,13 +144,13 @@ namespace spike_model
         }
     }
 
-    void Logger::logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    void Logger::logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
     {
         std::string ev="l2_wb";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0," << std::hex << address;
+            sstream << ev << "," << size << "," << std::hex << address;
             log(timestamp, id, pc, sstream.str());
         }
     }
@@ -243,13 +265,24 @@ namespace spike_model
         }
     }
 
-    void Logger::logMemoryControllerRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address)
+    void Logger::logMemoryControllerRead(uint64_t timestamp, uint64_t id, uint64_t pc, uint32_t size, uint64_t address)
     {
-        std::string ev="memory_request";
+        std::string ev="memory_read";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << "," << unsigned(mc) << "," << std::hex << address;
+            sstream << ev << "," << unsigned(size) << "," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
+    }
+    
+    void Logger::logMemoryControllerWrite(uint64_t timestamp, uint64_t id, uint64_t pc, uint32_t size, uint64_t address)
+    {
+        std::string ev="memory_write";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << "," << unsigned(size) << "," << std::hex << address;
             log(timestamp, id, pc, sstream.str());
         }
     }

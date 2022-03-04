@@ -1,6 +1,6 @@
-#include "SimulationOrchestrator.hpp"
+#include "ExecutionDrivenSimulationOrchestrator.hpp"
 
-SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::EventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc):
+ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
@@ -42,7 +42,7 @@ SimulationOrchestrator::SimulationOrchestrator(std::shared_ptr<spike_model::Spik
     waiting_on_mshrs.resize(num_cores,false);
 }
 
-SimulationOrchestrator::~SimulationOrchestrator()
+void ExecutionDrivenSimulationOrchestrator::saveReports()
 {
     //PRINTS THE SPARTA STATISTICS
     spike_model->saveReports();
@@ -55,10 +55,15 @@ SimulationOrchestrator::~SimulationOrchestrator()
     }
     printf("Total simulated instructions %lu\n", tot);
     
-    memoryAccessLatencyReport();
+    memoryAccessLatencyReport(); 
 }
 
-void SimulationOrchestrator::memoryAccessLatencyReport()
+ExecutionDrivenSimulationOrchestrator::~ExecutionDrivenSimulationOrchestrator()
+{
+    saveReports();
+}
+
+void ExecutionDrivenSimulationOrchestrator::memoryAccessLatencyReport()
 {
     uint64_t num_l1_hits=spike->getNumL1DataHits();
     uint64_t num_mem_accesses=num_l1_hits+num_l2_accesses;
@@ -82,12 +87,12 @@ void SimulationOrchestrator::memoryAccessLatencyReport()
     //std::cout << "The monitored section took " << timer <<" nanoseconds\n";
 }
 
-uint64_t SimulationOrchestrator::spartaDelay(uint64_t cycle)
+uint64_t ExecutionDrivenSimulationOrchestrator::spartaDelay(uint64_t cycle)
 {
     return cycle-spike_model->getScheduler()->getCurrentTick();
 }
 
-void SimulationOrchestrator::simulateInstInActiveCores()
+void ExecutionDrivenSimulationOrchestrator::simulateInstInActiveCores()
 {
     for(uint16_t i=0;i<runnable_cores.size();i++)
     {
@@ -167,7 +172,7 @@ void SimulationOrchestrator::simulateInstInActiveCores()
     }
 }
 
-void SimulationOrchestrator::handleSpartaEvents()
+void ExecutionDrivenSimulationOrchestrator::handleSpartaEvents()
 {
     //GET NEXT EVENT
     next_event_tick=spike_model->getScheduler()->nextEventTick();
@@ -220,22 +225,22 @@ void SimulationOrchestrator::handleSpartaEvents()
     }
 }
 
-void SimulationOrchestrator::scheduleArbiter()
+void ExecutionDrivenSimulationOrchestrator::scheduleArbiter()
 {
     request_manager->scheduleArbiter();
 }
 
-bool SimulationOrchestrator::hasArbiterQueueFreeSlot(uint16_t core)
+bool ExecutionDrivenSimulationOrchestrator::hasArbiterQueueFreeSlot(uint16_t core)
 {
     return request_manager->hasArbiterQueueFreeSlot(core);
 }
 
-bool SimulationOrchestrator::hasMsgInArbiter()
+bool ExecutionDrivenSimulationOrchestrator::hasMsgInArbiter()
 {
     return request_manager->hasMsgInArbiter();
 }
 
-void SimulationOrchestrator::run()
+void ExecutionDrivenSimulationOrchestrator::run()
 {
     //Each iteration of the loop handles a cycle
     //Simulation will end when there are neither pending events nor more instructions to simulate
@@ -284,10 +289,11 @@ void SimulationOrchestrator::run()
             //Advance clock to next
             current_cycle++;
         }
-    } 
+    }
+    printf("!!)!)!)!)!)!)!)\n");
 }
 
-void SimulationOrchestrator::selectRunnableThreads()
+void ExecutionDrivenSimulationOrchestrator::selectRunnableThreads()
 {
     //If active core is changed, mark the other active thread in RR fashion as runnable
     for(uint16_t i = 0; i < cur_cycle_suspended_threads.size(); i++)
@@ -316,26 +322,28 @@ void SimulationOrchestrator::selectRunnableThreads()
     }
 }
 
-void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
+void ExecutionDrivenSimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
 {
     r->setTimestamp(current_cycle);
 
     //Submit writebacks or requests of other types that have not been already submitted
     if(r->getType()==spike_model::CacheRequest::AccessType::WRITEBACK || in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].find(r->getAddress())==in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].end())
     {
-        request_manager->putRequest(r);
+        request_manager->putEvent(r);
     }
 
     if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
+    {
         in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
+    }
 }
 
-void SimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> r)
+void ExecutionDrivenSimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::Event> r)
 {
-    request_manager->putRequest(r);
+    request_manager->putEvent(r);
 }
 
-void SimulationOrchestrator::resumeCore(uint64_t core)
+void ExecutionDrivenSimulationOrchestrator::resumeCore(uint64_t core)
 {
     std::vector<uint16_t>::iterator it;
 
@@ -358,7 +366,7 @@ void SimulationOrchestrator::resumeCore(uint64_t core)
     }
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
 {
     if(!r->isServiced())
     {
@@ -525,13 +533,13 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r
         }
     }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
 {
     core_active=false;
     core_finished=true;
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
 {
     if(is_fetch)
     {
@@ -543,7 +551,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::Fence> f)
     }
 }
 
-void SimulationOrchestrator::runPendingSimfence(uint64_t core)
+void ExecutionDrivenSimulationOrchestrator::runPendingSimfence(uint64_t core)
 {
     //set the thread_barrier_cnt to number of threads, if not already set
     if(thread_barrier_cnt == 0)
@@ -605,7 +613,7 @@ void SimulationOrchestrator::runPendingSimfence(uint64_t core)
     }
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
 {
     if(!r->isServiced())
     {
@@ -635,7 +643,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUSetVVL> r)
     }
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadRequest> r)
 {
     sparta_assert(r->isServiced());
 
@@ -653,7 +661,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::ScratchpadReque
     }
 }
 
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction> i)
 {
     if(is_fetch == true)
     {
@@ -666,7 +674,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::MCPUInstruction
 }
 
 //latency and fetch
-void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEvent> r)
 {
     if(!r->isServiced())
     {
@@ -697,7 +705,7 @@ void SimulationOrchestrator::handle(std::shared_ptr<spike_model::InsnLatencyEven
     }
 }
 
-void SimulationOrchestrator::submitPendingCacheRequests(uint64_t core)
+void ExecutionDrivenSimulationOrchestrator::submitPendingCacheRequests(uint64_t core)
 {
     while(pending_misses_per_core[core].size()>0 && in_flight_requests_per_l1[core/num_threads_per_core].size()<max_in_flight_l1_misses)
     {
@@ -716,7 +724,7 @@ void SimulationOrchestrator::submitPendingCacheRequests(uint64_t core)
     }
 }
 
-void SimulationOrchestrator::submitPendingOps(uint64_t core)
+void ExecutionDrivenSimulationOrchestrator::submitPendingOps(uint64_t core)
 {
     if(pending_simfence[core] != NULL)
     {

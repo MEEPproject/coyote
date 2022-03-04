@@ -150,7 +150,8 @@ message("The booksim lib is "${BOOKSIM_PATH})
 add_executable(spike_model
   src/main.cpp
   src/SpikeModel.cpp
-  src/SimulationOrchestrator.cpp
+  src/ExecutionDrivenSimulationOrchestrator.cpp
+  src/TraceDrivenSimulationOrchestrator.cpp
   src/CPUFactory.cpp
   src/CPUTopology.cpp
   src/CPU.cpp
@@ -169,7 +170,7 @@ add_executable(spike_model
   src/PrivateL2Director.cpp
   src/SharedL2Director.cpp
   src/CacheRequest.cpp
-  src/EventManager.cpp
+  src/FullSystemSimulationEventManager.cpp
   src/MemoryTile/MemoryCPUWrapper.cpp
   src/MemoryTile/MemoryController.cpp
   src/MemoryTile/MemoryAccessSchedulerIF.cpp

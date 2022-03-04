@@ -71,8 +71,9 @@ namespace spike_model
              * \param id The id of the producing core
              * \param pc The PC of the instruction related to the event
              * \param address The read address
+             * \param size The size to read
              */
-            void logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            void logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size);
 
             /*!
              * \brief Add an L2 write event to the trace
@@ -80,8 +81,29 @@ namespace spike_model
              * \param id The id of the producing core
              * \param pc The PC of the instruction related to the event
              * \param address The written address
+             * \param size The size to write
              */
-            void logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            void logL2Write(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size);
+            
+            /*!
+             * \brief Add an LLC Read event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param pc The PC of the instruction related to the event
+             * \param address The read address
+             * \param size The size to read
+             */
+            void logLLCRead(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size);
+
+            /*!
+             * \brief Add an LLC write event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param pc The PC of the instruction related to the event
+             * \param address The written address
+             * \param size The size to write
+             */
+            void logLLCWrite(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size);
 
             /*!
              * \brief Add an L2 writeback event to the trace
@@ -89,8 +111,9 @@ namespace spike_model
              * \param id The id of the producing core (does not fully apply...)
              * \param pc The PC of the instruction related to the event (does not fully apply...)
              * \param address The written address
+             * \param size The size to write back
              */
-            void logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            void logL2WB(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size);
 
             /*!
              * \brief Add a Stall event to the trace. This means that a core is waiting on a memory request.
@@ -169,14 +192,25 @@ namespace spike_model
             void logMemoryCPUAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address);
 
             /*!
-             * \brief Add a an event representing a request to a memory controller
+             * \brief Add a an event representing a read request to a memory controller
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
              * \param pc The PC of the instruction related to the event
-             * \param mc The destination memory controller
+             * \param size The size of the read
              * \param The address in the request
              */
-            void logMemoryControllerRequest(uint64_t timestamp, uint64_t id, uint64_t pc, uint8_t mc, uint64_t address);
+            void logMemoryControllerRead(uint64_t timestamp, uint64_t id, uint64_t pc, uint32_t size, uint64_t address);
+
+            /*!
+             * \brief Add a an event representing a write request to a memory controller
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param pc The PC of the instruction related to the event
+             * \param size The size of the write
+             * \param The address in the request
+             * \param The size to write
+             */
+            void logMemoryControllerWrite(uint64_t timestamp, uint64_t id, uint64_t pc, uint32_t size, uint64_t address);
 
             /*!
              * \brief Add an event representing the start of the operation of a memory controller to service a request

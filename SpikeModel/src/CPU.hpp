@@ -52,7 +52,7 @@ public:
     };
 
     //! \brief Name of this resource. Required by sparta::UnitFactory
-    static constexpr char name[] = "cpu";
+    static constexpr char name[] = "arch";
 
     /**
      * @brief Constructor for CPU

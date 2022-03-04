@@ -13,7 +13,7 @@ namespace spike_model
 
     L3CacheBank::L3CacheBank(sparta::TreeNode *node, const L3CacheBankParameterSet *p) :
                     CacheBank(node, p->always_hit, p->miss_latency, p->hit_latency,
-                              p->max_outstanding_misses, p->max_outstanding_wbs, false, p->line_size, p->size_kb,
+                              p->max_outstanding_misses, p->max_outstanding_wbs, false, p->unit_test, p->line_size, p->size_kb,
                               p->associativity, p->bank_and_tile_offset)
     {
         in_core_req_.registerConsumerHandler
@@ -21,6 +21,29 @@ namespace spike_model
 
         in_biu_ack_.registerConsumerHandler
                 (CREATE_SPARTA_HANDLER_WITH_DATA(L3CacheBank, sendAck_, std::shared_ptr<CacheRequest>));
+    }
+    
+    void L3CacheBank::logCacheRequest(std::shared_ptr<CacheRequest> r)
+    {
+        switch(r->getType())
+        {
+            case CacheRequest::AccessType::FETCH:
+                logger_->logLLCRead(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress(), r->getSize());
+                break;
+
+            case CacheRequest::AccessType::LOAD:
+                logger_->logLLCRead(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress(), r->getSize());
+                break;
+
+            case CacheRequest::AccessType::STORE:
+                logger_->logLLCWrite(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress(), r->getSize());
+                break;
+
+            case CacheRequest::AccessType::WRITEBACK:
+                logger_->logLLCWrite(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress(), r->getSize());
+                break;
+        }
+
     }
 
     void L3CacheBank::scheduleIssueAccess(uint64_t cycle)

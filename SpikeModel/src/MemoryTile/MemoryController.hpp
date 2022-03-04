@@ -22,6 +22,8 @@
 #include <queue>
 
 #include "LogCapable.hpp"
+#include "EventVisitor.hpp"
+#include "SimulationEntryPoint.hpp"
 #include "MemoryAccessSchedulerIF.hpp"
 #include "CommandSchedulerIF.hpp"
 #include "MemoryBank.hpp"
@@ -32,8 +34,10 @@ namespace spike_model
     class MemoryBank; //Forward declaration
     class MemoryAccessSchedulerIF; //Forward declaration
 
-    class MemoryController : public sparta::Unit, public LogCapable
+    class MemoryController : public sparta::Unit, public LogCapable, public EventVisitor, public SimulationEntryPoint
     {
+        using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
+
         /*!
          * \class spike_model::MemoryController
          * \brief MemoryController models a the operation of simple memory controller
@@ -123,6 +127,7 @@ namespace spike_model
                        "WTRS:4",
                        "XP:8",
                        "XS:216"}), "The header size of each message including CRC (in bits)")
+                PARAMETER(bool, unit_test, false, "The controller will be used in a unit testing scenario. Messages will not be output through ports")
             };
 
             /*!
@@ -163,15 +168,20 @@ namespace spike_model
              * \brief The number of memory controllers
              * \param The number of rows in each bank
              * \param The number of columns in each bank
-             * \param The size of a cache line
              */
-            void setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size);
+            void setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank);
 
             /*
              *\brief Get the AddressMappingPolicy for the memory controller
              *\return The address mapping policy
              */
             spike_model::AddressMappingPolicy getAddressMapping();
+        
+            /*!
+             * \brief Handles a memory request
+             * \param r The event to handle
+             */
+            void handle(std::shared_ptr<spike_model::CacheRequest> r) override;
 
         private:
 
@@ -196,6 +206,7 @@ namespace spike_model
             std::shared_ptr<std::vector<uint64_t>> latencies;
 
             bool idle_=true;
+            bool unit_test_;
 
             std::shared_ptr<std::vector<MemoryBank *>> banks;
             
@@ -208,8 +219,6 @@ namespace spike_model
             uint64_t bank_mask;
             uint64_t row_mask;
             uint64_t col_mask;
-
-            uint16_t line_size;
 
             std::unique_ptr<MemoryAccessSchedulerIF> sched;
             std::unique_ptr<CommandSchedulerIF> ready_commands;
@@ -311,6 +320,14 @@ namespace spike_model
              * \return 
              */
             LatencyName getLatencyNameFromString_(const std::string& lat);
+
+        protected:
+            /*!
+             * \brief Enqueue an event to the tile
+             * \param The event to submit 
+             */
+            virtual void putEvent(const std::shared_ptr<Event> & ) override;
+
     };
 }
 #endif

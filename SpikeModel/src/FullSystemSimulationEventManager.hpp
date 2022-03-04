@@ -1,6 +1,6 @@
 
-#ifndef __EVENT_MANAGER_HH__
-#define __EVENT_MANAGER_HH__
+#ifndef __FULL_SYSTEM_SIMULATION_EVENT_MANAGER_HH__
+#define __FULL_SYSTEM_SIMULATION_EVENT_MANAGER_HH__
 
 #include <memory>
 #include "ServicedRequests.hpp"
@@ -9,24 +9,28 @@
 #include "AddressMappingPolicy.hpp"
 #include "Event.hpp"
 #include "MemoryTile/MCPUSetVVL.hpp"
+#include "SimulationEntryPoint.hpp"
 
 class SpikeModel; //Forward declaration
+class ExecutionDrivenSimulationOrchestrator;
 
 namespace spike_model
 {
-    class Tile; //Forward declaration    
+    class Tile; //Forward declaration
 
-    class EventManager : public spike_model::EventVisitor
+    class FullSystemSimulationEventManager : public spike_model::EventVisitor, public spike_model::SimulationEntryPoint
     {
+        friend class ::ExecutionDrivenSimulationOrchestrator;
+
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
 
         /**
-         * \class spike_model::EventManager
+         * \class spike_model::FullSystemSimulationEventManager
          *
-         * \brief EventManager is the main interface between Spike and Sparta.
+         * \brief FullSystemSimulationEventManager is the main interface between Spike and Sparta.
          *
-         * Instances of SimulationOrchestrator use an instance of EventManager to forward a Request 
-         * to Sparta and check for its completion. The EventManager also holds information regarding
+         * Instances of ExecutionDrivenSimulationOrchestrator use an instance of FullSystemSimulationEventManager to forward a Request 
+         * to Sparta and check for its completion. The FullSystemSimulationEventManager also holds information regarding
          * the memory hiwerarchy of the modelled architecture, to update the data of requests.
          *
          */
@@ -40,13 +44,13 @@ namespace spike_model
              * \param tiles The tiles handled my the request manager
              * \param cores_per_tile The number of cores per tile
              */
-            EventManager(std::vector<Tile *> tiles, uint16_t cores_per_tile);
+            FullSystemSimulationEventManager(std::vector<Tile *> tiles, uint16_t cores_per_tile);
             
             /*!
-             * \brief Forward an L2 request to the memory hierarchy.
-             * \param req The request to forward 
+             * \brief Submit an event.
+             * \param ev The event to submit.
              */
-            virtual void putRequest(std::shared_ptr<Event> req);
+            virtual void putEvent(const std::shared_ptr<Event> &) override;
             
             /*!
              * \brief Notify the completion of request

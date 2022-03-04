@@ -24,14 +24,13 @@
 
 #include "CacheRequest.hpp"
 #include "ScratchpadRequest.hpp"
-
 #include "SimpleDL1.hpp"
-
 #include "LogCapable.hpp"
+#include "SimulationEntryPoint.hpp"
 
 namespace spike_model
 {
-    class CacheBank : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
+    class CacheBank : public sparta::Unit, public LogCapable, public EventVisitor, public SimulationEntryPoint
     {
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
 
@@ -41,7 +40,7 @@ namespace spike_model
          *
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
          * be in service at the some time. Whether banks are shared or private to the tile is controlled from
-         * the EventManager class. The Cache is write-back and write-allocate.
+         * the FullSystemSimulationFullSystemSimulationEventManager class. The Cache is write-back and write-allocate.
          *
          * This cache might return more than one ack in the same cycle if an access that corresponds to more than one request is serviced. 
          * External arbitration and queueing is necessary to avoid this behavior.
@@ -55,7 +54,7 @@ namespace spike_model
          * \param p The CacheBank parameter set
          */
         CacheBank(sparta::TreeNode* node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
-                  uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, uint64_t line_size, uint64_t size_kb,
+                  uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, bool unit_test, uint64_t line_size, uint64_t size_kb,
                   uint64_t associativity, uint32_t bank_and_tile_offset);
 
         ~CacheBank() {
@@ -132,7 +131,7 @@ namespace spike_model
          * \brief Get a request coming from the input port from the tile and store it for later handling
          * \param req The request to store
          */
-        void getAccess_(const std::shared_ptr<Request> & req);
+        virtual void getAccess_(const std::shared_ptr<Request> & req);
 
         /*!
         * \brief Issue a request from the queue of pending requests
@@ -201,7 +200,7 @@ namespace spike_model
             {&unit_port_set_, "in_tile_ack"};
 
         virtual void scheduleIssueAccess(uint64_t ) = 0;
-
+        
     private:
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -224,14 +223,7 @@ namespace spike_model
         // NOTE:
         // Depending on how many outstanding TLB misses the MMU could handle at the same time
         // This single slot could potentially be extended to a MMU pending miss queue
-
-
-    protected:
-        // Using the same handling policies as the L1 Data Cache
-        using DL1Handle = SimpleDL1::Handle;
-        DL1Handle l2_cache_;
-    
-    private:
+ 
         const bool always_hit_;
         bool cache_busy_ = false;
         // Keep track of the instruction that causes current outstanding cache miss
@@ -246,30 +238,7 @@ namespace spike_model
         uint16_t max_outstanding_misses_;
 
         bool busy_;
-
-        ////////////////////////////////////////////////////////////////////////////////
-        // Callbacks
-        ////////////////////////////////////////////////////////////////////////////////
-
-
-
-        ////////////////////////////////////////////////////////////////////////////////
-        // Regular Function/Subroutine Call
-        ////////////////////////////////////////////////////////////////////////////////
-    protected:
-        /*!
-        * \brief Handle the cache access for a request
-        * \param mem_access_info_ptr The access to handle
-        */
-        bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
-
-        /*!
-        * \brief Update the replacement info for an address
-        * \param The address to update
-        */
-        void reloadCache_(uint64_t, uint16_t);
         
-    private:
         /*!
         * \brief Lookup the cache
         * \param The access for the lookup
@@ -374,11 +343,7 @@ namespace spike_model
         std::list<std::shared_ptr<CacheRequest>> pending_load_requests_;
         std::list<std::shared_ptr<CacheRequest>> pending_store_requests_;
         std::list<std::shared_ptr<ScratchpadRequest>> pending_scratchpad_requests_;
-    
-    protected:
-        std::map<uint64_t, uint64_t> eviction_times_;
-
-    private:
+        
         uint64_t l2_size_kb_;
         uint64_t l2_associativity_;
         uint64_t l2_line_size_;
@@ -387,6 +352,33 @@ namespace spike_model
         uint32_t bank_and_tile_offset_;
 
         long long d;
+   
+        virtual void logCacheRequest(std::shared_ptr<CacheRequest> r)=0;
+
+    protected:
+        std::map<uint64_t, uint64_t> eviction_times_;
+        bool unit_test;
+        // Using the same handling policies as the L1 Data Cache
+        using DL1Handle = SimpleDL1::Handle;
+        DL1Handle l2_cache_;
+        
+        /*!
+         * \brief Enqueue an event to the tile
+         * \param The event to submit 
+         */
+        virtual void putEvent(const std::shared_ptr<Event> & ) override;
+        
+        /*!
+        * \brief Handle the cache access for a request
+        * \param mem_access_info_ptr The access to handle
+        */
+        virtual bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
+
+        /*!
+        * \brief Update the replacement info for an address
+        * \param The address to update
+        */
+        virtual void reloadCache_(uint64_t, uint16_t);
 
 
     };

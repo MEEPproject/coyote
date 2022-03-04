@@ -11,7 +11,7 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     CacheBank::CacheBank(sparta::TreeNode *node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
-                         uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, uint64_t line_size, uint64_t size_kb,
+                         uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, bool unit_test, uint64_t line_size, uint64_t size_kb,
                          uint64_t associativity, uint32_t bank_and_tile_offset) :
         sparta::Unit(node),
         memory_access_allocator(2000, 1000),
@@ -28,11 +28,12 @@ namespace spike_model
         pending_load_requests_(),
         pending_store_requests_(),
         pending_scratchpad_requests_(),
-        eviction_times_(),
         l2_size_kb_(size_kb),
         l2_associativity_(associativity),
         l2_line_size_(line_size),
-        bank_and_tile_offset_(bank_and_tile_offset)
+        bank_and_tile_offset_(bank_and_tile_offset),
+        eviction_times_(),
+        unit_test(unit_test)
     {
 
         // Cache config
@@ -67,7 +68,10 @@ namespace spike_model
             {
                 range_misses.first->second->setServiced();
                 //The total time spent by requests is not updated here. This is for acks
-                out_core_ack_.send(range_misses.first->second);
+                if(!unit_test)
+                {
+                    out_core_ack_.send(range_misses.first->second);
+                }
                 range_misses.first++;
             }
 
@@ -182,7 +186,10 @@ namespace spike_model
 
         if (CACHE_HIT) {
                 mem_access_info_ptr->getReq()->setServiced();
-               	out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+                if(!unit_test)
+                {
+               	    out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+                }
                 total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
         }
         else {
@@ -210,7 +217,7 @@ namespace spike_model
                 if(!already_pending)
                 {
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
-
+                    printf("This is a miss that I am sending\n");
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
 
@@ -322,12 +329,19 @@ namespace spike_model
 
     void CacheBank::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
+        printf("A\n");
         if(r->isServiced())
         {
             sendAckInternal_(r);
         }
         else
         {
+            printf("B\n");
+            if(trace_)
+            {
+                logCacheRequest(r);
+            }
+
             if(r->getType()==CacheRequest::AccessType::LOAD || r->getType()==CacheRequest::AccessType::FETCH)
             {
                 count_cache_reads_+=1;
@@ -351,7 +365,10 @@ namespace spike_model
             {
                 //AUTO HIT
                 r->setServiced();
-                out_core_ack_.send(r,1);
+                if(!unit_test)
+                {
+                    out_core_ack_.send(r,1);
+                }
                 total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+1-r->getTimestampReachCacheBank());
                 count_hit_on_store_++;
             }
@@ -378,6 +395,7 @@ namespace spike_model
 
                 if(!busy_ && !in_flight_misses_.is_full() && pending_wb==nullptr)
                 {
+                    printf("Scheduled!!!!!!!!!!!!!!!!!!!!!\n");
                     busy_=true;
                     //ISSUE EVENT
                     scheduleIssueAccess(sparta::Clock::Cycle(0));
@@ -397,5 +415,9 @@ namespace spike_model
         }
     }
 
+    void CacheBank::putEvent(const std::shared_ptr<Event> & ev)
+    {
+        ev->handle(this);
+    }
 
 } // namespace core_example

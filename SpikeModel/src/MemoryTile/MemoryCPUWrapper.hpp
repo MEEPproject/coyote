@@ -13,7 +13,7 @@
 #include "NoC/NoCMessage.hpp"
 #include "NoC/NoC.hpp"
 #include "Event.hpp"
-#include "EventManager.hpp"
+#include "FullSystemSimulationEventManager.hpp"
 #include "MCPUSetVVL.hpp"
 #include "MCPUInstruction.hpp"
 #include "CacheRequest.hpp"
@@ -186,7 +186,7 @@ namespace spike_model {
 			
 
 
-			//std::shared_ptr<EventManager> request_manager;
+			//std::shared_ptr<FullSystemSimulationEventManager> request_manager;
 			spike_model::NoC *noc;
 			sparta::RootTreeNode *root_node;
 			

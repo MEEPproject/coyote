@@ -21,7 +21,8 @@ namespace spike_model
     num_banks_(p->num_banks),
     num_banks_per_group_(p->num_banks_per_group),
     write_allocate_(p->write_allocate),
-    unused_lsbs_(p->unused_lsbs)
+    unused_lsbs_(p->unused_lsbs),
+    unit_test_(p->unit_test)
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
 
@@ -94,11 +95,21 @@ namespace spike_model
             ready_commands=std::make_unique<FifoCommandScheduler>(latencies, num_banks_);
         }
     }
-
+    
+    void MemoryController::putEvent(const std::shared_ptr<Event> & ev)
+    { 
+        ev->handle(this);
+    }
 
     void MemoryController::receiveMessage_(const std::shared_ptr<spike_model::CacheRequest> &mes)
+    { 
+        mes->handle(this);
+    }
+
+    void MemoryController::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        uint64_t address=mes->getAddress();
+        printf("Handling\n");
+        uint64_t address=r->getAddress();
         
         uint64_t rank=0;
         if(rank_mask!=0)
@@ -124,17 +135,25 @@ namespace spike_model
             col=calculateCol(address);
         }
         
-        mes->setBankInfo(rank, bank, row, col);
+        r->setBankInfo(rank, bank, row, col);
 
-        mes->setTimestampReachMC(getClock()->currentCycle());
-        sched->putRequest(mes, bank);
+        r->setTimestampReachMC(getClock()->currentCycle());
+        sched->putRequest(r, bank);
         if(trace_)
         {
-            logger_->logMemoryControllerRequest(getClock()->currentCycle(), mes->getCoreId(), mes->getPC(), mes->getMemoryController(), mes->getAddress());
+            if(r->getType()==CacheRequest::AccessType::LOAD || r->getType()==CacheRequest::AccessType::FETCH)
+            {
+                logger_->logMemoryControllerRead(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSize(), r->getAddress());
+            }
+            else
+            {
+                logger_->logMemoryControllerWrite(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getSize(), r->getAddress());
+            }
         }
 
         if(idle_ & sched->hasBanksToSchedule())
         {
+            printf("Scheduling\n");
             controller_cycle_event_.schedule();
             idle_=false;
         }
@@ -163,8 +182,12 @@ namespace spike_model
                 total_time_spent_by_wb_requests_=total_time_spent_by_wb_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
                 break;
         }
-        
-        out_port_mcpu_.send(req, 0);
+       
+
+        if(!unit_test_)
+        {
+            out_port_mcpu_.send(req, 0);
+        }
     }
     
     void MemoryController::controllerCycle_()
@@ -180,6 +203,7 @@ namespace spike_model
 
             if(command_to_schedule!=nullptr)
             {
+                printf("Issuing to command queue\n");
                 if(trace_)
                 {
                     logger_->logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
@@ -201,6 +225,7 @@ namespace spike_model
                         total_time_spent_in_queue_wb_=total_time_spent_in_queue_wb_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
                         break;
                 }
+                printf("Adding command\n");
                 ready_commands->addCommand(command_to_schedule);
             }
         }
@@ -211,9 +236,11 @@ namespace spike_model
 
         if(ready_commands->hasCommands())
         {
+            printf("Picking command\n");
             std::shared_ptr<BankCommand> next=ready_commands->getNextCommand(current_t);
             if(next!=nullptr)
             {
+                printf("Sending to bank");
                 (*banks)[next->getDestinationBank()]->issue(next);
                 sched->notifyCommandSubmission(next);
                 uint16_t next_command_delay=1;
@@ -234,6 +261,7 @@ namespace spike_model
 
     void MemoryController::addBank_(MemoryBank * bank)
     {
+        printf("\t--------------------------> Adding bank\n");
         banks->push_back(bank);
         bank->setMemSpec(latencies);
         ready_commands->setBurstLength(bank->getBurstLength());
@@ -380,14 +408,14 @@ namespace spike_model
 
     }
 
-    void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank, uint16_t line_size)
+    void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
     {
-        this->line_size=line_size;
+        printf("--<-<-<-<-<--<-<eawsdfwwefewwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww\n");
         uint64_t mc_shift;
         switch(address_mapping_policy_)
         {
             case AddressMappingPolicy::OPEN_PAGE:
-                mc_shift=ceil(log2(line_size));
+                mc_shift=unused_lsbs_;
                 col_shift=mc_shift+ceil(log2(num_cols_per_bank));
                 bank_shift=col_shift+ceil(log2(num_banks_));
                 rank_shift=bank_shift+0;
@@ -396,7 +424,7 @@ namespace spike_model
                 col_mask=utils::nextPowerOf2(num_cols_per_bank)-1;
                 break;    
             case AddressMappingPolicy::CLOSE_PAGE:
-                mc_shift=ceil(log2(line_size));
+                mc_shift=unused_lsbs_;
                 bank_shift=mc_shift+ceil(log2(num_banks_));
                 rank_shift=bank_shift+0;
                 col_shift=rank_shift+ceil(log2(num_cols_per_bank));

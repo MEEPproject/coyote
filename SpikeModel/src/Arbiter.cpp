@@ -12,7 +12,7 @@ namespace spike_model
         // Also, using the UnboundParameterTree, the parameter needs to be in the config file and the parameter has a default value that 
         // should be used.
         std::string noc_networks = node->getRoot()->getAs<sparta::RootTreeNode>()->getSimulator()->getSimulationConfiguration()
-                                                ->getUnboundParameterTree().tryGet("top.cpu.noc.params.noc_networks")->getAs<std::string>();
+                                                ->getUnboundParameterTree().tryGet("top.arch.noc.params.noc_networks")->getAs<std::string>();
         num_outputs_ = std::count(noc_networks.begin(), noc_networks.end(), ',') + 1;
 
         std::string in_name=std::string("in_tile");

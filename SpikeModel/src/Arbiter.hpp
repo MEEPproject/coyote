@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include "EventManager.hpp"
+#include "FullSystemSimulationEventManager.hpp"
 #include "NoC/NoCMessage.hpp"
 #include "LogCapable.hpp"
 #include "NoC/NoC.hpp"
@@ -30,7 +30,7 @@
 
 namespace spike_model
 {
-    class EventManager; //Forward declarations
+    class FullSystemSimulationFullSystemSimulationEventManager; //Forward declarations
     class NoC;
     class L2CacheBank;
 

@@ -10,7 +10,7 @@
 #include <cinttypes>
 #include "Request.hpp"
 #include "ServicedRequests.hpp"
-#include "EventManager.hpp"
+#include "FullSystemSimulationEventManager.hpp"
 #include "L2SharingPolicy.hpp"
 #include "AddressMappingPolicy.hpp"
 #include "Logger.hpp"
@@ -41,7 +41,7 @@ public:
     // Tear it down
     virtual ~SpikeModel();
 
-    std::shared_ptr<spike_model::EventManager> createRequestManager();
+    std::shared_ptr<spike_model::FullSystemSimulationEventManager> createRequestManager();
 
     spike_model::Logger& getLogger();
 

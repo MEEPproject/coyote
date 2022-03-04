@@ -19,7 +19,7 @@ namespace spike_model
          * and between Sparta Units, either as plain Requests or encapsulated in a NoCMessage.
          *
          */
-        friend class EventManager;
+        friend class FullSystemSimulationEventManager;
 
         public:
 

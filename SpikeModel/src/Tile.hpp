@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include "EventManager.hpp"
+#include "FullSystemSimulationEventManager.hpp"
 #include "NoC/NoCMessage.hpp"
 #include "LogCapable.hpp"
 #include "AddressMappingPolicy.hpp"
@@ -31,17 +31,19 @@
 #include "InsnLatencyEvent.hpp"
 #include "Arbiter.hpp"
 #include "ArbiterMsg.hpp"
+#include "SimulationEntryPoint.hpp"
 
 namespace spike_model
 {
-    class EventManager; //Forward declarations
+    class FullSystemSimulationEventManager; //Forward declarations
     class NoCMessage;
     class Arbiter;
 
-    class Tile : public sparta::Unit, public LogCapable, public spike_model::EventVisitor
+    class Tile : public sparta::Unit, public LogCapable, public EventVisitor, public SimulationEntryPoint
     {
         using spike_model::EventVisitor::handle; //This prevents the compiler from warning on overloading 
         friend class AccessDirector;
+        friend class FullSystemSimulationEventManager; //Friendship is not inherited. This is to access private method putEvent from SimulationEntryPoint.
 
         /*!
          * \class spike_model::Tile
@@ -108,7 +110,7 @@ namespace spike_model
              * \brief Set the request manager for the tile
              * \param r The request manager
              */
-            void setRequestManager(std::shared_ptr<EventManager> r);
+            void setRequestManager(std::shared_ptr<FullSystemSimulationEventManager> r);
 
             /*!
              * \brief Set the id for the tile
@@ -137,13 +139,6 @@ namespace spike_model
             {
                 return num_tiles_;
             }
-
-            /*!
-             * \brief Enqueue an L2 request to the tile
-             * \param lapse The number of cycles that the request needs to be delayed to 
-             * accomodate the difference between the Sparta and overall simulation clocks
-             */
-            void putRequest_(const std::shared_ptr<Event> & req);
             
             /*!
              * \brief Notify the completion of the service for an L2 request
@@ -198,7 +193,14 @@ namespace spike_model
                                 uint64_t num_mcs, uint64_t mc_shift, uint64_t mc_mask, uint16_t num_cores, uint16_t corr_mcpu);
 
             uint16_t getL2Banks();
-            std::shared_ptr<EventManager> getRequestManager();
+            std::shared_ptr<FullSystemSimulationEventManager> getRequestManager();
+            
+        protected:
+            /*!
+             * \brief Enqueue an event to the tile
+             * \param The event to submt 
+             */
+            virtual void putEvent(const std::shared_ptr<Event> & ) override;
 
         private:
             uint16_t id_;
@@ -242,7 +244,7 @@ namespace spike_model
     
             Arbiter *arbiter;
 
-            std::shared_ptr<EventManager> request_manager_;
+            std::shared_ptr<FullSystemSimulationEventManager> request_manager_;
 
             /*!
              * \brief Send a request to a memory controller

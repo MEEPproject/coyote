@@ -81,14 +81,14 @@ namespace spike_model {
 				auto config			= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
 				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
 				this->enabled_llc	= config.tryGet("meta.params.enable_llc")->getAs<bool>();
-				this->sp_reg_size	= (size_t)config.tryGet("top.cpu.tile0.params.num_l2_banks")->getAs<uint16_t>() *
-									  (size_t)config.tryGet("top.cpu.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
+				this->sp_reg_size	= (size_t)config.tryGet("top.arch.tile0.params.num_l2_banks")->getAs<uint16_t>() *
+									  (size_t)config.tryGet("top.arch.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
 									  (size_t)1024 / (
-									  	(size_t)config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>() /
-									  	(size_t)config.tryGet("top.cpu.params.num_tiles")->getAs<uint16_t>()
+									  	(size_t)config.tryGet("top.arch.params.num_cores")->getAs<uint16_t>() /
+									  	(size_t)config.tryGet("top.arch.params.num_tiles")->getAs<uint16_t>()
 									  ) /
 									  (size_t)num_of_registers;
-				uint16_t n_cores	= config.tryGet("top.cpu.params.num_cores")->getAs<uint16_t>();
+				uint16_t n_cores	= config.tryGet("top.arch.params.num_cores")->getAs<uint16_t>();
 				this->vvl			= (uint32_t *)std::calloc(n_cores, sizeof(uint32_t));
 				sparta_assert(this->vvl != nullptr, "Could not allocate the array to hold VVL in the Memory Tile.");
 				
@@ -756,7 +756,7 @@ namespace spike_model {
 	
 	void MemoryCPUWrapper::setID(uint16_t new_id) {
 		auto config	= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
-		uint16_t max_id = config.tryGet("top.cpu.params.num_memory_cpus")->getAs<uint16_t>();
+		uint16_t max_id = config.tryGet("top.arch.params.num_memory_cpus")->getAs<uint16_t>();
 		
 		sparta_assert(new_id < max_id, "The given ID for the Memory Tile is out of range!");
 		

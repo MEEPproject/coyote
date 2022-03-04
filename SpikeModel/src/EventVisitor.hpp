@@ -28,7 +28,7 @@ namespace spike_model
          *
          * \brief EventVisitor uses the Visitor design pattern to operate on Events
          *
-         * SimulationOrchestrator inherits from this class. Thiss efectively separates all Sparta files from the Spike side compilation.
+         * ExecutionDrivenSimulationOrchestrator inherits from this class. Thiss efectively separates all Sparta files from the Spike side compilation.
          * Each class extending EventVisitor will potentially define its own handle methods for particular kinds of events.
          *
          */

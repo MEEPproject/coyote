@@ -28,11 +28,11 @@ namespace spike_model
         out_ports_l2_reqs_(num_l2_banks_)
     {
         sparta_assert(l2_sharing_mode_ == "tile_private" || l2_sharing_mode_ == "fully_shared", 
-            "The top.cpu.tile*.params.l2_sharing_mode must be tile_private or fully_shared");
+            "The top.arch.tile*.params.l2_sharing_mode must be tile_private or fully_shared");
         sparta_assert(bank_policy_ == "page_to_bank" || bank_policy_ == "set_interleaving", 
-            "The top.cpu.tile*.params.bank_policy must be page_to_bank or set_interleaving");
+            "The top.arch.tile*.params.bank_policy must be page_to_bank or set_interleaving");
         sparta_assert(scratchpad_policy_ == "core_to_bank" || scratchpad_policy_ == "vreg_interleaving",
-            "The top.cpu.tile*.params.scratchpad_policy must be core_to_bank or vreg_interleaving");
+            "The top.arch.tile*.params.scratchpad_policy must be core_to_bank or vreg_interleaving");
         node_ = node;
         arbiter = NULL;
 
@@ -178,7 +178,7 @@ namespace spike_model
         issueLocalRequest_(req, 0);
     }
 
-    void Tile::putRequest_(const std::shared_ptr<Event> & req)
+    void Tile::putEvent(const std::shared_ptr<Event> & req)
     {
         req->handle(this);
     }
@@ -253,12 +253,12 @@ namespace spike_model
         std::cout << "There are " << unsigned(bank_bits) << " bits for banks and " << unsigned(set_bits) << " bits for sets\n";
     }
 
-    void Tile::setRequestManager(std::shared_ptr<EventManager> r)
+    void Tile::setRequestManager(std::shared_ptr<FullSystemSimulationEventManager> r)
     {
         request_manager_=r;
     }
 
-    std::shared_ptr<EventManager> Tile::getRequestManager()
+    std::shared_ptr<FullSystemSimulationEventManager> Tile::getRequestManager()
     {
         return request_manager_;
     }

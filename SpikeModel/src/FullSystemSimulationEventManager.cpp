@@ -1,45 +1,45 @@
 
-#include "EventManager.hpp"
+#include "FullSystemSimulationEventManager.hpp"
 #include "NoC/NoCMessageType.hpp"
 
 namespace spike_model
 {
-    EventManager::EventManager(std::vector<Tile *> tiles, uint16_t cores_per_tile)
+    FullSystemSimulationEventManager::FullSystemSimulationEventManager(std::vector<Tile *> tiles, uint16_t cores_per_tile)
     {
         tiles_=tiles;
         cores_per_tile_=cores_per_tile;
     }
 
-    void EventManager::notifyAck(const std::shared_ptr<Event>& req)
+    void FullSystemSimulationEventManager::notifyAck(const std::shared_ptr<Event>& req)
     {
         serviced_requests_.addRequest(req);
     }
 
-    bool EventManager::hasServicedRequest()
+    bool FullSystemSimulationEventManager::hasServicedRequest()
     {
         return serviced_requests_.hasRequest();
     }
 
-    std::shared_ptr<Event> EventManager::getServicedRequest()
+    std::shared_ptr<Event> FullSystemSimulationEventManager::getServicedRequest()
     {
         return serviced_requests_.getRequest();
     }
 
-    void EventManager::putRequest(std::shared_ptr<Event> req)
+    void FullSystemSimulationEventManager::putEvent(const std::shared_ptr<Event>& ev)
     {
 //        printf("In handle\n");
-        req->handle(this);
+        ev->handle(this);
     }
 
 
-    void EventManager::handle(std::shared_ptr<spike_model::CoreEvent> r)
+    void FullSystemSimulationEventManager::handle(std::shared_ptr<spike_model::CoreEvent> r)
     {
         uint16_t source=r->getCoreId()/cores_per_tile_;
         r->setSourceTile(source);
-        tiles_[source]->putRequest_(r);
+        tiles_[source]->putEvent(r);
     }
 
-    void EventManager::scheduleArbiter()
+    void FullSystemSimulationEventManager::scheduleArbiter()
     {
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
         {
@@ -48,7 +48,7 @@ namespace spike_model
         }
     }
 
-    bool EventManager::hasArbiterQueueFreeSlot(uint16_t core)
+    bool FullSystemSimulationEventManager::hasArbiterQueueFreeSlot(uint16_t core)
     {
         bool ret = false;
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
@@ -58,7 +58,7 @@ namespace spike_model
         return ret;
     }
 
-    bool EventManager::hasMsgInArbiter()
+    bool FullSystemSimulationEventManager::hasMsgInArbiter()
     {
         for(auto itr = tiles_.begin(); itr != tiles_.end(); itr++)
         {

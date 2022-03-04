@@ -32,7 +32,7 @@ spike_model::CPU::CPU(sparta::TreeNode* node, const spike_model::CPU::CPUParamet
         "\n X: " << x_size_ <<
         "\n Y: " << y_size_ <<
         "\n PEs: " << num_memory_cpus_ + num_tiles_);
-    sparta_assert(params->mcpus_indices.isVector(), "The top.cpu.params.mcpus_indices must be a vector");
+    sparta_assert(params->mcpus_indices.isVector(), "The top.arch.params.mcpus_indices must be a vector");
     sparta_assert(params->mcpus_indices.getNumValues() == num_memory_cpus_, 
         "The number of elements in mcpus_indices must be equal to the number of MCPUs");
 }

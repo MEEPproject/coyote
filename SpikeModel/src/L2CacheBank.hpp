@@ -41,7 +41,7 @@ namespace spike_model
          *
          * Only one request is issued into the cache per cycle, but up to max_outstanding_misses_ might
          * be in service at the some time. Whether banks are shared or private to the tile is controlled from
-         * the EventManager class. The Cache is write-back and write-allocate.
+         * the FullSystemSimulationEventManager class. The Cache is write-back and write-allocate.
          *
          * This cache might return more than one ack in the same cycle if an access that corresponds to more than one request is serviced. 
          * External arbitration and queueing is necessary to avoid this behavior.
@@ -71,6 +71,7 @@ namespace spike_model
             PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")
             PARAMETER(uint16_t, max_outstanding_misses, 8, "Maximum misses in flight to the next level")
             PARAMETER(uint16_t, max_outstanding_wbs, 1, "Maximum number of in flight wbs")
+            PARAMETER(bool, unit_test, false, "The bank will be used in a unit testing scenario")
         };
 
         /*!
@@ -103,7 +104,7 @@ namespace spike_model
 
         void scheduleIssueAccess(uint64_t cycle);
 
-        void getAccess_(const std::shared_ptr<Request> & req);
+        virtual void getAccess_(const std::shared_ptr<Request> & req) override;
         void issueAccess_();
         sparta::UniqueEvent<> issue_access_event_
             {&unit_event_set_, "issue_access_", CREATE_SPARTA_HANDLER(L2CacheBank, issueAccess_)};
@@ -111,10 +112,11 @@ namespace spike_model
         void sendAck_(const std::shared_ptr<CacheRequest> & req);
         sparta::PayloadEvent<std::shared_ptr<CacheRequest> > send_ack_event_ {&unit_event_set_, "send_ack_event_", CREATE_SPARTA_HANDLER_WITH_DATA(L2CacheBank, sendAck_, std::shared_ptr<CacheRequest> )};
 
-        bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr);
+        virtual bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr) override;
     private:
         Tile *tile;
-        void reloadCache_(uint64_t, uint16_t);
+        virtual void reloadCache_(uint64_t, uint16_t) override;
+        virtual void logCacheRequest(std::shared_ptr<CacheRequest> r) override;
 
     };
 } // namespace spike_model

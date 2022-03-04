@@ -183,14 +183,31 @@ public:
 
 }; // class CPUTopology
 
-
-class CoreTopology_4 : public CPUTopology{
+class L2TestTopology : public CPUTopology{
 public:
 
     /**
-     * @brief Constructor for CPUTopology
+     * @brief Constructor for L2TestTopology
      */
-    CoreTopology_4();
-}; // class CoreTopology_3
+    L2TestTopology();
+}; // class L2TestTopology
+
+class MemoryControllerTestTopology : public CPUTopology{
+public:
+
+    /**
+     * @brief Constructor for MemoryControllerTestTopology
+     */
+    MemoryControllerTestTopology();
+}; // class MemoryControllerTestTopology
+
+class TiledTopology : public CPUTopology{
+public:
+
+    /**
+     * @brief Constructor for TiledTopology
+     */
+    TiledTopology();
+}; // class TiledTopology
 }  // namespace spike_model
 #endif
