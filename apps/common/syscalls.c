@@ -479,6 +479,21 @@ long atol(const char* str)
   return sign ? -res : res;
 }
 
+uint64_t coyote_gettimeofday()
+{
+  uint64_t res=0;
+  asm __volatile__ ("addi sp,sp,-8\n"
+		    "sw t1, 0(sp)\n"
+		    ".word 0x0000230B\n" //TIME TO REGISTER 6, which is t1
+		    "add %0,t1,0\n"
+		    "lw t1,0(sp)\n"
+		    "addi sp,sp,8\n"
+		    :"=r" (res)
+		    :
+		    :);
+  return res;
+}
+
 void simfence()
 {
   asm __volatile__ (".word 0x0000006B\n");
