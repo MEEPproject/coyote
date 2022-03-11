@@ -115,7 +115,7 @@ namespace spike_model
         virtual bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr) override;
     private:
         Tile *tile;
-        virtual void reloadCache_(uint64_t, uint16_t) override;
+        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType) override;
         virtual void logCacheRequest(std::shared_ptr<CacheRequest> r) override;
 
     };

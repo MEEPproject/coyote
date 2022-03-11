@@ -98,7 +98,7 @@ std::shared_ptr<spike_model::Event> TraceDrivenSimulationOrchestrator::parse(std
         }
         else if(type=="l2_write" || type=="memory_write")
         {
-            res==createCacheRequest(v2, spike_model::CacheRequest::AccessType::STORE, pc, timestamp, core, v1);
+            res=createCacheRequest(v2, spike_model::CacheRequest::AccessType::STORE, pc, timestamp, core, v1);
         }
         else
         {

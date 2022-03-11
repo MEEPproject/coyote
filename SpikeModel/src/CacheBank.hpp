@@ -258,6 +258,7 @@ namespace spike_model
         sparta::Counter count_scratchpad_requests_=sparta::Counter(getStatisticSet(), "scratchpad_requests", "Number of scratchpad requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_misses_on_already_pending_=sparta::Counter(getStatisticSet(), "misses_on_already_pending", "Number of misses on addreses that have already been requested", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_conflict_=sparta::Counter(getStatisticSet(), "cache_conflicts", "Number of cache conflicts", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_stall_=sparta::Counter(getStatisticSet(), "stalls", "Stalls due to full in-flight queue", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_hit_on_store_=sparta::Counter(getStatisticSet(), "hits_on_store", "Number of hits on pending stores", sparta::Counter::COUNT_NORMAL);
         
@@ -322,7 +323,6 @@ namespace spike_model
                     return misses_.size()==max_;
                 }
 
-
             private:
                 std::unordered_multimap<uint64_t, std::shared_ptr<CacheRequest>> misses_;
                 uint64_t line_size_;
@@ -378,7 +378,7 @@ namespace spike_model
         * \brief Update the replacement info for an address
         * \param The address to update
         */
-        virtual void reloadCache_(uint64_t, uint16_t);
+        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType);
 
 
     };

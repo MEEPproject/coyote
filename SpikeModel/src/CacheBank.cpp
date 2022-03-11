@@ -58,7 +58,7 @@ namespace spike_model
         
         if(req->getType()!=CacheRequest::AccessType::WRITEBACK)
         {
-            reloadCache_(calculateLineAddress(req), req->getCacheBank());
+            reloadCache_(calculateLineAddress(req), req->getCacheBank(), req->getType());
 
             auto range_misses=in_flight_misses_.equal_range(req);
 
@@ -81,6 +81,7 @@ namespace spike_model
         {
             if(num_in_flight_wbs==max_in_flight_wbs && pending_wb!=nullptr) //If it was stalled due to WBs
             {
+                count_wbs_+=1;
                 out_biu_req_.send(pending_wb, 1);                
                 pending_wb=nullptr;
             }
@@ -175,7 +176,7 @@ namespace spike_model
         bool CACHE_HIT;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
-            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank());
+            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType());
             CACHE_HIT=true;
         }
         else
@@ -193,7 +194,7 @@ namespace spike_model
                 total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
         }
         else {
-            count_cache_misses_++;
+            //count_cache_misses_++;
 
             // Update memory access info
 
@@ -202,7 +203,7 @@ namespace spike_model
                 // Cache is now busy_, no more CACHE MISS can be handled, RESET required on finish
                 //cache_busy_ = true;
                 // Keep record of the current CACHE MISS instruction
-                
+
                 // NOTE:
                 // cache_busy_ RESET could be done:
                 // as early as port-driven event for this miss finish, and
@@ -216,6 +217,7 @@ namespace spike_model
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
                 if(!already_pending)
                 {
+                    count_cache_misses_++;
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
                     printf("This is a miss that I am sending\n");
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
@@ -291,7 +293,7 @@ namespace spike_model
     }
 
     // Reload cache line
-    void CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank)
+    void CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank, CacheRequest::AccessType type)
     {
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
 
@@ -313,9 +315,13 @@ namespace spike_model
             }
         }
 
+        if(l2_cache_line->isValid())
+            count_conflict_++;
+
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
-        
-        l2_cache_line->setModified(true);
+
+        if(type == CacheRequest::AccessType::WRITEBACK || type == CacheRequest::AccessType::STORE)
+            l2_cache_line->setModified(true);
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "Cache reload complete!";
