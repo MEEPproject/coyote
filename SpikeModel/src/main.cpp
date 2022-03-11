@@ -137,6 +137,7 @@ SimulationOrchestrator * createExecutionDrivenOrchestrator(sparta::app::CommandL
     auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
     auto vector_bypass_l1       = upt.get("meta.params.vector_bypass_l1").getAs<bool>();
     auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
+    auto l1_writeback           = upt.get("meta.params.l1_writeback").getAs<bool>();
     // architectural parameters
     auto isa                    = upt.get("top.arch.params.isa").getAs<std::string>();
     auto trace                  = upt.get("meta.params.trace").getAs<bool>();
@@ -168,10 +169,12 @@ SimulationOrchestrator * createExecutionDrivenOrchestrator(sparta::app::CommandL
         
         vector_bypass_l1,
         vector_bypass_l2,
+        l1_writeback,
         lanes_per_vpu,
         scratchpad_size);
 
-    return new ExecutionDrivenSimulationOrchestrator(spike, sim, request_manager, num_cores, num_threads_per_core, thread_switch_latency, num_mshrs_per_core, trace, detailed_noc);
+    return new ExecutionDrivenSimulationOrchestrator(spike, sim, request_manager, num_cores, num_threads_per_core,
+                thread_switch_latency, num_mshrs_per_core, trace, l1_writeback, detailed_noc);
 }
                 
 int main(int argc, char **argv)

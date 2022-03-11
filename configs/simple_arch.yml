@@ -22,6 +22,7 @@ meta:
     enable_llc: false                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
     vector_bypass_l1: false                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
     vector_bypass_l2: false                 # (bool)            Vector memory accesses bypass the L2 (Ignored if MCPU enabled)
+    l1_writeback: false                    # (bool)            l1 is a writeback or a writethrough cache
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
     cmd: apps/mt-matmul/matmul              # (std::string)     App to execute in the RISC-V simulator (Either a binary or trace depending on param simulation_mode)
 
@@ -30,7 +31,7 @@ top:
   arch:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 1                          # (uint16_t)        The number of cores to simulate
+      num_cores: 8                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_mshrs_per_core: 8                 # (uint16_t)        The number of MSHRs per core

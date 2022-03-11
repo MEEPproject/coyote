@@ -45,9 +45,10 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
          * \param thread_switch_latency The penalty of switching between threads in CGMT
          * \param num_mshrs_per_core The number of Miss Status Holding Registers per core
          * \param trace Whether tracing is enabled or not
+         * \param l1_writeback Whether l1 is writeback or writethrough
          * \param detailed_noc A pointer to the simulated DetailedNoC or NULL if a detailed model is not used
          */
-        ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc);
+        ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::DetailedNoC* detailed_noc);
 
         /*!
          * \brief Destructor for ExecutionDrivenSimulationOrchestrator
@@ -141,6 +142,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
         bool core_finished;
 
         bool trace;
+        bool l1_writeback;
 
         bool is_fetch;
 

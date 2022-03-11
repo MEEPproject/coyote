@@ -1,6 +1,6 @@
 #include "ExecutionDrivenSimulationOrchestrator.hpp"
 
-ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, spike_model::DetailedNoC* detailed_noc):
+ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::DetailedNoC* detailed_noc):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
@@ -15,6 +15,7 @@ ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std
     timer(0),
     spike_finished(false),
     trace(trace),
+    l1_writeback(l1_writeback),
     is_fetch(false),
     detailed_noc_(detailed_noc),
     booksim_has_packets_in_flight_(false),
@@ -327,14 +328,32 @@ void ExecutionDrivenSimulationOrchestrator::submitToSparta(std::shared_ptr<spike
     r->setTimestamp(current_cycle);
 
     //Submit writebacks or requests of other types that have not been already submitted
-    if(r->getType()==spike_model::CacheRequest::AccessType::WRITEBACK || in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].find(r->getAddress())==in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].end())
+    if(l1_writeback)
     {
-        request_manager->putEvent(r);
-    }
+        if(r->getType()==spike_model::CacheRequest::AccessType::WRITEBACK ||
+           in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].find(r->getAddress())==in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].end())
+        {
+            request_manager->putEvent(r);
+        }
 
-    if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
+        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK)
+        {
+            in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
+        }
+    }
+    else
     {
-        in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
+        if(r->getType()==spike_model::CacheRequest::AccessType::WRITEBACK ||
+           r->getType()==spike_model::CacheRequest::AccessType::STORE ||
+           in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].find(r->getAddress())==in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].end())
+        {
+            request_manager->putEvent(r);
+        }
+
+        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && r->getType()!=spike_model::CacheRequest::AccessType::STORE)
+        {
+            in_flight_requests_per_l1[r->getCoreId()/num_threads_per_core].insert(std::pair<uint64_t,std::shared_ptr<spike_model::CacheRequest>>(r->getAddress(), r));
+        }
     }
 }
 
@@ -443,9 +462,11 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
             }
         }
         
-
+        //For write through caches, if store was a hit, the later load/store request on this block would also be a hit
+        //If store was a miss, the later load request on this block also needs to be submitted to sparta
+        //as inflight list would not keep store request
         //Stores may bring lines that are pending for a load
-        if(is_load || is_store)
+        if(is_load || (is_store && l1_writeback))
         {
             //Update average memory access time metrics
             avg_mem_access_time_l1_miss=avg_mem_access_time_l1_miss+((float)(current_cycle-r->getTimestamp())-avg_mem_access_time_l1_miss)/num_l2_accesses;
@@ -466,9 +487,18 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
             }
         }
 
-        if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK)
-            in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
-            
+        if(l1_writeback)
+        {
+            if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK)
+                in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+        }
+        else
+        {
+            if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK &&
+               r->getType() != spike_model::CacheRequest::AccessType::STORE)
+                in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+        }
+
         if(waiting_on_mshrs[core])
         {
             submitPendingCacheRequests(core);
@@ -482,18 +512,40 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
 
 
         //Reload the cache and generate a writeback
-        if(r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1())
+        if(l1_writeback)
         {
-            std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
-            if(wb!=nullptr)
+            if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1())
             {
-                if(in_flight_requests_per_l1[core/num_threads_per_core].size()<max_in_flight_l1_misses)
+                std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
+                if(wb!=nullptr)
                 {
-                    handle(wb);
+                    if(in_flight_requests_per_l1[core/num_threads_per_core].size()<max_in_flight_l1_misses)
+                    {
+                        handle(wb);
+                    }
+                    else
+                    {
+                        pending_misses_per_core[current_core].push_back(wb);
+                    }
                 }
-                else
+            }
+        }
+        else
+        {
+            if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1()
+                 && r->getType()!=spike_model::CacheRequest::AccessType::STORE)
+            {
+                std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
+                if(wb!=nullptr)
                 {
-                    pending_misses_per_core[current_core].push_back(wb);
+                    if(in_flight_requests_per_l1[core/num_threads_per_core].size()<max_in_flight_l1_misses)
+                    {
+                        handle(wb);
+                    }
+                    else
+                    {
+                        pending_misses_per_core[current_core].push_back(wb);
+                    }
                 }
             }
         }
