@@ -66,6 +66,7 @@ namespace spike_model
             PARAMETER(uint64_t, associativity, 8, "DL1 associativity (power of 2)")
             PARAMETER(uint32_t, bank_and_tile_offset, 1, "The stride for banks and tiles. It is log2'd to get the bits that need to be shifted to identify the set")
             PARAMETER(bool, always_hit, false, "DL1 will always hit")
+            PARAMETER(bool, writeback, false, "the cache is writeback or writethrough")
             // Parameters for event scheduling
             PARAMETER(uint16_t, miss_latency, 10, "Cache miss latency")
             PARAMETER(uint16_t, hit_latency, 10, "Cache hit latency")

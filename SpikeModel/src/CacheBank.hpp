@@ -53,7 +53,7 @@ namespace spike_model
          * \param node The node that represent the CacheBank and
          * \param p The CacheBank parameter set
          */
-        CacheBank(sparta::TreeNode* node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
+        CacheBank(sparta::TreeNode* node, bool always_hit, bool is_writeback, uint16_t miss_latency, uint16_t hit_latency,
                   uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, bool unit_test, uint64_t line_size, uint64_t size_kb,
                   uint64_t associativity, uint32_t bank_and_tile_offset);
 
@@ -225,6 +225,7 @@ namespace spike_model
         // This single slot could potentially be extended to a MMU pending miss queue
  
         const bool always_hit_;
+        bool writeback_;
         bool cache_busy_ = false;
         // Keep track of the instruction that causes current outstanding cache miss
 

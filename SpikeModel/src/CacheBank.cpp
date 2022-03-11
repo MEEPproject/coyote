@@ -10,12 +10,13 @@ namespace spike_model
     // Constructor
     ////////////////////////////////////////////////////////////////////////////////
 
-    CacheBank::CacheBank(sparta::TreeNode *node, bool always_hit, uint16_t miss_latency, uint16_t hit_latency,
+    CacheBank::CacheBank(sparta::TreeNode *node, bool always_hit, bool writeback, uint16_t miss_latency, uint16_t hit_latency,
                          uint16_t max_outstanding_misses, uint16_t max_in_flight_wbs, bool busy, bool unit_test, uint64_t line_size, uint64_t size_kb,
                          uint64_t associativity, uint32_t bank_and_tile_offset) :
         sparta::Unit(node),
         memory_access_allocator(2000, 1000),
         always_hit_(always_hit),
+        writeback_(writeback),
         miss_latency_(miss_latency),
         hit_latency_(hit_latency),
         max_outstanding_misses_(max_outstanding_misses),
@@ -55,8 +56,9 @@ namespace spike_model
     void CacheBank::sendAckInternal_(const std::shared_ptr<CacheRequest> & req)
     {
         bool was_stalled=(in_flight_misses_.is_full() || pending_wb!=nullptr);
-        
-        if(req->getType()!=CacheRequest::AccessType::WRITEBACK)
+
+        //For write-through caches, stores are no-write allocate, so no need to reload the cache
+        if((writeback_ && req->getType()!=CacheRequest::AccessType::WRITEBACK) || req->getType()!=CacheRequest::AccessType::STORE)
         {
             reloadCache_(calculateLineAddress(req), req->getCacheBank(), req->getType());
 
@@ -176,6 +178,7 @@ namespace spike_model
         bool CACHE_HIT;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
+            std::cout << "Should not get here for write-through L1" << std::endl;
             reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType());
             CACHE_HIT=true;
         }
@@ -185,15 +188,21 @@ namespace spike_model
             CACHE_HIT = cacheLookup_(mem_access_info_ptr);
         }
 
-        if (CACHE_HIT) {
-                mem_access_info_ptr->getReq()->setServiced();
-                if(!unit_test)
-                {
-               	    out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
-                }
-                total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
+        if (CACHE_HIT)
+        {
+            mem_access_info_ptr->getReq()->setServiced();
+            if(!unit_test)
+            {
+                out_core_ack_.send(mem_access_info_ptr->getReq(), hit_latency_);
+            }
+            total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
+            if(!writeback_ && mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE)
+            {
+                out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(hit_latency_));
+            }
         }
-        else {
+        else 
+        {
             //count_cache_misses_++;
 
             // Update memory access info
@@ -211,8 +220,12 @@ namespace spike_model
 
                 bool already_pending=false;
 
-                already_pending=in_flight_misses_.contains(mem_access_info_ptr->getReq());
-                in_flight_misses_.insert(mem_access_info_ptr->getReq());
+                //For writethrough cache, dont track stores in inflight
+                if(writeback_ || (mem_access_info_ptr->getReq()->getType() != CacheRequest::AccessType::STORE))
+                {
+                    already_pending=in_flight_misses_.contains(mem_access_info_ptr->getReq());
+                    in_flight_misses_.insert(mem_access_info_ptr->getReq());
+                }
 
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
                 if(!already_pending)
@@ -222,18 +235,14 @@ namespace spike_model
                     printf("This is a miss that I am sending\n");
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
-
-                    //NO FURTHER ACTION IS NEEDED
-/*                    if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
-                    {
-                        mem_access_info_ptr->getReq()->setServiced();
-                        //This reply was already accounted for regarding the stats in the outer "if"
-                        out_core_ack_.send(mem_access_info_ptr->getReq());
-                    }*/
                 }
                 else
                 {
-                    count_misses_on_already_pending_++;
+                    //For writethrough caches, all the writes are sent to lower level cache
+                    if(!writeback_ && mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE)
+                        out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
+                    else
+                        count_misses_on_already_pending_++;
                     //Nothing more to do until the ack arrives. Do not update the stats
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
                 }
@@ -269,9 +278,9 @@ namespace spike_model
             if (cache_hit) {
                 l2_cache_->touchMRU(*cache_line);
                 //SET DIRTY BIT IF NECESSARY
-                if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
+                if((mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK) && writeback_)
                 {
-                    cache_line->setModified(true);
+                    cache_line->setModified(true); //send the block to memory for write through l2
                 }
             }
         }
@@ -313,6 +322,7 @@ namespace spike_model
             {
                 pending_wb=cache_req;
             }
+            std::cout << "Should not reach here for writethrough caches" << std::endl;
         }
 
         if(l2_cache_line->isValid())
@@ -321,7 +331,7 @@ namespace spike_model
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
 
         if(type == CacheRequest::AccessType::WRITEBACK || type == CacheRequest::AccessType::STORE)
-            l2_cache_line->setModified(true);
+            l2_cache_line->setModified(true); //Send the block to memory for write through L2
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "Cache reload complete!";

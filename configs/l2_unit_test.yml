@@ -29,7 +29,7 @@ top:
         size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
         associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
         always_hit: false                 # (bool)            L2 cache will always hit
-        miss_latency: 15                  # (uint16_t)        Cache miss latency
+        miss_latency: 16                 # (uint16_t)        Cache miss latency
         hit_latency: 15                   # (uint16_t)        Cache hit latency
         max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
         max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs

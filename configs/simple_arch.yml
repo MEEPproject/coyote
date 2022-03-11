@@ -16,8 +16,8 @@ meta:
     architecture: tiled                     # (std::string)     Topology to simulate (tiled, l2_unit_test, memory_controller_unit_test)
     simulation_mode: execution_driven       # (std::string)     The type of simulation to perform (execution_driven, trace_driven). Mode execution_driven only supported for a tiled architecture
     show_factories: false                   # (bool)            Print generated factories
-    trace: false                            # (bool)            Generate a trace into paraver format
-    events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    trace: true                            # (bool)            Generate a trace into paraver format
+    events_to_trace: [stall,resume]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
     enable_llc: false                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
     vector_bypass_l1: false                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
@@ -63,6 +63,7 @@ top:
           size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
           associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
           always_hit: false                 # (bool)            L2 cache will always hit
+          writeback: false                # (bool)            L2 cache is writeback or writethrough
           miss_latency: 15                  # (uint16_t)        Cache miss latency
           hit_latency: 15                   # (uint16_t)        Cache hit latency
           max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level

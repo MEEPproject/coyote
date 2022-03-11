@@ -12,7 +12,7 @@ namespace spike_model
     ////////////////////////////////////////////////////////////////////////////////
 
     L2CacheBank::L2CacheBank(sparta::TreeNode *node, const L2CacheBankParameterSet *p) :
-                    CacheBank(node, p->always_hit, p->miss_latency, p->hit_latency,
+                    CacheBank(node, p->always_hit, p->writeback, p->miss_latency, p->hit_latency,
                               p->max_outstanding_misses, p->max_outstanding_wbs, false, p->unit_test, p->line_size, p->size_kb,
                               p->associativity, p->bank_and_tile_offset)
     {
