@@ -124,7 +124,6 @@ namespace spike_model
 
     void MemoryController::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        printf("Handling\n");
         uint64_t address=r->getAddress();
         
         uint64_t rank=0;
@@ -213,27 +212,6 @@ namespace spike_model
         {
             out_port_mcpu_.send(req, 1);
             sent_this_cycle=true;
-        }
-        else
-        {
-            if(req->getClosesMemoryRow())
-            {
-                num_load_miss++;
-                time_load_miss+=time_to_service;
-                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> miss: " << (float)time_load_miss/num_load_miss << "(" << num_load_miss << ", " << time_to_service << ")\n";
-            }
-            else if(req->getMissesMemoryRow())
-            {
-                num_load_closed++;
-                time_load_closed+=time_to_service;
-                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> closed: " << (float)time_load_closed/num_load_closed << "(" << num_load_closed << ", " << time_to_service << ")\n";
-            }
-            else
-            {
-                num_load_hit++;
-                time_load_hit+=time_to_service;
-                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> hit: " << (float)time_load_hit/num_load_hit << "(" << num_load_hit << ", " << time_to_service << ")\n";
-            }
         }
         else
         {
