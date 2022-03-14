@@ -96,7 +96,7 @@ void setupTiledSimulation(sparta::app::CommandLineSimulator& cls)
         "\nL1$I line size: " << icache_line_size << " because top.arch.params.icache_config is: " << icache_config);            
 } 
 
-SimulationOrchestrator * createTraceDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
+std::shared_ptr<SimulationOrchestrator> createTraceDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
 {
     const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
 
@@ -122,10 +122,10 @@ SimulationOrchestrator * createTraceDrivenOrchestrator(sparta::app::CommandLineS
     {
         sparta_assert(false, "Unsupported architecture " << architecture << " for trace driven simulation.");
     }
-    return new TraceDrivenSimulationOrchestrator(cmd, sim, entry_point, trace, detailed_noc);
+    return std::make_shared<TraceDrivenSimulationOrchestrator>(cmd, sim, entry_point, trace, detailed_noc);
 }
 
-SimulationOrchestrator * createExecutionDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
+std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
 {
     const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
     
@@ -173,7 +173,7 @@ SimulationOrchestrator * createExecutionDrivenOrchestrator(sparta::app::CommandL
         lanes_per_vpu,
         scratchpad_size);
 
-    return new ExecutionDrivenSimulationOrchestrator(spike, sim, request_manager, num_cores, num_threads_per_core,
+    return std::make_shared<ExecutionDrivenSimulationOrchestrator>(spike, sim, request_manager, num_cores, num_threads_per_core,
                 thread_switch_latency, num_mshrs_per_core, trace, l1_writeback, detailed_noc);
 }
                 
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
             }
         }
 
-        SimulationOrchestrator * orchestrator=NULL;
+        std::shared_ptr<SimulationOrchestrator> orchestrator=NULL;
         
         if(simulation_mode=="execution_driven")
         {
