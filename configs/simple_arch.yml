@@ -17,7 +17,7 @@ meta:
     simulation_mode: execution_driven       # (std::string)     The type of simulation to perform (execution_driven, trace_driven). Mode execution_driven only supported for a tiled architecture
     show_factories: false                   # (bool)            Print generated factories
     trace: true                            # (bool)            Generate a trace into paraver format
-    events_to_trace: [stall,resume]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
     enable_llc: false                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
     vector_bypass_l1: false                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
@@ -31,7 +31,7 @@ top:
   arch:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
-      num_cores: 8                          # (uint16_t)        The number of cores to simulate
+      num_cores: 1                          # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
       num_mshrs_per_core: 8                 # (uint16_t)        The number of MSHRs per core
@@ -90,8 +90,8 @@ top:
         num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
         num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
         write_allocate: true                # (bool)            The write allocation policy
-        request_reordering_policy: fifo      # (std::string)     The reordering policy for memory requests (fifo, access_type)
-        command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready)
+        request_reordering_policy: fifo      # (std::string)     The reordering policy for memory requests (fifo, access_type, greedy)
+        command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready, fifo_with_priorities, oldest_rw_over_precharge)
         address_policy: row_bank_column_bank_group_interleave 
                                             # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
 

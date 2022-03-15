@@ -519,6 +519,11 @@ namespace spike_model
              * \param upper The upper bound
              */
             void setTimeBounds(uint64_t lower, uint64_t upper);
+            
+            std::shared_ptr<std::ofstream> getFile()
+            {
+                return trace_file_;
+            }
 
         private:
             std::shared_ptr<std::ofstream> trace_file_;

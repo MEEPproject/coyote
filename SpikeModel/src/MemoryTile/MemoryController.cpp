@@ -1,9 +1,12 @@
 #include "sparta/utils/SpartaAssert.hpp"
 #include "MemoryController.hpp"
 #include "FifoRrMemoryAccessScheduler.hpp"
+#include "GreedyFifoRrMemoryAccessScheduler.hpp"
 #include "FifoRrMemoryAccessSchedulerAccessTypePriority.hpp"
 #include "FifoCommandScheduler.hpp"
 #include "OldestReadyCommandScheduler.hpp"
+#include "OldestRWOverPrechargeCommandScheduler.hpp"
+#include "FifoCommandSchedulerWithPriorities.hpp"
 #include "utils.hpp"
 
 #include <memory>
@@ -22,7 +25,8 @@ namespace spike_model
     num_banks_per_group_(p->num_banks_per_group),
     write_allocate_(p->write_allocate),
     unused_lsbs_(p->unused_lsbs),
-    unit_test_(p->unit_test)
+    unit_test_(p->unit_test),
+    pending_acks()
     {
         in_port_mcpu_.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(MemoryController, receiveMessage_, std::shared_ptr<CacheRequest>));
 
@@ -35,6 +39,10 @@ namespace spike_model
         else if(p->request_reordering_policy=="access_type")
         {
             sched=std::make_unique<FifoRrMemoryAccessSchedulerAccessTypePriority>(banks, num_banks_, write_allocate_);
+        }
+        else if(p->request_reordering_policy=="greedy")
+        {
+            sched=std::make_unique<GreedyFifoRrMemoryAccessScheduler>(banks, num_banks_, write_allocate_);
         }
         else
         {
@@ -89,6 +97,14 @@ namespace spike_model
         {
             ready_commands=std::make_unique<OldestReadyCommandScheduler>(latencies, num_banks_);
         }
+        else if(p->command_reordering_policy=="fifo_with_priorities")
+        {
+            ready_commands=std::make_unique<FifoCommandSchedulerWithPriorities>(latencies, num_banks_);
+        }
+        else if(p->command_reordering_policy=="oldest_rw_over_precharge")
+        {
+            ready_commands=std::make_unique<OldestRWOverPrechargeCommandScheduler>(latencies, num_banks_);
+        }
         else
         {
             std::cout << "Unsupported command reordering policy. Falling back to the default policy.\n";
@@ -108,7 +124,6 @@ namespace spike_model
 
     void MemoryController::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        printf("Handling\n");
         uint64_t address=r->getAddress();
         
         uint64_t rank=0;
@@ -153,7 +168,6 @@ namespace spike_model
 
         if(idle_ & sched->hasBanksToSchedule())
         {
-            printf("Scheduling\n");
             controller_cycle_event_.schedule();
             idle_=false;
         }
@@ -162,36 +176,76 @@ namespace spike_model
 
     void MemoryController::issueAck_(std::shared_ptr<CacheRequest> req)
     {
+        if(trace_)
+        {
+            logger_->logMemoryControllerAck(getClock()->currentCycle(), req->getCoreId(), req->getPC(), req->getSize(), req->getAddress());
+        }
+
         //out_port_noc_.send(std::make_shared<NoCMessage>(req, NoCMessageType::MEMORY_ACK, line_size_, req->getHomeTile()), 0);
+        uint64_t time_to_service=getClock()->currentCycle()-req->getTimestampMCIssue();
         switch(req->getType())
         {
             case CacheRequest::AccessType::LOAD:
                 count_load_requests_++;
-                total_time_spent_by_load_requests_=total_time_spent_by_load_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                count_bytes_read_+=req->getSize();
+                total_time_spent_by_load_requests_=total_time_spent_by_load_requests_+time_to_service;
                 break;
             case CacheRequest::AccessType::FETCH:
                 count_fetch_requests_++;
-                total_time_spent_by_fetch_requests_=total_time_spent_by_fetch_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                count_bytes_read_+=req->getSize();
+                total_time_spent_by_fetch_requests_=total_time_spent_by_fetch_requests_+time_to_service;
                 break;
             case CacheRequest::AccessType::STORE:
                 count_store_requests_++;
-                total_time_spent_by_store_requests_=total_time_spent_by_store_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                count_bytes_written_+=req->getSize();
+                total_time_spent_by_store_requests_=total_time_spent_by_store_requests_+time_to_service;
                 break;
             case CacheRequest::AccessType::WRITEBACK:
                 count_wb_requests_++;
-                total_time_spent_by_wb_requests_=total_time_spent_by_wb_requests_+(getClock()->currentCycle()-req->getTimestampReachMC());
+                count_bytes_written_+=req->getSize();
+                total_time_spent_by_wb_requests_=total_time_spent_by_wb_requests_+time_to_service;
                 break;
         }
        
 
         if(!unit_test_)
         {
-            out_port_mcpu_.send(req, 0);
+            out_port_mcpu_.send(req, 1);
+            sent_this_cycle=true;
+        }
+        else
+        {
+            if(req->getClosesMemoryRow())
+            {
+                num_load_miss++;
+                time_load_miss+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> miss: " << (float)time_load_miss/num_load_miss << "(" << num_load_miss << ", " << time_to_service << ")\n";
+            }
+            else if(req->getMissesMemoryRow())
+            {
+                num_load_closed++;
+                time_load_closed+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> closed: " << (float)time_load_closed/num_load_closed << "(" << num_load_closed << ", " << time_to_service << ")\n";
+            }
+            else
+            {
+                num_load_hit++;
+                time_load_hit+=time_to_service;
+                std::cout << "Times (@" << std::hex << req->getAddress() << std::dec << ")-> hit: " << (float)time_load_hit/num_load_hit << "(" << num_load_hit << ", " << time_to_service << ")\n";
+            }
         }
     }
     
     void MemoryController::controllerCycle_()
     {
+        sent_this_cycle=false;
+        if(pending_acks.size()>0)
+        {
+             issueAck_(pending_acks.front()->getRequest());
+             pending_acks.pop();
+        }
+    
+
         uint64_t current_t=getClock()->currentCycle();
         average_queue_occupancy_=((float)(average_queue_occupancy_*last_queue_sampling_timestamp)/current_t)+((float)sched->getQueueOccupancy()*(current_t-last_queue_sampling_timestamp))/current_t;
         max_queue_occupancy_= (max_queue_occupancy_>=sched->getQueueOccupancy()) ? max_queue_occupancy_ : sched->getQueueOccupancy();
@@ -203,29 +257,42 @@ namespace spike_model
 
             if(command_to_schedule!=nullptr)
             {
-                printf("Issuing to command queue\n");
+                if(command_to_schedule->getType()==BankCommand::CommandType::PRECHARGE)
+                {
+                    command_to_schedule->getRequest()->setClosesMemoryRow();
+                }
+                else if(command_to_schedule->getType()==BankCommand::CommandType::ACTIVATE)
+                {
+                    command_to_schedule->getRequest()->setMissesMemoryRow();
+                }
+
+
                 if(trace_)
                 {
                     logger_->logMemoryControllerOperation(current_t, command_to_schedule->getRequest()->getCoreId(), command_to_schedule->getRequest()->getPC(), command_to_schedule->getRequest()->getMemoryController(), command_to_schedule->getRequest()->getAddress());
 
                 }
-            
-                switch(command_to_schedule->getRequest()->getType())
+           
+                if(command_to_schedule->getRequest()->getTimestampMCIssue()==0)
                 {
-                    case CacheRequest::AccessType::LOAD:
-                        total_time_spent_in_queue_load_=total_time_spent_in_queue_load_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-                        break;
-                    case CacheRequest::AccessType::FETCH:
-                        total_time_spent_in_queue_fetch_=total_time_spent_in_queue_fetch_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-                        break;
-                    case CacheRequest::AccessType::STORE:
-                        total_time_spent_in_queue_store_=total_time_spent_in_queue_store_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-                        break;
-                    case CacheRequest::AccessType::WRITEBACK:
-                        total_time_spent_in_queue_wb_=total_time_spent_in_queue_wb_+(current_t-command_to_schedule->getRequest()->getTimestampReachMC());
-                        break;
+                    uint64_t time_to_issue=current_t-command_to_schedule->getRequest()->getTimestampReachMC();
+                    switch(command_to_schedule->getRequest()->getType())
+                    {
+                        case CacheRequest::AccessType::LOAD:
+                            total_time_spent_in_queue_load_=total_time_spent_in_queue_load_+time_to_issue;
+                            break;
+                        case CacheRequest::AccessType::FETCH:
+                            total_time_spent_in_queue_fetch_=total_time_spent_in_queue_fetch_+time_to_issue;
+                            break;
+                        case CacheRequest::AccessType::STORE:
+                            total_time_spent_in_queue_store_=total_time_spent_in_queue_store_+time_to_issue;
+                            break;
+                        case CacheRequest::AccessType::WRITEBACK:
+                            total_time_spent_in_queue_wb_=total_time_spent_in_queue_wb_+time_to_issue;
+                            break;
+                    }
+                    command_to_schedule->getRequest()->setTimestampMCIssue(current_t);
                 }
-                printf("Adding command\n");
                 ready_commands->addCommand(command_to_schedule);
             }
         }
@@ -236,11 +303,9 @@ namespace spike_model
 
         if(ready_commands->hasCommands())
         {
-            printf("Picking command\n");
             std::shared_ptr<BankCommand> next=ready_commands->getNextCommand(current_t);
             if(next!=nullptr)
             {
-                printf("Sending to bank");
                 (*banks)[next->getDestinationBank()]->issue(next);
                 sched->notifyCommandSubmission(next);
                 uint16_t next_command_delay=1;
@@ -249,7 +314,7 @@ namespace spike_model
                     next_command_delay=2; // ACTIVATES are two cycle commands
                 }
 
-                if(ready_commands->hasCommands() || sched->hasBanksToSchedule())
+                if(ready_commands->hasCommands() || sched->hasBanksToSchedule() || (sent_this_cycle && pending_acks.size()>0))
                 {
                     controller_cycle_event_.schedule(next_command_delay);
                     idle_=false;
@@ -258,10 +323,8 @@ namespace spike_model
         }
     }
 
-
     void MemoryController::addBank_(MemoryBank * bank)
     {
-        printf("\t--------------------------> Adding bank\n");
         banks->push_back(bank);
         bank->setMemSpec(latencies);
         ready_commands->setBurstLength(bank->getBurstLength());
@@ -281,10 +344,17 @@ namespace spike_model
     {
         if(c->getCompletesRequest())
         {
-            issueAck_(c->getRequest());
+            if(!sent_this_cycle)
+            {
+                issueAck_(c->getRequest());
+            }
+            else
+            {
+                pending_acks.push(c);
+            }
         }
 
-        if(idle_ && ((sched->hasBanksToSchedule() || ready_commands->hasCommands())))
+        if(idle_ && (sched->hasBanksToSchedule() || ready_commands->hasCommands() || (sent_this_cycle && pending_acks.size()>0)))
         {
             controller_cycle_event_.schedule();
             idle_=false;
@@ -410,7 +480,6 @@ namespace spike_model
 
     void MemoryController::setup_masks_and_shifts_(uint64_t num_mcs, uint64_t num_rows_per_bank, uint64_t num_cols_per_bank)
     {
-        printf("--<-<-<-<-<--<-<eawsdfwwefewwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww\n");
         uint64_t mc_shift;
         switch(address_mapping_policy_)
         {

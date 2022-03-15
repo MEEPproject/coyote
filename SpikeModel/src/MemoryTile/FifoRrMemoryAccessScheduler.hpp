@@ -1,7 +1,7 @@
 #ifndef __FIFO_MEMORY_ACCESS_SCHEDULER_HH__
 #define __FIFO_MEMORY_ACCESS_SCHEDULER_HH__
 
-#include <queue>
+#include <deque>
 #include <vector>
 #include "CacheRequest.hpp"
 #include "BankCommand.hpp"
@@ -71,10 +71,10 @@ namespace spike_model
              * \param c The bank to reschedule
              */
             void rescheduleBank(uint64_t bank) override;
+            
+            std::deque<uint64_t> banks_to_schedule; //A bank id will be in this queue if the associated bank queue has elements and a request to the buffer is not currently in process
 
-        private:
             std::vector<std::queue<std::shared_ptr<CacheRequest>>> request_queues;
-            std::queue<uint64_t> banks_to_schedule; //A bank id will be in this queue if the associated bank queue has elements and a request to the buffer is not currently in process
     };
 }
 #endif

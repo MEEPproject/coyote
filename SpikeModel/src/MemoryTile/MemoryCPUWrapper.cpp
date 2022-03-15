@@ -109,15 +109,16 @@ namespace spike_model {
 		count_requests_noc++;
 		
 		if(trace_) {
-			std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(mes->getRequest());
-			logger_->logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort(), req->getAddress());
+		/*	std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(mes->getRequest());
+            std::cout << getClock()->currentCycle() << ", " << getID() << "," << mes->getSrcPort() << "," << req->getAddress() << "\n";
+			logger_->logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort(), req->getAddress());*/
 		}
 		
 		if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
 			DEBUG_MSG("CacheRequest received from NoC: " << *cr);
 			
-			cr->set_mem_op_latency(line_size/32); // if memtile not enabled, handle only cache lines (64 Bytes)
+			//cr->set_mem_op_latency(line_size/32); // if memtile not enabled, handle only cache lines (64 Bytes)
 			
 			if(this->enabled_llc) {
 				out_ports_llc[calculateBank(cr)]->send(cr, 0);
@@ -147,7 +148,8 @@ namespace spike_model {
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_CYAN, "CacheRequest: " << *mes);
 				
 		if(mes->getMemTile() == (uint16_t)-1) {		//-- a transaction from the VAS Tile
-			mes->set_mem_op_latency(line_size/32);
+			//mes->set_mem_op_latency(line_size/32);
+            mes->setSize(line_size);
 			sendToDestination(mes);					//-- check, if the address is for the local memory or for a remote MemTile
 			count_scalar++;
 
@@ -345,7 +347,7 @@ namespace spike_model {
 		
 		//-- Send to the LLC or MC
 		if(this->enabled_llc) {
-			instr_for_mc->set_mem_op_latency(line_size/32);	// Overwrite! LLC always loads 64 Bytes = 2*32 Bytes
+			//instr_for_mc->set_mem_op_latency(line_size/32);	// Overwrite! LLC always loads 64 Bytes = 2*32 Bytes
 			out_ports_llc[calculateBank(instr_for_mc)]->send(instr_for_mc, 1);
 			
 			if(trace_) {
@@ -383,9 +385,10 @@ namespace spike_model {
 			sched_outgoing.pop();
 			DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_GREEN, "Sending to NoC from " << getID() << ": " << *response);
 			if(trace_) {
-				std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(response->getRequest());
+				/*std::shared_ptr<Request> req = std::dynamic_pointer_cast<Request>(response->getRequest());
 				logger_->logMemTileNoCSent(getClock()->currentCycle(), getID(), response->getDstPort(), req->getAddress());
 				log_sched_outgoing();
+                */
 			}
 			
 			
@@ -428,9 +431,10 @@ namespace spike_model {
 			
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
-			memory_request->set_mem_op_latency(line_size/32);	// load 64 Bytes
 			
 			DEBUG_MSG("elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", CR: " << *memory_request);
+			//memory_request->set_mem_op_latency(line_size/32);	// load 64 Bytes
+            memory_request->setSize(line_size);
 									
 			//-- schedule this request for the MC
 			sendToDestination(memory_request);
@@ -456,7 +460,8 @@ namespace spike_model {
 			DEBUG_MSG("index: 0x" << *it << ", base_address: 0x" << address << ", computed_address: 0x" << address + *it);	
 			//-- create and schedule request for the MC
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address + *it, instr);
-			memory_request->set_mem_op_latency(1);	// load 32 Bytes or less
+			//memory_request->set_mem_op_latency(1);	// load 32 Bytes or less
+            memory_request->setSize(32); //This is set to the smallest READ for HBM
 			sendToDestination(memory_request);
 		}
 		

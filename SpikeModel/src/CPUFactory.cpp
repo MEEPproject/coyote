@@ -195,7 +195,6 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
         }
         else if(node_name.find(to_replace_memory_banks_)!=std::string::npos)
         {
-            printf("----------------------------__>\n");
             for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers){
                 for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks){
                     parent_name = unit.parent_name;
@@ -457,7 +456,6 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
             
             /*auto mc_node = root_node->getChild(std::string("arch.memory_controller") +
                     sparta::utils::uint32_to_str(num_of_memory_cpus));                  // the MPCU is bound to one MC
-
             sparta_assert(mc_node != nullptr);
             */
 
@@ -621,7 +619,6 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
         MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
 
         mc->setLogger(topology_->logger);
-        printf("<<<<<<<<<<<<<<<<<<<<<The number of banks is %d\n", topology_->num_memory_banks);
         for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks) {
             auto bank_node = root_node->getChild(std::string("arch.memory_controller") + std::string(".memory_bank") + sparta::utils::uint32_to_str(num_of_memory_banks));
             sparta_assert(bank_node != nullptr);
@@ -638,6 +635,18 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
         uint64_t num_cols=b->getNumColumns();
 
         mc->setup_masks_and_shifts_(1, num_rows, num_cols);
+    }
+    else if(topology_->topology_name=="l2_unit_test")
+    {
+        //I should be binding here
+        auto bank_node = root_node->getChild(std::string("arch.l2_bank"));
+        sparta_assert(bank_node != nullptr);
+
+        L2CacheBank * bank=bank_node->getResourceAs<spike_model::L2CacheBank>();
+
+        bank->setLogger(topology_->logger);
+                        
+        sparta::bind(root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.out_tile_req"), root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.in_tile_ack"));
     }
 }
 

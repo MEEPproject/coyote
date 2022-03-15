@@ -207,6 +207,9 @@ namespace spike_model
 
             bool idle_=true;
             bool unit_test_;
+            bool sent_this_cycle=false;
+
+            std::queue<std::shared_ptr<BankCommand>> pending_acks;
 
             std::shared_ptr<std::vector<MemoryBank *>> banks;
             
@@ -227,6 +230,8 @@ namespace spike_model
             sparta::Counter count_store_requests_=sparta::Counter(getStatisticSet(), "store_requests", "Number of store requests", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_fetch_requests_=sparta::Counter(getStatisticSet(), "fetch_requests", "Number of fetch requests", sparta::Counter::COUNT_NORMAL);
             sparta::Counter count_wb_requests_=sparta::Counter(getStatisticSet(), "wb_requests", "Number of wb requests", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_bytes_read_=sparta::Counter(getStatisticSet(), "bytes_read", "Number of bytes read", sparta::Counter::COUNT_NORMAL);
+            sparta::Counter count_bytes_written_=sparta::Counter(getStatisticSet(), "bytes_written", "Number of bytes written", sparta::Counter::COUNT_NORMAL);
             sparta::Counter total_time_spent_by_load_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_load_requests", "The total time spent by load requests", sparta::Counter::COUNT_LATEST);
             sparta::Counter total_time_spent_by_store_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_store_requests", "The total time spent by write requests", sparta::Counter::COUNT_LATEST);
             sparta::Counter total_time_spent_by_fetch_requests_=sparta::Counter(getStatisticSet(), "total_time_spent_by_fetch_requests", "The total time spent by fetch requests", sparta::Counter::COUNT_LATEST);
@@ -288,6 +293,13 @@ namespace spike_model
                 "Average time in the queue per wb request",
                 getStatisticSet(), "total_time_spent_in_queue_wbs/wb_requests"
             };
+
+            uint64_t num_load_hit=0;
+            uint64_t time_load_hit=0;
+            uint64_t num_load_miss=0;
+            uint64_t time_load_miss=0;
+            uint64_t num_load_closed=0;
+            uint64_t time_load_closed=0;
 
             /*!
              * \brief Receive a message from the NoC

@@ -6,9 +6,9 @@ namespace spike_model
 {
 
     MemoryAccessSchedulerIF::MemoryAccessSchedulerIF(std::shared_ptr<std::vector<MemoryBank *>> b, uint64_t num_banks, bool write_allocate) : 
-        banks(b), 
         write_allocate(write_allocate),
-        pending_command(num_banks, false)
+        pending_command(num_banks, false),
+        banks(b)
     {}
 
     std::shared_ptr<BankCommand> MemoryAccessSchedulerIF::getCommand(uint64_t bank)

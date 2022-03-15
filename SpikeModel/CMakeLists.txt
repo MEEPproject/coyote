@@ -176,9 +176,12 @@ add_executable(spike_model
   src/MemoryTile/MemoryAccessSchedulerIF.cpp
   src/MemoryTile/CommandSchedulerIF.cpp
   src/MemoryTile/FifoRrMemoryAccessScheduler.cpp
+  src/MemoryTile/GreedyFifoRrMemoryAccessScheduler.cpp
   src/MemoryTile/FifoRrMemoryAccessSchedulerAccessTypePriority.cpp
+  src/MemoryTile/FifoCommandSchedulerWithPriorities.cpp
   src/MemoryTile/FifoCommandScheduler.cpp
   src/MemoryTile/OldestReadyCommandScheduler.cpp
+  src/MemoryTile/OldestRWOverPrechargeCommandScheduler.cpp
   src/MemoryTile/MemoryBank.cpp
   src/EventVisitor.cpp
   ${SPIKE_PATH}/spike_main/spike_wrapper.cc

@@ -380,8 +380,6 @@ namespace spike_model
         * \param The address to update
         */
         virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType);
-
-
     };
 
 

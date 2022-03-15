@@ -1,5 +1,5 @@
-#ifndef __FIFO_COMMAND_SCHEDULER_HH__
-#define __FIFO_COMMAND_SCHEDULER_HH__
+#ifndef __RW_OVER_PRECHARGE_COMMAND_SCHEDULER_HH__
+#define __RW_OVER_PRECHARGE_COMMAND_SCHEDULER_HH__
 
 #include <memory>
 #include <queue>
@@ -9,7 +9,7 @@
 
 namespace spike_model
 {
-    class FifoCommandScheduler : public CommandSchedulerIF
+    class RWOverPrechargeCommandScheduler : public CommandSchedulerIF
     {
         /*!
          * \class spike_model::FifoCommandScheduler
@@ -20,7 +20,7 @@ namespace spike_model
              * \brief Constructor for FifoCommandScheduler
              * \param latencies The DRAM memspec
              */
-            FifoCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
+            RWOverPrechargeCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
 
             /*!
             * \brief Add a command to the scheduler
@@ -34,18 +34,17 @@ namespace spike_model
             * \return True if the scheduler has more commands
             */
             bool hasCommands() override;
+            
+        private:
+            std::queue<std::shared_ptr<BankCommand>> reads_and_writes;
+            std::queue<std::shared_ptr<BankCommand>> precharges_and_activates;
 
-        protected:
             /*!
             * \brief Pick the next command to submit to a bank at the current timestamp. The command will be picked FIFO (if timing requirements are met)
             * \param currentTimestamp The timestamp for the scheduling
             * \return The next command to schedule (nullptr if no command is available).
             */
             std::shared_ptr<BankCommand> selectCommand(uint64_t currentTimestamp) override;
-            
-        private:
-            std::queue<std::shared_ptr<BankCommand>> commands;
-
     };  
 }
 #endif

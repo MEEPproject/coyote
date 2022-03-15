@@ -291,7 +291,6 @@ void ExecutionDrivenSimulationOrchestrator::run()
             current_cycle++;
         }
     }
-    printf("!!)!)!)!)!)!)!)\n");
 }
 
 void ExecutionDrivenSimulationOrchestrator::selectRunnableThreads()

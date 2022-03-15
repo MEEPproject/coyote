@@ -9,7 +9,7 @@ namespace spike_model
         request_queues[bank].push(req);
         if(request_queues[bank].size()==1 && !pending_command[bank])
         {
-            banks_to_schedule.push(bank);
+            banks_to_schedule.push_back(bank);
         }
     }
 
@@ -22,7 +22,7 @@ namespace spike_model
     uint64_t FifoRrMemoryAccessScheduler::getNextBank()
     {
         uint64_t res=banks_to_schedule.front();
-        banks_to_schedule.pop();
+        banks_to_schedule.pop_front();
         return res;
     }
     
@@ -51,7 +51,7 @@ namespace spike_model
     {
         if(request_queues[bank].size()>0)
         {
-            banks_to_schedule.push(bank);
+            banks_to_schedule.push_back(bank);
         }
     }
 }

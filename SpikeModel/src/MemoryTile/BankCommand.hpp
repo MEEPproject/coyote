@@ -42,6 +42,7 @@ namespace spike_model
                 destination_bank=b;
                 value=v;
                 request=r;
+                high_priority=false;
             }
 
             /*!
@@ -96,10 +97,22 @@ namespace spike_model
                 return completes_request;
             }
 
+            bool isHighPriority()
+            {
+                return high_priority;
+            }
+            
+            void setHighPriority()
+            {
+                high_priority=true;
+            }
+
         private:
             CommandType type;
             uint64_t destination_bank;
             uint64_t value;
+
+            bool high_priority;
 
             bool completes_request=false;
 

@@ -82,6 +82,18 @@ namespace spike_model
              * \return The timestamp when the request reached the memory controller.
              */
             uint64_t getTimestampReachMC() {return timestamp_reach_mc;}
+            
+            /*!
+             * \brief Set the timestamp when the request reached the memory controller.
+             * \param t The timestamp when the request reached the memory controller.
+             */
+            void setTimestampMCIssue(uint64_t t) {timestamp_mc_issue=t;}
+            
+            /*!
+             * \brief Get the timestamp when the request reached the memory controller.
+             * \return The timestamp when the request reached the memory controller.
+             */
+            uint64_t getTimestampMCIssue() {return timestamp_mc_issue;}
 
             /*!
              * \brief Set the timestamp when the request reached the tile arbiter.
@@ -101,6 +113,7 @@ namespace spike_model
             
             uint64_t timestamp_reach_cache_bank=0;
             uint64_t timestamp_reach_mc=0;
+            uint64_t timestamp_mc_issue=0;
             uint64_t timestamp_reach_arbiter=0;
     };
     

@@ -76,4 +76,24 @@ namespace spike_model
         resetSizeRequestedToMemory();
         allocating=true;
     }
+            
+    void CacheRequest::setClosesMemoryRow()
+    {
+        closes_memory_row=true;
+    }
+
+    void CacheRequest::setMissesMemoryRow()
+    {
+        misses_memory_row=true;
+    }
+
+    bool CacheRequest::getClosesMemoryRow()
+    {
+        return closes_memory_row;
+    }
+
+    bool CacheRequest::getMissesMemoryRow()
+    {
+        return misses_memory_row;
+    }
 }

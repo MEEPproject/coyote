@@ -232,7 +232,6 @@ namespace spike_model
                 {
                     count_cache_misses_++;
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
-                    printf("This is a miss that I am sending\n");
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
                 }
@@ -345,14 +344,12 @@ namespace spike_model
 
     void CacheBank::handle(std::shared_ptr<spike_model::CacheRequest> r)
     {
-        printf("A\n");
         if(r->isServiced())
         {
             sendAckInternal_(r);
         }
         else
         {
-            printf("B\n");
             if(trace_)
             {
                 logCacheRequest(r);
@@ -411,7 +408,6 @@ namespace spike_model
 
                 if(!busy_ && !in_flight_misses_.is_full() && pending_wb==nullptr)
                 {
-                    printf("Scheduled!!!!!!!!!!!!!!!!!!!!!\n");
                     busy_=true;
                     //ISSUE EVENT
                     scheduleIssueAccess(sparta::Clock::Cycle(0));

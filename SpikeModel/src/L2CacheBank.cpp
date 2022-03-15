@@ -26,7 +26,6 @@ namespace spike_model
 
     void L2CacheBank::scheduleIssueAccess(uint64_t cycle)
     {
-        printf("In schedule\n");
         issue_access_event_.schedule(cycle);
     }
     ////////////////////////////////////////////////////////////////////////////////
@@ -50,7 +49,6 @@ namespace spike_model
 
     void L2CacheBank::logCacheRequest(std::shared_ptr<CacheRequest> r)
     {
-        printf("--------------->Logging\n");
         switch(r->getType())
         {
             case CacheRequest::AccessType::FETCH:
@@ -58,7 +56,6 @@ namespace spike_model
                 break;
 
             case CacheRequest::AccessType::LOAD:
-                std::cout << "The address is " << r->getAddress() << "\n";
                 logger_->logL2Read(getClock()->currentCycle(), r->getCoreId(), r->getPC(), r->getAddress(), r->getSize());
                 break;
 
@@ -90,7 +87,6 @@ namespace spike_model
     }
     
     bool L2CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr) {
-        std::cout << trace_ << "???????\n";
         if(trace_)
         {
             logger_->logL2Miss(getClock()->currentCycle(), mem_access_info_ptr->getReq()->getCoreId(), mem_access_info_ptr->getReq()->getPC(), mem_access_info_ptr->getReq()->getAddress());

@@ -1,26 +1,25 @@
-#ifndef __FIFO_COMMAND_SCHEDULER_HH__
-#define __FIFO_COMMAND_SCHEDULER_HH__
+#ifndef __OLDEST_RW_OVER_PRECHARGE_COMMAND_SCHEDULER_HH__
+#define __OLDEST_RW_OVER_PRECHARGE_COMMAND_SCHEDULER_HH__
 
 #include <memory>
-#include <queue>
-#include <set>
+#include <list>
 #include "BankCommand.hpp"
 #include "CommandSchedulerIF.hpp"
 
 namespace spike_model
 {
-    class FifoCommandScheduler : public CommandSchedulerIF
+    class OldestRWOverPrechargeCommandScheduler : public CommandSchedulerIF
     {
         /*!
-         * \class spike_model::FifoCommandScheduler
+         * \class spike_model::OldestRWOverPrechargeCommandScheduler
          * \brief A simple FIFO BankCommand scheduler
          */
         public: 
             /*!
-             * \brief Constructor for FifoCommandScheduler
+             * \brief Constructor for OldestRWOverPrechargeCommandScheduler
              * \param latencies The DRAM memspec
              */
-            FifoCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
+            OldestRWOverPrechargeCommandScheduler(std::shared_ptr<std::vector<uint64_t>> latencies, uint16_t num_banks);
 
             /*!
             * \brief Add a command to the scheduler
@@ -34,18 +33,17 @@ namespace spike_model
             * \return True if the scheduler has more commands
             */
             bool hasCommands() override;
+            
+        private:
+            std::list<std::shared_ptr<BankCommand>> reads_and_writes;
+            std::list<std::shared_ptr<BankCommand>> precharges_and_activates;
 
-        protected:
             /*!
-            * \brief Pick the next command to submit to a bank at the current timestamp. The command will be picked FIFO (if timing requirements are met)
+            * \brief Pick the next command to submit to a bank at the current timestamp. The command will be the oldest that meets the timing requirements
             * \param currentTimestamp The timestamp for the scheduling
             * \return The next command to schedule (nullptr if no command is available).
             */
             std::shared_ptr<BankCommand> selectCommand(uint64_t currentTimestamp) override;
-            
-        private:
-            std::queue<std::shared_ptr<BankCommand>> commands;
-
     };  
 }
 #endif

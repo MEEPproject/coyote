@@ -166,28 +166,6 @@ namespace spike_model
                 memory_ack = ack;
             }
 
-            /**
-             * \brief Configure how long the memory controller work on this memory request.
-             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
-             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
-             * (or even less), will be beneficial.
-             * \param latency: The memory controller latency for this request.
-             */
-            void set_mem_op_latency(uint latency) {
-                mem_op_latency = latency;
-            }
-            
-            /**
-             * \brief Configure how long the memory controller work on this memory request.
-             * The HBM returns 32 Bytes of data. Therefore, for a 64 Byte memory operation,
-             * double the time is required. However, if elements are scattered/gathered, 32 Bytes
-             * (or even less), will be beneficial.
-             * \return: The memory controller latency for this request.
-             */
-            uint get_mem_op_latency() {
-                return mem_op_latency;
-            }
-
             /*
              * \brief Get the number of bytes that have been handled by memory for this cache request
              * \return The number of bytes handled by memory
@@ -211,6 +189,14 @@ namespace spike_model
              */
             void setAllocate();
 
+            void setClosesMemoryRow();
+
+            void setMissesMemoryRow();
+
+            bool getClosesMemoryRow();
+
+            bool getMissesMemoryRow();
+
         private:
             AccessType type;
 
@@ -227,11 +213,12 @@ namespace spike_model
             bool bypass_l1;
             bool bypass_l2;
             
-            int8_t mem_op_latency;
-
             uint16_t size_requested_to_memory;
             bool allocating=false;
-            
+
+            bool closes_memory_row=false;
+            bool misses_memory_row=false;
+
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest
              * \param rank The rank that will be accessed

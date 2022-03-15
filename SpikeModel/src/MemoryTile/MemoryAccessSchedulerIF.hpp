@@ -39,7 +39,7 @@ namespace spike_model
             * \param bank The bank for which the request is desired
             * \return A command (or nullptr if no command is available)
             */
-            std::shared_ptr<BankCommand> getCommand(uint64_t bank);
+            virtual std::shared_ptr<BankCommand> getCommand(uint64_t bank);
              
             /*!
             * \brief Get the next bank for which a request should be handled
@@ -66,7 +66,6 @@ namespace spike_model
             virtual uint64_t getQueueOccupancy()=0;
 
         private:
-            std::shared_ptr<std::vector<MemoryBank *>> banks;
             bool write_allocate;
 
 
@@ -106,6 +105,7 @@ namespace spike_model
             virtual void rescheduleBank(uint64_t bank)=0;
             
             std::vector<bool> pending_command; //pending_command[i]==true if there is a command for bank i that has been sent to the command scheduler that has not been submitted yet
+            std::shared_ptr<std::vector<MemoryBank *>> banks;
      
     };
 }

@@ -25,7 +25,7 @@ top:
   arch:
     memory_controller:
       params:
-        num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
+        num_banks: 16                       # (uint64_t)        The number of memory banks handled by this MC
         num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
         write_allocate: true                # (bool)            The write allocation policy
         request_reordering_policy: fifo      # (std::string)     The reordering policy for memory requests (fifo, access_type)
@@ -33,7 +33,7 @@ top:
         address_policy: row_bank_column_bank_group_interleave 
                                             # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
 
-        unused_lsbs: 6                      # (uint8_t)         The number of bits that are unused in the address calculation
+        unused_lsbs: 5                      # (uint8_t)         The number of bits that are unused in the address calculation
         unit_test: true
         mem_spec:                           # (vector<string>)  The memory latencies
           - "CCDL:3"

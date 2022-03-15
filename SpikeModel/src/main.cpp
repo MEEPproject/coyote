@@ -138,9 +138,10 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
     auto vector_bypass_l1       = upt.get("meta.params.vector_bypass_l1").getAs<bool>();
     auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
     auto l1_writeback           = upt.get("meta.params.l1_writeback").getAs<bool>();
+    auto trace                  = upt.get("meta.params.trace").getAs<bool>();
+    auto events_of_interest     = upt.get("meta.params.events_to_trace").getAs<std::string>();
     // architectural parameters
     auto isa                    = upt.get("top.arch.params.isa").getAs<std::string>();
-    auto trace                  = upt.get("meta.params.trace").getAs<bool>();
     auto num_tiles              = upt.get("top.arch.params.num_tiles").getAs<uint16_t>();
     auto num_cores              = upt.get("top.arch.params.num_cores").getAs<uint16_t>();
     auto num_threads_per_core   = upt.get("top.arch.params.num_threads_per_core").getAs<uint16_t>();
@@ -156,6 +157,7 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
     std::shared_ptr<spike_model::FullSystemSimulationEventManager> request_manager=sim->createRequestManager();
 
     size_t scratchpad_size = ((num_banks * l2bank_size * 1024 * 8) / (num_cores / num_tiles)) / 32;
+ 
     std::shared_ptr<spike_model::SpikeWrapper> spike=std::make_shared<spike_model::SpikeWrapper>(
         std::to_string(num_cores),              // Number of cores to simulate
         std::to_string(num_threads_per_core),   // Number of cores in each core
@@ -173,6 +175,18 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
         lanes_per_vpu,
         scratchpad_size);
 
+    if(trace)
+    {
+        if(events_of_interest=="[any]" || events_of_interest.find("instruction_log")!=std::string::npos)
+        {
+            spike_model::Logger l=sim->getLogger();
+            spike->setInstructionLogFile(l.getFile());
+        }
+        else
+        {
+            std::cout << "Instruction logging requires tracing to be enabled. Running in normal mode\n";
+        }
+    }
     return std::make_shared<ExecutionDrivenSimulationOrchestrator>(spike, sim, request_manager, num_cores, num_threads_per_core,
                 thread_switch_latency, num_mshrs_per_core, trace, l1_writeback, detailed_noc);
 }
