@@ -39,9 +39,9 @@ namespace spike_model {
 					MemoryCPUWrapperParameterSet(sparta::TreeNode* n):sparta::ParameterSet(n) { }
 					PARAMETER(uint64_t, line_size, 64, "The cache line size")
 					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
-                			PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
-                			PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
-                			PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
+                	PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
+                	PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
+                	PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
 			};
 
 			/*!
@@ -91,6 +91,11 @@ namespace spike_model {
                          * \param assoc The associativity of the LLC
                          */
 			void setLLCInfo(uint64_t size_kbs, uint8_t assoc);
+			
+			
+			bool ableToAcceptPacket(std::shared_ptr<NoCMessage> packet) {
+				return true;
+			}
 
 		private:
 			const uint8_t num_of_registers = 32;
@@ -118,7 +123,7 @@ namespace spike_model {
 			uint64_t mc_shift;
 			uint64_t mc_mask;
 			
-		    	uint8_t tag_bits;
+		    uint8_t tag_bits;
 			uint8_t block_offset_bits;
 			uint8_t set_bits;
 			uint8_t bank_bits;
