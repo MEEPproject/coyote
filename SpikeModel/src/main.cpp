@@ -259,7 +259,7 @@ int main(int argc, char **argv)
             auto noc_model              = upt.get("top.arch.noc.params.noc_model").getAs<std::string>();
             if (noc_model == "detailed")
             {
-                detailed_noc = sim->getRoot()->getChild(std::string("cpu.noc"))->getResourceAs<spike_model::DetailedNoC>();
+                detailed_noc = sim->getRoot()->getChild(std::string("arch.noc"))->getResourceAs<spike_model::DetailedNoC>();
             }
         }
 
@@ -267,7 +267,9 @@ int main(int argc, char **argv)
         
         if(simulation_mode=="execution_driven")
         {
+            printf("Gonna create\n");
             orchestrator=createExecutionDrivenOrchestrator(cls, sim, detailed_noc);
+            printf("Created\n");
         }
         else if(simulation_mode == "trace_driven")
         {
@@ -314,6 +316,7 @@ int main(int argc, char **argv)
                 l.addEventOfInterest(events_of_interest); //Last event
             }
         }
+        printf("Gonna run\n");
         orchestrator->run();
 
         cls.postProcess(&(*sim));
