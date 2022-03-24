@@ -251,6 +251,7 @@ void ExecutionDrivenSimulationOrchestrator::run()
         handleSpartaEvents();
         //auto t1 = std::chrono::high_resolution_clock::now();
         scheduleArbiter();
+        handleSpartaEvents();
         std::set<uint16_t>::iterator it = stalled_cores_for_arbiter.begin();
         while(it!=stalled_cores_for_arbiter.end())
         {
