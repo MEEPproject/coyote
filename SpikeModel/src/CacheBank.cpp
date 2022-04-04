@@ -58,12 +58,12 @@ namespace spike_model
         bool was_stalled=(in_flight_misses_.is_full() || pending_wb!=nullptr);
 
         //For write-through caches, stores are no-write allocate, so no need to reload the cache
-        if((writeback_ && req->getType()!=CacheRequest::AccessType::WRITEBACK) || req->getType()!=CacheRequest::AccessType::STORE)
+        //For write-back, stores are write allocate, so we have to reload the cache
+        if((writeback_ && req->getType()!=CacheRequest::AccessType::WRITEBACK) || (!writeback_ && req->getType()!=CacheRequest::AccessType::STORE))
         {
             reloadCache_(calculateLineAddress(req), req->getCacheBank(), req->getType());
 
             auto range_misses=in_flight_misses_.equal_range(req);
-
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
 
             while(range_misses.first != range_misses.second)
@@ -83,7 +83,6 @@ namespace spike_model
         {
             if(num_in_flight_wbs==max_in_flight_wbs && pending_wb!=nullptr) //If it was stalled due to WBs
             {
-                count_wbs_+=1;
                 out_biu_req_.send(pending_wb, 1);                
                 pending_wb=nullptr;
             }
@@ -178,7 +177,6 @@ namespace spike_model
         bool CACHE_HIT;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
-            std::cout << "Should not get here for write-through L1" << std::endl;
             reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType());
             CACHE_HIT=true;
         }
@@ -239,7 +237,9 @@ namespace spike_model
                 {
                     //For writethrough caches, all the writes are sent to lower level cache
                     if(!writeback_ && mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE)
+                    {
                         out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
+                    }
                     else
                         count_misses_on_already_pending_++;
                     //Nothing more to do until the ack arrives. Do not update the stats
@@ -284,7 +284,6 @@ namespace spike_model
             }
         }
 
-
         if (SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             if (always_hit_) {
                 info_logger_ << "Cache HIT all the time: phyAddr=0x" << std::hex << phyAddr;
@@ -321,7 +320,6 @@ namespace spike_model
             {
                 pending_wb=cache_req;
             }
-            std::cout << "Should not reach here for writethrough caches" << std::endl;
         }
 
         if(l2_cache_line->isValid())
