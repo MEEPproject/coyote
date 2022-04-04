@@ -118,7 +118,7 @@ namespace spike_model
     }
 
     void MemoryController::receiveMessage_(const std::shared_ptr<spike_model::CacheRequest> &mes)
-    { 
+    {
         mes->handle(this);
     }
 
@@ -239,12 +239,12 @@ namespace spike_model
     void MemoryController::controllerCycle_()
     {
         sent_this_cycle=false;
+        uint16_t next_command_delay=1;
         if(pending_acks.size()>0)
         {
              issueAck_(pending_acks.front()->getRequest());
              pending_acks.pop();
         }
-    
 
         uint64_t current_t=getClock()->currentCycle();
         average_queue_occupancy_=((float)(average_queue_occupancy_*last_queue_sampling_timestamp)/current_t)+((float)sched->getQueueOccupancy()*(current_t-last_queue_sampling_timestamp))/current_t;
@@ -308,18 +308,16 @@ namespace spike_model
             {
                 (*banks)[next->getDestinationBank()]->issue(next);
                 sched->notifyCommandSubmission(next);
-                uint16_t next_command_delay=1;
                 if(next->getType()==BankCommand::CommandType::ACTIVATE)
                 {
                     next_command_delay=2; // ACTIVATES are two cycle commands
                 }
-
-                if(ready_commands->hasCommands() || sched->hasBanksToSchedule() || (sent_this_cycle && pending_acks.size()>0))
-                {
-                    controller_cycle_event_.schedule(next_command_delay);
-                    idle_=false;
-                }
             }
+        }
+        if(ready_commands->hasCommands() || sched->hasBanksToSchedule() || (sent_this_cycle && pending_acks.size()>0))
+        {
+            controller_cycle_event_.schedule(next_command_delay);//MIGHT SEND AN ACK LATER THAN IT SHOULD IF next_command_delay>1 and pending_acks.size()>0
+            idle_=false;
         }
     }
 
