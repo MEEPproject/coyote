@@ -70,7 +70,7 @@ namespace spike_model
 
         if(trace_)
         {
-            logger_->logMemoryBankCommand(getClock()->currentCycle(), c->getRequest()->getMemoryController(), c->getRequest()->getPC(), c->getDestinationBank(), c->getRequest()->getAddress());
+            logger_->logMemoryBankCommand(getClock()->currentCycle(), c->getRequest()->getCoreId(), c->getRequest()->getPC(), c->getDestinationBank(), c->getRequest()->getAddress());
         }
     }
 
