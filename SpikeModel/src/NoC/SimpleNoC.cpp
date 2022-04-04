@@ -200,10 +200,6 @@ namespace spike_model
                     }
                 }
                 dst_file_aggregated << aggregated << ";";
-                if(SPARTA_EXPECT_FALSE(trace_))
-                {
-                    logger_->logNoCMessageDestinationCummulated(getClock()->currentCycle(), y*dst_count_[0].size()+x, 0, aggregated);
-                }
             }
             for(auto network : noc_networks_)
                 dst_file[getNetworkFromString(network)] << "\n";
@@ -236,10 +232,6 @@ namespace spike_model
                     }
                 }
                 src_file_aggregated << aggregated << ";";
-                if(SPARTA_EXPECT_FALSE(trace_))
-                {
-                    logger_->logNoCMessageSourceCummulated(getClock()->currentCycle(), y*dst_count_.size()+x, 0, aggregated);
-                }
             }
             for(auto network : noc_networks_)
             {

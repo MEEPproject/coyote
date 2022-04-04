@@ -4,7 +4,7 @@
 
 #include <memory>
 #include "NoCMessageType.hpp"
-#include "../Event.hpp"
+#include "../CoreEvent.hpp"
 #include <iostream>
 
 namespace spike_model
@@ -32,7 +32,7 @@ namespace spike_model
              * \param dst_port The destination port that depends on the type of message
              * \note NoCMessages must contain fully initialized Requests, including all of the associated destination data. Handle with care.
              */
-            NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint16_t payload_size, uint16_t src_port, uint16_t dst_port);
+            NoCMessage(std::shared_ptr<CoreEvent> r, NoCMessageType t, uint16_t payload_size, uint16_t src_port, uint16_t dst_port);
 
             /*!
              * \brief Get the type of the message
@@ -44,7 +44,7 @@ namespace spike_model
              * \brief Get the CacheRequest associated to the message
              * \return The CacheRequest
              */
-            std::shared_ptr<Event> getRequest(){return request_;}
+            std::shared_ptr<CoreEvent> getRequest(){return request_;}
 
             
             /*!
@@ -92,7 +92,7 @@ namespace spike_model
 
         private:
 
-            std::shared_ptr<Event>  request_;
+            std::shared_ptr<CoreEvent>  request_;
             NoCMessageType          message_type_;
             uint16_t                size_;              //! The message size in bits
             uint16_t                src_port_;          //! The source

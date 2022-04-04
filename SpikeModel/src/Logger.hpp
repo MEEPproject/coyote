@@ -482,27 +482,20 @@ namespace spike_model
             /*!
              * \brief Add an NoCMessage Source event to the trace
              * \param timestamp The timestamp for the event
-             * \param id The id of the source of the message
+             * \parram core_id The id of the core involved in this event
+             * \param src_id The id of the source of the message
              * \param pc The PC of the instruction related to the event (does not fully apply...)
              */
-            void logNoCMessageSource(uint64_t timestamp, uint64_t src_id, uint64_t pc);
-
-            /*!
-             * \brief Add an NoCMessage Source event to the trace
-             * \param timestamp The timestamp for the event
-             * \param id The id of the source of the message
-             * \param pc The PC of the instruction related to the event (does not fully apply...)
-             * \param num_packets The number of packets that have been enqueued since the last event
-             */
-            void logNoCMessageSourceCummulated(uint64_t timestamp, uint64_t src_id, uint64_t pc, uint64_t num_packets);
+            void logNoCMessageSource(uint64_t timestamp, uint64_t core_id, uint64_t src_id, uint64_t pc);
 
             /*!
              * \brief Add a cummulated NoCMessage Destination event to the trace
              * \param timestamp The timestamp for the event
-             * \param id The id of the source of the message
+             * \parram core_id The id of the core involved in this event
+             * \param dst_id The id of the source of the message
              * \param pc The PC of the instruction related to the event (does not fully apply...)
              */
-            void logNoCMessageDestination(uint64_t timestamp, uint64_t dst_id, uint64_t pc);
+            void logNoCMessageDestination(uint64_t timestamp, uint64_t core_id, uint64_t dst_id, uint64_t pc);
             
             /*!
              * \brief Add a cummulated NoCMessage Destination event to the trace

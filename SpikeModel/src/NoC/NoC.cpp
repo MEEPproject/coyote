@@ -193,8 +193,8 @@ namespace spike_model
             default:
                 break;
         }
-        logger_->logNoCMessageDestination(getClock()->currentCycle(), dst_id, 0); //mess->getRequest()->getPC());
-        logger_->logNoCMessageSource(getClock()->currentCycle(), src_id, 0); //mess->getRequest()->getPC());
+        logger_->logNoCMessageDestination(getClock()->currentCycle(), mess->getRequest()->getCoreId() , dst_id, mess->getRequest()->getPC());
+        logger_->logNoCMessageSource(getClock()->currentCycle(), mess->getRequest()->getCoreId(), src_id, mess->getRequest()->getPC());
     }
 
     void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)

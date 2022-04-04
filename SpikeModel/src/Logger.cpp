@@ -37,7 +37,7 @@ namespace spike_model
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0," << std::hex << mem_bank;
+            sstream << ev << ",0," << std::dec << mem_bank;
             log(timestamp, id, 0, sstream.str());
         }
     }
@@ -48,7 +48,7 @@ namespace spike_model
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0," << std::hex << cache_bank;
+            sstream << ev << ",0," << std::dec << cache_bank;
             log(timestamp, id, 0, sstream.str());
         }
     }
@@ -59,7 +59,7 @@ namespace spike_model
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0," << std::hex << tile_id;
+            sstream << ev << ",0," << std::dec << tile_id;
             log(timestamp, id, 0, sstream.str());
         }
     }
@@ -210,50 +210,28 @@ namespace spike_model
         }
     }
 
-    void Logger::logNoCMessageSource(uint64_t timestamp, uint64_t src_id, uint64_t pc)
+    void Logger::logNoCMessageSource(uint64_t timestamp, uint64_t core_id, uint64_t src_id, uint64_t pc)
     {
         std::string ev="noc_message_src";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0,1";
-            log(timestamp, src_id, pc, sstream.str());
+            sstream << ev << ",0," << src_id;
+            log(timestamp, core_id, pc, sstream.str());
         }
     }
    
-    void Logger::logNoCMessageSourceCummulated(uint64_t timestamp, uint64_t src_id, uint64_t pc, uint64_t num_packets)
-    {
-        std::string ev="noc_message_src_cummulated";
-        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
-        {
-            std::stringstream sstream;
-            sstream << ev << ",0," << num_packets;
-            log(timestamp, src_id, pc, sstream.str());
-        }
-    }
-
-    void Logger::logNoCMessageDestination(uint64_t timestamp, uint64_t dst_id, uint64_t pc)
+    void Logger::logNoCMessageDestination(uint64_t timestamp, uint64_t core_id, uint64_t dst_id, uint64_t pc)
     {
         std::string ev="noc_message_dst";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
-            sstream << ev << ",0,1";
+            sstream << ev << ",0," << dst_id;
             log(timestamp, dst_id, pc, sstream.str());
         }
     }
     
-    void Logger::logNoCMessageDestinationCummulated(uint64_t timestamp, uint64_t dst_id, uint64_t pc, uint64_t num_packets)
-    {
-        std::string ev="noc_message_dst_cummulated";
-        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
-        {
-            std::stringstream sstream;
-            sstream << ev << ",0," << num_packets;
-            log(timestamp, dst_id, pc, sstream.str());
-        }
-    }
-
     void Logger::logMemoryCPUAck(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t tile, uint64_t address)
     {
         std::string ev="memory_ack";

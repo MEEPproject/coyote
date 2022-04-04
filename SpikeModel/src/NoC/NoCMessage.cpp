@@ -7,7 +7,7 @@ namespace spike_model
 {
     uint8_t NoCMessage::header_size[static_cast<int>(NoCMessageType::count)]; // Define header_size for each packet
 
-    NoCMessage::NoCMessage(std::shared_ptr<Event> r, NoCMessageType t, uint16_t payload_size, uint16_t src_port, uint16_t dst_port) :
+    NoCMessage::NoCMessage(std::shared_ptr<CoreEvent> r, NoCMessageType t, uint16_t payload_size, uint16_t src_port, uint16_t dst_port) :
         request_(r),
         message_type_(t),
         src_port_(src_port),
