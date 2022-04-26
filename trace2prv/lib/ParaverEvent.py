@@ -20,6 +20,15 @@ class PrvEvent:
 
         self.values[label] = value;
 
+    def containsKey(self, key):
+        return key in self.values
+
+    def numValues(self):
+        return len(list(self.values.values()))
+
+    def getValue(self, key):
+        return self.values.get(key)
+
     def setMul(self, mul):
 
         if not isinstance(mul, int):

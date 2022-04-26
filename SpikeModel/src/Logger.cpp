@@ -19,6 +19,11 @@ namespace spike_model
     {
         *trace_file_ << std::dec << timestamp << "," << id << "," << std::hex << pc << "," << ev << std::endl;
     }
+            
+    void Logger::logRaw(uint64_t timestamp, char * text)
+    {
+        *trace_file_ << std::dec << timestamp << ", " << text << std::endl;
+    }
 
     void Logger::logResumeWithMC(uint64_t timestamp, uint64_t id, uint64_t mc)
     {
@@ -228,7 +233,7 @@ namespace spike_model
         {
             std::stringstream sstream;
             sstream << ev << ",0," << dst_id;
-            log(timestamp, dst_id, pc, sstream.str());
+            log(timestamp, core_id, pc, sstream.str());
         }
     }
     

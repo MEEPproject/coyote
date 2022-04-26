@@ -6,10 +6,8 @@
       { "eventName": "pc",          "eventID": "0"},
       { "eventName": "event-type"    ,               "eventID": "1" ,
         "derivedEvents": [
-          {"eventName": "AccessType",               "eventID": "2"  },
           {"eventName": "LocalRequest",               "eventID": "3"  },
           {"eventName": "RemoteRequest",               "eventID": "4"  },
-          {"eventName": "SurrogateRequest",               "eventID": "5"  },
           {"eventName": "MemoryRequest",               "eventID": "6"  },
           {"eventName": "MemoryOperation",               "eventID": "7"  },
           {"eventName": "MemoryAck",               "eventID": "8"  },
@@ -61,8 +59,6 @@
 
         ]
       },
-      { "eventName": "destination",          "eventID": "516"},
-      { "eventName": "address",          "eventID": "517"},
       { "eventName": "MemoryObjName",          "eventID": "518"},
       { "eventName": "MemoryObjStart",          "eventID": "519"},
       { "eventName": "MemoryObjEnd",          "eventID": "520"}
