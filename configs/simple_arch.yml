@@ -17,10 +17,12 @@ meta:
     simulation_mode: execution_driven       # (std::string)     The type of simulation to perform (execution_driven, trace_driven). Mode execution_driven only supported for a tiled architecture
     show_factories: false                   # (bool)            Print generated factories
     trace: true                            # (bool)            Generate a trace into paraver format
+#    trace_start_tick: 100                     # (uint_64_t)       The timestampo in which tracing will begin
+#    trace_end_tick: 300                     # (uint_64_t)       The timestampo in which tracing will end
     events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
     enable_llc: false                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
-    vector_bypass_l1: false                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
+    vector_bypass_l1: true                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
     vector_bypass_l2: false                 # (bool)            Vector memory accesses bypass the L2 (Ignored if MCPU enabled)
     l1_writeback: false                    # (bool)            l1 is a writeback or a writethrough cache
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
@@ -74,7 +76,7 @@ top:
         latency: 1                          # (uint64_t)        The latency of the MCPU
         num_llc_banks: 16                    # (uint16_t)        The number of LLCs
         llc_bank_policy: set_interleaving   # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
-        max_vvl: 16384                      # (uint64_t         The maximum vvl that will be returned by the MCPU (in bits)
+        max_vvl: 16384                      # (uint64_t         The maximum vvl that will be returned by the MCPU (in bits). Unused if smart_mcpu is disabled
       llc*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)

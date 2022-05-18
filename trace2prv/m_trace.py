@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, re, csv, decimal
+import sys, re, csv, decimal, operator
 import time
 import argparse
 from lib.utils import *
@@ -12,69 +12,72 @@ import lib.ParaverLine
 from lib.DisasmRV import *
 import subprocess
 
-derived_event_dict= {
-                        "access_type" : 2,
-                        "local_request" : 3,
-                        "remote_request" : 4,
-                        "surrogate_request" : 5,
-                        "memory_request" : 6,
-                        "memory_operation" : 7,
-                        "memory_ack" : 8,
-                        "ack_received" : 9,
-                        "ack_forwarded" : 10,
-                        "ack_forward_received" : 11,
-                        "miss_serviced" : 12,
-                        "l2_miss" : 13,
-                        "stall" : 14,
-                        "resume" : 15,
-                        "KI" : 16,
-                        "bank_operation" : 17,
-                        "miss_on_evicted" : 18,
-                        "resume_mc" : 19,
-                        "resume_memory_bank" : 20,
-                        "resume_cache_bank" : 21,
-                        "resume_tile" : 22,
-                        "noc_message_dst" : 23,
-                        "noc_message_src" : 24,
-                        "noc_message_dst_cummulated" : 25,
-                        "noc_message_src_cummulated" : 26,
-                        "mem_tile_occupancy_out_noc"    : 27,
-                        "mem_tile_occupancy_mc"         : 28,
-                        "mem_tile_vvl"                  : 29,
-                        "mem_tile_vecop_recv"           : 30,
-                        "mem_tile_vecop_sent"           : 31,
-                        "mem_tile_scaop_recv"           : 32,
-                        "mem_tile_scaop_sent"           : 33,
-                        "mem_tile_spop_recv"            : 34,
-                        "mem_tile_spop_sent"            : 35,
-                        "mem_tile_mtop_recv"            : 36,
-                        "mem_tile_mtop_sent"            : 37,
-                        "mem_tile_mc_recv"              : 38,
-                        "mem_tile_mc_sent"              : 39,
-                        "mem_tile_llc_recv"             : 40,
-                        "mem_tile_llc_sent"             : 41,
-                        "mem_tile_mc2llc"               : 42,
-                        "mem_tile_llc2mc"               : 43,
-                        "mem_tile_noc_recv"             : 44,
-                        "mem_tile_noc_sent"             : 45,
-                        "inst" : 46,
-                        "l2_read" : 47,
-                        "l2_write" : 48,
-                        "memory_read" : 49,
-                        "memory_write" : 50,
-                        "set_vl" : 51,
-                        "requested_vl" : 52,
-                        "l2_wb" : 53
-                    }
-
 base_event_dict= {
-                    2 : 0,
-                    3 : 1,
-                    4 : 2,
-                    5 : 3
+                    "pc" : 0,
+                    "l1_miss" : 1,
+                    "l1_hit" : 1,
+                    "l1_address" : 2,
+                    "local_request" : 3,
+                    "remote_request" : 4,
+                    "l1_bypass" : 2,
+                    "l2_address" : 5,
+                    "memory_request" : 6,
+                    "memory_operation" : 7,
+                    "memory_ack" : 8,
+                    "ack_received" : 9,
+                    "ack_forwarded" : 10,
+                    "ack_forward_received" : 11,
+                    "miss_serviced" : 12,
+                    "stall" : 13,
+                    "resume" : 14,
+                    "KI" : 15,
+                    "bank_operation" : 16,
+                    "miss_on_evicted" : 17,
+                    "resume_address" : 18,
+                    "resume_mc" : 19,
+                    "resume_memory_bank" : 20,
+                    "resume_cache_bank" : 21,
+                    "resume_tile" : 22,
+                    "noc_message_dst" : 23,
+                    "noc_message_src" : 24,
+                    "noc_message_dst_cummulated" : 25,
+                    "noc_message_src_cummulated" : 26,
+                    "mem_tile_occupancy_out_noc"    : 27,
+                    "mem_tile_occupancy_mc"         : 28,
+                    "mem_tile_vvl"                  : 29,
+                    "mem_tile_vecop_recv"           : 30,
+                    "mem_tile_vecop_sent"           : 31,
+                    "mem_tile_scaop_recv"           : 32,
+                    "mem_tile_scaop_sent"           : 33,
+                    "mem_tile_spop_recv"            : 34,
+                    "mem_tile_spop_sent"            : 35,
+                    "mem_tile_mtop_recv"            : 36,
+                    "mem_tile_mtop_sent"            : 37,
+                    "mem_tile_mc_recv"              : 38,
+                    "mem_tile_mc_sent"              : 39,
+                    "mem_tile_llc_recv"             : 40,
+                    "mem_tile_llc_sent"             : 41,
+                    "mem_tile_mc2llc"               : 42,
+                    "mem_tile_llc2mc"               : 43,
+                    "mem_tile_noc_recv"             : 44,
+                    "mem_tile_noc_sent"             : 45,
+                    "inst" : 46,
+                    "l2_read" : 47,
+                    "l2_write" : 48,
+                    "memory_read" : 49,
+                    "memory_write" : 50,
+                    "set_vl" : 51,
+                    "requested_vl" : 52,
+                    "l2_wb" : 53,
+                    "l2_hit" : 54,
+                    "l2_miss" : 54,
+                    "InstructionOperand1" : 55,
+                    "InstructionOperand2" : 56,
+                    "InstructionOperand3" : 57
                 };
+                #MemoryObj events should remain the last in the json file!!
 
-def offset_parser(offsets_string, paraver_events, paraver_line, last_inst_with_offsets):
+def offset_parser(offsets_string, paraver_events, paraver_line, last_inst_with_offsets, PrvEvents):
     counter = 0
     offsets_strip = offsets_string.strip()
     events = paraver_events.derivedEvents
@@ -93,7 +96,7 @@ def offset_parser(offsets_string, paraver_events, paraver_line, last_inst_with_o
          
     return last_inst_with_offsets
 
-def offset_parser_with_delay(offsets_string, paraver_events, paraver_line, last_state):
+def offset_parser_with_delay(offsets_string, paraver_events, paraver_line, last_state, PrvEvents):
     #Last_state:
     #last_state[0] int with time between instructions
     #last_state[1] prv file
@@ -149,15 +152,14 @@ def instToTrace(string, event, paraver_line, last_state):
     paraver_line.addEvent(event, string)
 
 
-def intToPRV(string, event, paraver_line, last_state):
+def intToPRV(string, event, paraver_line, last_state, PrvEvents):
     value = 0 
     new_value=False
     if string != "":
         base=0
         #if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
-        #print(event.name)
         #print("\t"+string)
-        if event.name in ["pc", "address", "MemoryOperation", "MemoryRead", "MemoryWrite", "L2Miss", "Ack", "L1MissServiced", "Resume", "BankOperation", "L2Read", "L2Write", "L2Writeback"] or ("Request" in event.name and "Requested" not in event.name) or "Ack" in event.name or "MemTile" in event.name:
+        if event.name in ["PC", "Address", "MemoryOperation", "MemoryRead", "MemoryWrite", "L1Hit", "L1Miss", "L2Hit", "L2Miss", "Ack", "L1MissServiced", "ResumeAddress", "BankOperation", "L2Read", "L2Write", "L2Writeback"] or ("Request" in event.name and "Requested" not in event.name) or "Ack" in event.name or "MemTile" in event.name:
             base=16
 
         value=int(string, base)
@@ -177,7 +179,7 @@ def threadID(string, event, paraver_line, last_state):
     return last_state
 
 
-def coreID(string, event, paraver_line, last_state):
+def coreID(string, event, paraver_line, last_state, PrvEvents):
     paraver_line.threadId = int(string)+1
     return  last_state
 
@@ -197,11 +199,13 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     csvfile.seek(0)
     data = csv.reader(csvfile, skipinitialspace=True, delimiter=',')
 
+    next(data,None) #Skip header
+    data = sorted(data, key=lambda x:int(x[0])) 
+
     paraver_line = ParaverLine(2, 1, 1, 1, 1)
    
 
     last_dst_value = 0
-    last_dst_event = PrvEvents[1].derivedEvents[0]
 
     #disasm_col = 2
     offset_col = 0
@@ -218,9 +222,9 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     last_state = [0] * NUMBER_OF_COLUMS
     parser_functions = [intToPRV] * NUMBER_OF_COLUMS
 
-    mem_obj_name_pos=2
-    mem_obj_start_pos=3
-    mem_obj_end_pos=4
+    mem_obj_name_pos=-3
+    mem_obj_start_pos=-2
+    mem_obj_end_pos=-1
     mem_objs=[]
 
     #for a in PrvEvents:
@@ -275,23 +279,29 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     prev_time=0
     prev_core="-1"
     num_different_instructions=0
+    num_stall_reasons=0
+    num_operands1=0;
+    num_operands2=0;
+    num_operands3=0;
 
     for row in data:
 
         if (sanityCheck(row, True) == -1): continue
         
-        paraver_line.time = row[0]
-        paraver_line.events = []
+        if int(row[0])>prev_time:
+            writePRVFile(prvfile, paraver_line.getLine())
+            paraver_line.time = row[0]
+            paraver_line.events = []
 
         #print("["+row[0]+"]")
 
         #To be able to count events, we need to add an event with value zero after an actual event of the kind to count (unless there is an event of that kind actually happening the cycle after)
-        if prev_type in ["l2_miss", "KI", "bank_operation", "miss_on_evicted", "resume_cache_bank"] and (row[coreid_col]!=prev_core or prev_type!=row[3] or ( prev_type==row[3] and  int(paraver_line.time)>prev_time+1)):
-            last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[3]].derivedEvents[derived_event_dict[prev_type]-4], paraver_line, last_state[3])
-            paraver_line.time = str(prev_time+1)
-            writePRVFile(prvfile, paraver_line.getLine())
-            paraver_line.time = row[0]
-            paraver_line.events = []
+    #    if prev_type in ["l2_miss", "KI", "bank_operation", "miss_on_evicted", "resume_cache_bank"] and (row[coreid_col]!=prev_core or prev_type!=row[3] or ( prev_type==row[3] and  int(paraver_line.time)>prev_time+1)):
+ #           last_state[3] = parser_functions[3]("0", PrvEvents[base_event_dict[prev_type]], paraver_line, last_state[3], PrvEvents)
+  #          paraver_line.time = str(prev_time+1)
+   #         writePRVFile(prvfile, paraver_line.getLine())
+    #        paraver_line.time = row[0]
+     #       paraver_line.events = []
 
         i = 0 #Starts at 1 because the firs column after the time stamp is not an event
 
@@ -318,39 +328,114 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                     value=row[4]
 
                 #print("col is "+col)
-                if col!="inst":
+                if col=="l1_miss" or col=="l1_hit":
+                    miss=0
+                    if col=="l1_miss":
+                        miss=1
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l1_miss"]], miss)
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l1_address"]], int(str(value), 16))
+                elif col=="l2_miss" or col=="l2_hit":
+                    miss=0
+                    if col=="l2_miss":
+                        miss=1
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l2_miss"]], miss)
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l2_address"]], int(str(value), 16))
+
+                elif col=="inst":
+                    #print(str(derived_event_dict[col])+" ->  "+value)
+                    #print(PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2])
+                    key=-1
+
+                    tokens=value.split()
+                    opcode=tokens[0]
+                    operand1=""
+                    operand2=""
+                    operand3=""
+                    if len(tokens)>1:
+                        match=re.match("[a-z]\d+",tokens[1])
+                        if match!=None:
+                            operand1=match.group(0)
+                        if len(tokens)>2:
+                            match=re.match("[a-z]\d+",tokens[2])
+                            if match!=None:
+                                operand2=match.group(0)
+                            if len(tokens)>3:
+                                match=re.match("[a-z]\d+",tokens[3])
+                                if match!=None:
+                                    operand3=match.group(0)
+
+
+                    if not PrvEvents[base_event_dict[col]].containsKey(opcode):
+                        key=num_different_instructions
+                        PrvEvents[base_event_dict[col]].addValue(key, opcode)
+                        num_different_instructions=num_different_instructions+1
+                    else:
+                        key=PrvEvents[base_event_dict[col]].getValue(opcode)
+                    last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict[col]], paraver_line, last_state[i], PrvEvents)
+                    
+                    if operand1!="":
+                        if not PrvEvents[base_event_dict["InstructionOperand1"]].containsKey(operand1):
+                            key=num_operands1
+                            PrvEvents[base_event_dict["InstructionOperand1"]].addValue(key, operand1)
+                            num_operands1=num_operands1+1
+                        else:
+                            key=PrvEvents[base_event_dict["InstructionOperand1"]].getValue(operand1)
+                        last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict["InstructionOperand1"]], paraver_line, last_state[i], PrvEvents)
+                    
+                    if operand2!="":
+                        if not PrvEvents[base_event_dict["InstructionOperand2"]].containsKey(operand2):
+                            key=num_operands2
+                            PrvEvents[base_event_dict["InstructionOperand2"]].addValue(key, operand2)
+                            num_operands2=num_operands2+1
+                        else:
+                            key=PrvEvents[base_event_dict["InstructionOperand2"]].getValue(operand2)
+                        last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict["InstructionOperand2"]], paraver_line, last_state[i], PrvEvents)
+                    
+                    if operand3!="":
+                        if not PrvEvents[base_event_dict["InstructionOperand3"]].containsKey(operand3):
+                            key=num_operands3
+                            PrvEvents[base_event_dict["InstructionOperand3"]].addValue(key, operand3)
+                            num_operands3=num_operands3+1
+                        else:
+                            key=PrvEvents[base_event_dict["InstructionOperand3"]].getValue(operand3)
+                        last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict["InstructionOperand3"]], paraver_line, last_state[i], PrvEvents)
+                    
+                    last_state[i] = parser_functions[i](row[2], PrvEvents[base_event_dict["pc"]], paraver_line, last_state[i], PrvEvents)
+
+                elif col=="stall": #stall
+                    key=-1
+                    if not PrvEvents[base_event_dict[col]].containsKey(value):
+                        key=num_stall_reasons
+                        PrvEvents[base_event_dict[col]].addValue(key, value)
+                        num_stall_reasons=num_stall_reasons+1
+                    else:
+                        key=PrvEvents[base_event_dict[col]].getValue(value)
+                        #print("NOPE")
+
+                    #print("The key is "+str(key))
+                    last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict[col]], paraver_line, last_state[i], PrvEvents)
+                else:
                     #if derived_event_dict[col]-2==46:
                         #print("!!!!!!!!!!!"+col)
                     #print(col+" -> "+str(derived_event_dict[col]))
                     #print(len(PrvEvents[base_event_dict[i]].derivedEvents))
                     #print("value is "+value)
                     #print("id is "+str(derived_event_dict[col]-2))
-                    last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-4], paraver_line, last_state[i])
+                    last_state[i] = parser_functions[i](value, PrvEvents[base_event_dict[col]], paraver_line, last_state[i], PrvEvents)
                     if(col=="set_vl"):
-                        last_state[i] = parser_functions[i](row[4], PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict["requested_vl"]-4], paraver_line, last_state[i])
-                else:
-                    #print(str(derived_event_dict[col])+" ->  "+value)
-                    #print(PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-2])
-                    key=-1
-                    if not PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-4].containsKey(value):
-                        key=num_different_instructions
-                        PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-4].addValue(key, value)
-                        num_different_instructions=num_different_instructions+1
-                    else:
-                        key=PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-4].getValue(value)
-                        #print("NOPE")
-
-                    #print("The key is "+str(key))
-                    last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict[i]].derivedEvents[derived_event_dict[col]-4], paraver_line, last_state[i])
+                        last_state[i] = parser_functions[i](row[4], PrvEvents[base_event_dict["requested_vl"]], paraver_line, last_state[i], PrvEvents)
 
             else:
                 if i==1: #Core id
-                    parser_functions[i](col, None, paraver_line, last_state[i])
-                else:
+                    parser_functions[i](col, None, paraver_line, last_state[i], PrvEvents)
+                #else:
                     #if i==4 or i==5:
                      #   continue
                     #else:
-                    last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
+                    #print(col)
+                    #print(i)
+                    #print(base_event_dict[i])
+                    #last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
         if (row[3]!="resume" and row[3]!="stall" and row[3]!="KI") or (row[3]=="resume" and int(row[5], 16)!=0): #Add memory obj info. stalls, KIs and resumes with value 0 have no mem info
             found=False
@@ -370,8 +455,6 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
         prev_type=row[3]
         prev_time=int(row[0])
         prev_core=row[coreid_col]
-
-        writePRVFile(prvfile, paraver_line.getLine())
 
     printMsg("PRV generated successfully!", "OK")
 
