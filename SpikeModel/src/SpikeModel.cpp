@@ -361,7 +361,7 @@ void SpikeModel::onTriggered_(const std::string & msg)
     std::cout << "     [trigger] " << msg << std::endl;
 }
 
-spike_model::Logger& SpikeModel::getLogger()
+spike_model::Logger * SpikeModel::getLogger()
 {
     return getCPUFactory_()->getLogger();
 }

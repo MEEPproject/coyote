@@ -20,10 +20,10 @@ namespace spike_model
              * \brief Set the logger that will be used for tracing.
              * \param l The logger to use
              */
-            void setLogger(Logger & l)
+            void setLogger(Logger * l)
             {
                 trace_=true;
-                logger_= &l;
+                logger_= l;
             }
 
         protected:

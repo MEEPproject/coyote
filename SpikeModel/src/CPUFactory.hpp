@@ -57,7 +57,7 @@ public:
      */
     auto getResourceNames() const -> const std::vector<std::string>&;
 
-    Logger& getLogger();
+    Logger * getLogger();
 
 private:
 

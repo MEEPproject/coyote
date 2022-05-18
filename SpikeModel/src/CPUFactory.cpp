@@ -335,7 +335,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
             if(topology_->trace)
             {
-                noc->setLogger(topology_->logger);
+                noc->setLogger(&topology_->logger);
             }
         }
 
@@ -534,7 +534,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
             /*if(topology_->trace)
             {
-                core->setLogger(topology_->logger);
+                core->setLogger(&topology_->logger);
             }*/
         }
 
@@ -548,7 +548,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
                 Tile * tile=tile_node->getResourceAs<spike_model::Tile>();
 
-                tile->setLogger(topology_->logger);
+                tile->setLogger(&topology_->logger);
 
                 for(std::size_t num_of_l2_banks = 0; num_of_l2_banks < topology_->num_banks_per_tile; ++num_of_l2_banks){
                     auto bank_node = root_node->getChild(std::string("arch.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
@@ -557,7 +557,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
                     L2CacheBank * bank=bank_node->getResourceAs<spike_model::L2CacheBank>();
 
-                    bank->setLogger(topology_->logger);
+                    bank->setLogger(&topology_->logger);
                 }
                 auto arbiter_node = root_node->getChild(std::string("arch.tile") + sparta::utils::uint32_to_str(num_of_tiles) +
                         std::string(".arbiter"));
@@ -565,7 +565,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
                 Arbiter * arb=arbiter_node->getResourceAs<spike_model::Arbiter>();
 
-                arb->setLogger(topology_->logger);
+                arb->setLogger(&topology_->logger);
             }
 
             for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
@@ -574,7 +574,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                 sparta_assert(mcpu_node != nullptr);
 
                 MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
-                mcpu->setLogger(topology_->logger);
+                mcpu->setLogger(&topology_->logger);
             }
 
             for(std::size_t num_of_memory_controllers = 0; num_of_memory_controllers < topology_->num_memory_controllers; ++num_of_memory_controllers)
@@ -585,7 +585,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
                 MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
 
-                mc->setLogger(topology_->logger);
+                mc->setLogger(&topology_->logger);
 
                 for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks) {
                     auto bank_node = root_node->getChild(std::string("arch.memory_controller") +
@@ -593,7 +593,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                 std::string(".memory_bank") + sparta::utils::uint32_to_str(num_of_memory_banks));
                     sparta_assert(bank_node != nullptr);
                     MemoryBank * b=bank_node->getResourceAs<spike_model::MemoryBank>();
-                    b->setLogger(topology_->logger);
+                    b->setLogger(&topology_->logger);
                 }
             }
         }
@@ -606,7 +606,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
         L2CacheBank * bank=bank_node->getResourceAs<spike_model::L2CacheBank>();
 
-        bank->setLogger(topology_->logger);
+        bank->setLogger(&topology_->logger);
                         
         sparta::bind(root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.out_tile_req"), root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.in_tile_ack"));
     }
@@ -618,12 +618,12 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
         MemoryController * mc=mc_node->getResourceAs<spike_model::MemoryController>();
 
-        mc->setLogger(topology_->logger);
+        mc->setLogger(&topology_->logger);
         for(std::size_t num_of_memory_banks = 0; num_of_memory_banks < topology_->num_memory_banks; ++num_of_memory_banks) {
             auto bank_node = root_node->getChild(std::string("arch.memory_controller") + std::string(".memory_bank") + sparta::utils::uint32_to_str(num_of_memory_banks));
             sparta_assert(bank_node != nullptr);
             MemoryBank * b=bank_node->getResourceAs<spike_model::MemoryBank>();
-            b->setLogger(topology_->logger);
+            b->setLogger(&topology_->logger);
             mc->addBank_(b);
             b->setMemoryController(mc);
         }
@@ -644,7 +644,7 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
 
         L2CacheBank * bank=bank_node->getResourceAs<spike_model::L2CacheBank>();
 
-        bank->setLogger(topology_->logger);
+        bank->setLogger(&topology_->logger);
                         
         sparta::bind(root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.out_tile_req"), root_node->getChildAs<sparta::Port>("arch.l2_bank.ports.in_tile_ack"));
     }
@@ -674,8 +674,8 @@ auto spike_model::CPUFactory::getResourceNames() const -> const std::vector<std:
     return resource_names_;
 }
 
-spike_model::Logger& spike_model::CPUFactory::getLogger()
+spike_model::Logger * spike_model::CPUFactory::getLogger()
 {
-    return topology_->logger;
+    return &topology_->logger;
 }
 // vim: set tabstop=4:softtabstop=0:expandtab:shiftwidth=4:smarttab:

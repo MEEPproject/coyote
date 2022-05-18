@@ -43,7 +43,7 @@ public:
 
     std::shared_ptr<spike_model::FullSystemSimulationEventManager> createRequestManager();
 
-    spike_model::Logger& getLogger();
+    spike_model::Logger * getLogger();
 
     double getAvgArbiterLatency();
     double getAvgL2Latency();

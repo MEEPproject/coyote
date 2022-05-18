@@ -179,8 +179,15 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
     {
         if(events_of_interest=="[any]" || events_of_interest.find("instruction_log")!=std::string::npos)
         {
-            spike_model::Logger l=sim->getLogger();
-            spike->setInstructionLogFile(l.getFile());
+            spike_model::Logger * l=sim->getLogger();
+            uint64_t start=0;
+            uint64_t end=std::numeric_limits<uint64_t>::max();
+            if(upt.hasValue("meta.params.trace_start_tick") && upt.hasValue("meta.params.trace_end_tick"))
+            {
+                start=upt.get("meta.params.trace_start_tick").getAs<uint64_t>();
+                end=upt.get("meta.params.trace_end_tick").getAs<uint64_t>();
+            }
+            spike->setInstructionLogFile(l->getFile(), start, end);
         }
         else
         {
@@ -278,14 +285,14 @@ int main(int argc, char **argv)
 
         if(trace)
         {
-            spike_model::Logger l=sim->getLogger();
+            spike_model::Logger * l=sim->getLogger();
 
             if(upt.hasValue("meta.params.trace_start_tick") && upt.hasValue("meta.params.trace_end_tick"))
             {
                 uint64_t start=upt.get("meta.params.trace_start_tick").getAs<uint64_t>();
                 uint64_t end=upt.get("meta.params.trace_end_tick").getAs<uint64_t>();
                 std::cout << "Tracing between cycle "<< start << " and cycle " << end << "\n";
-                l.setTimeBounds(start, end);
+                l->setTimeBounds(start, end);
             }
             else
             {
@@ -307,13 +314,13 @@ int main(int argc, char **argv)
                 token = events_of_interest.substr(0, pos);
                 if(token!="any")
                 {
-                    l.addEventOfInterest(token);
+                    l->addEventOfInterest(token);
                 }
                 events_of_interest.erase(0, pos + delimiter.length());
             }
             if(events_of_interest!="any")
             {
-                l.addEventOfInterest(events_of_interest); //Last event
+                l->addEventOfInterest(events_of_interest); //Last event
             }
         }
         printf("Gonna run\n");
