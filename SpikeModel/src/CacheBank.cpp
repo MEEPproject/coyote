@@ -79,7 +79,7 @@ namespace spike_model
 
             in_flight_misses_.erase(req);
         }
-        else
+        else if(writeback_ && req->getType()!=CacheRequest::AccessType::STORE)
         {
             if(num_in_flight_wbs==max_in_flight_wbs && pending_wb!=nullptr) //If it was stalled due to WBs
             {
@@ -173,14 +173,13 @@ namespace spike_model
     // Handle cache access request
     bool CacheBank::handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr)
     {
-
-        bool CACHE_HIT;
+        bool CACHE_HIT=true;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
             reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType());
             CACHE_HIT=true;
         }
-        else
+        else if(writeback_ || mem_access_info_ptr->getReq()->getType()!=CacheRequest::AccessType::STORE)
         {
             // Access cache, and check cache hit or miss
             CACHE_HIT = cacheLookup_(mem_access_info_ptr);
