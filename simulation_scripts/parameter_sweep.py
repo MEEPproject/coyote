@@ -9,26 +9,29 @@ import time
 # Configuration
 coyote_bin_path="../SpikeModel/build/spike_model"
 apps_path="../apps/"
-apps=["mt-matmul-vec/matmul"]
+#apps=["axpy/axpy", "spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS", "spmv_synth", "mt-matmul-vec/matmul"]
+apps=["spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS"]
+#apps=["spmv-vec/spmv_pdb1HYS", "spmv_synth", "mt-matmul-vec/matmul"]
 cores=1 # Change to the number of procs to use
 polling_time=60 # seconds
 
 # Params validation
-if len(sys.argv)<4 and len(sys.argv)>5:
+if len(sys.argv)<5 or len(sys.argv)>6:
     print(len(sys.argv))
-    print("Usage: python3 parameter_sweep.py config_file parameter_name value_list(brace-enclosed, comma-separated) [(Optional)enable_trace]")
+    print("Usage: python3 parameter_sweep.py config_file parameter_name value_list(brace-enclosed, comma-separated) output_path [(Optional)enable_trace]")
     sys.exit()
 
 # Trace?
 save_trace=False
-if len(sys.argv)==5:
-    if sys.argv[4]!="enable_trace":
-        print("Unknown parameter "+sys.argv[4])
+if len(sys.argv)==6:
+    if sys.argv[5]!="enable_trace":
+        print("Unknown parameter "+sys.argv[5])
         sys.exit()
     else:
         save_trace=True
         cores=1
 
+results_path=sys.argv[4]
 config_file=sys.argv[1]
 param=sys.argv[2]
 
@@ -38,7 +41,7 @@ print("Apps: "+str(apps)+"\n")
 # Get values for sweeping
 values=sys.argv[3][1:-1].split(',')
 # Generate out path
-out_path="./results_"+param.split(".")[-1]+"/"
+out_path=results_path+"/results_"+param.split(".")[-1]+"/"
 # Create variable results folder
 subprocess.run(["mkdir", "-p", out_path]) 
 
