@@ -41,6 +41,7 @@ ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std
     pending_simfence.resize(num_cores,NULL);
     waiting_on_fetch.resize(num_cores,false);
     waiting_on_mshrs.resize(num_cores,false);
+    waiting_on_scalar_stores.resize(num_cores,false);
 }
 
 void ExecutionDrivenSimulationOrchestrator::saveReports()
@@ -98,6 +99,7 @@ void ExecutionDrivenSimulationOrchestrator::simulateInstInActiveCores()
     for(uint16_t i=0;i<runnable_cores.size();i++)
     {
         core_finished=false;
+        stall_reason=StallReason::MAX_REASONS;
         current_core=runnable_cores[i];
 
         simulated_instructions_per_core[current_core]++;
@@ -119,6 +121,11 @@ void ExecutionDrivenSimulationOrchestrator::simulateInstInActiveCores()
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
 
         core_active=success;
+
+        if(!success)
+        {
+            stall_reason=StallReason::RAW;
+        }
 
         for(std::shared_ptr<spike_model::Event> e:new_spike_events)
         {
@@ -167,7 +174,14 @@ void ExecutionDrivenSimulationOrchestrator::simulateInstInActiveCores()
             }
             if(trace_)
             {
-                logger_->logStall(current_cycle, current_core, 0);
+                if(stall_reason==StallReason::MSHRS)
+                {
+                    logger_->logStall(current_cycle+submittedCacheRequestsInThisCycle-1, current_core, stall_reason);
+                }
+                else
+                {
+                    logger_->logStall(current_cycle, current_core, stall_reason);  
+                }
             }
         }
     }
@@ -177,6 +191,7 @@ void ExecutionDrivenSimulationOrchestrator::handleSpartaEvents()
 {
     //GET NEXT EVENT
     next_event_tick=spike_model->getScheduler()->nextEventTick();
+
 
     //HANDLE ALL THE EVENTS FOR THE CURRENT CYCLE
     if(next_event_tick==current_cycle)
@@ -247,6 +262,7 @@ void ExecutionDrivenSimulationOrchestrator::run()
     //Simulation will end when there are neither pending events nor more instructions to simulate
     while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
     {
+        submittedCacheRequestsInThisCycle=0;
         simulateInstInActiveCores();
         handleSpartaEvents();
         //auto t1 = std::chrono::high_resolution_clock::now();
@@ -325,6 +341,7 @@ void ExecutionDrivenSimulationOrchestrator::selectRunnableThreads()
 
 void ExecutionDrivenSimulationOrchestrator::submitToSparta(std::shared_ptr<spike_model::CacheRequest> r)
 {
+    submittedCacheRequestsInThisCycle++;
     r->setTimestamp(current_cycle);
 
     //Submit writebacks or requests of other types that have not been already submitted
@@ -362,9 +379,11 @@ void ExecutionDrivenSimulationOrchestrator::submitToSparta(std::shared_ptr<spike
     request_manager->putEvent(r);
 }
 
-void ExecutionDrivenSimulationOrchestrator::resumeCore(uint64_t core)
+bool ExecutionDrivenSimulationOrchestrator::resumeCore(uint64_t core)
 {
     std::vector<uint16_t>::iterator it;
+
+    bool res=false;
 
     //core should only be made active if there is space in the Arbiter Queue
     //This is a conservative approach. A performance efficient approach would be to activate the core and let it execute
@@ -378,11 +397,17 @@ void ExecutionDrivenSimulationOrchestrator::resumeCore(uint64_t core)
         {
             stalled_cores.erase(it);
             active_cores.push_back(core);
+            res=true;
+            if(trace_)
+            {
+                logger_->logResume(current_cycle, core);
+            }
         }
     }
     else{
        stalled_cores_for_arbiter.insert(core);
     }
+    return res;
 }
 
 void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::CacheRequest> r)
@@ -393,6 +418,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         {
             core_active=false;
             waiting_on_mshrs[current_core] = true;
+            stall_reason=StallReason::MSHRS;
             mshr_stalls_per_core[current_core]++;
             pending_misses_per_core[current_core].push_back(r);
         }
@@ -403,6 +429,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
                 //Fetch misses are serviced. Subsequent, misses will be submitted later.
                 submitToSparta(r);
                 core_active=false;
+                stall_reason=StallReason::FETCH_MISS;
                 is_fetch = true;
                 waiting_on_fetch[current_core] = true;
             }
@@ -490,13 +517,17 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         if(l1_writeback)
         {
             if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK)
+            {
                 in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+            }
         }
         else
         {
             if(r->getType() != spike_model::CacheRequest::AccessType::WRITEBACK &&
                r->getType() != spike_model::CacheRequest::AccessType::STORE)
+            {
                 in_flight_requests_per_l1[core/num_threads_per_core].erase(r->getAddress());
+            }
         }
 
         if(waiting_on_mshrs[core])
@@ -532,7 +563,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         }
         else
         {
-            if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1()
+        if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1()
                  && r->getType()!=spike_model::CacheRequest::AccessType::STORE)
             {
                 std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
@@ -549,6 +580,16 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
                 }
             }
         }
+
+        if(r->getType()==spike_model::CacheRequest::AccessType::STORE && !r->getBypassL1())
+        {
+            spike->decrementInFlightScalarStores(core);
+            if(!spike->checkInFlightScalarStores(core) && waiting_on_scalar_stores[core])
+            {
+                waiting_on_scalar_stores[core]=false;
+                resumeCore(core);
+            }
+        }
     
         //If the core was stalled on MSHRs and all the pending requests have been submitted
         if(waiting_on_mshrs[core] && pending_misses_per_core[core].size()==0)
@@ -561,8 +602,8 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         //If there are MSHRs available, the core is not in a barrier and either a RAW was serviced or MSHRs just became available
         if(can_run && !threads_in_barrier[core])
         {
-            resumeCore(core);
-            if(trace_)
+            bool resumed=resumeCore(core);
+            if(trace_ && resumed)
             {
                 logger_->logResumeWithAddress(current_cycle, core, r->getAddress());
 
@@ -588,6 +629,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
 void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::Finish> f)
 {
     core_active=false;
+    stall_reason=StallReason::CORE_FINISHED;
     core_finished=true;
 }
 
@@ -602,6 +644,13 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         runPendingSimfence(current_core);
     }
 }
+        
+void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::VectorWaitingForScalarStore> e)
+{
+    waiting_on_scalar_stores[e->getCoreId()]=true;
+    core_active=false;
+    stall_reason=StallReason::VECTOR_WAITING_ON_SCALAR_STORE;
+}
 
 void ExecutionDrivenSimulationOrchestrator::runPendingSimfence(uint64_t core)
 {
@@ -614,6 +663,7 @@ void ExecutionDrivenSimulationOrchestrator::runPendingSimfence(uint64_t core)
             std::cout << " barrier cnt " << thread_barrier_cnt << std::endl;
             threads_in_barrier[core] = true;
             core_active=false;
+            stall_reason=StallReason::WAITING_ON_BARRIER;
             std::cout << "first core " << core
                   << " waiting for barrier " << current_cycle << std::endl;
         }
@@ -630,10 +680,6 @@ void ExecutionDrivenSimulationOrchestrator::runPendingSimfence(uint64_t core)
             if(it != stalled_cores.end())  //Check if i is not already in active core
             {
                 resumeCore(i);
-                if(trace_)
-                {
-                    logger_->logResume(current_cycle, i);
-                }
                 //The below condition makes sure that the thread from the core-group
                 //in which 'core' belongs, is also made active
                 if(i == core)
@@ -661,6 +707,7 @@ void ExecutionDrivenSimulationOrchestrator::runPendingSimfence(uint64_t core)
         thread_barrier_cnt--;
         threads_in_barrier[core] = true;
         core_active=false;
+        stall_reason=StallReason::WAITING_ON_BARRIER;
         std::cout << "Core " << core << " waiting for barrier " << current_cycle << std::endl;
     }
 }
@@ -687,10 +734,6 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         if(can_run && !threads_in_barrier[core])
         {
             resumeCore(core);
-            if(trace_)
-            {
-                logger_->logResume(current_cycle, core);
-            }
         }
     }
 }
@@ -706,10 +749,6 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
     if(can_run && !threads_in_barrier[core])
     {
         resumeCore(core);
-        if(trace_)
-        {
-            logger_->logResume(current_cycle, core);
-        }
     }
 }
 
@@ -749,10 +788,6 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
             uint16_t core = r->getCoreId();
             submitPendingOps(core);
             resumeCore(core);
-            if(trace_)
-            {
-                logger_->logResume(current_cycle, r->getCoreId());
-            }
         }
     }
 }

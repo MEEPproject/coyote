@@ -2,6 +2,8 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include "StallReason.hpp"
+#include "utils.hpp"
 
 namespace spike_model
 {
@@ -71,7 +73,7 @@ namespace spike_model
 
     void Logger::logResumeWithAddress(uint64_t timestamp, uint64_t id, uint64_t address)
     {
-        std::string ev="resume";
+        std::string ev="resume_address";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
@@ -82,7 +84,13 @@ namespace spike_model
     
     void Logger::logResume(uint64_t timestamp, uint64_t id)
     {
-        logResumeWithAddress(timestamp, id, 0);
+        std::string ev="resume";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0,0";
+            log(timestamp, id, 0, sstream.str());
+        }
     }
 
     void Logger::logL2Read(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address, uint32_t size)
@@ -129,18 +137,31 @@ namespace spike_model
         }
     }
 
-    void Logger::logStall(uint64_t timestamp, uint64_t id, uint64_t pc)
+    void Logger::logStall(uint64_t timestamp, uint64_t id, StallReason reason)
     {
         std::string ev="stall";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
-            log(timestamp, id, pc, "stall,0,0");
+            std::stringstream sstream;
+            sstream << ev  << "," << 0 << "," << utils::reason_to_string(reason);
+            log(timestamp, id, 0, sstream.str());
         }
     }
 
     void Logger::logL2Miss(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
     {
         std::string ev="l2_miss";
+        if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
+        {
+            std::stringstream sstream;
+            sstream << ev << ",0," << std::hex << address;
+            log(timestamp, id, pc, sstream.str());
+        }
+    }
+    
+    void Logger::logL2Hit(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address)
+    {
+        std::string ev="l2_hit";
         if(checkIfEventOfInterest(ev) && checkBounds(timestamp))
         {
             std::stringstream sstream;
@@ -575,12 +596,18 @@ namespace spike_model
     
     void Logger::setTimeBounds(uint64_t lower, uint64_t upper)
     {
-        *lower_bound_=lower;
-        *upper_bound_=upper;
+        lower_bound_=lower;
+        upper_bound_=upper;
     }
             
     bool Logger::checkBounds(uint64_t t)
     {
-        return t>=*lower_bound_ && t<*upper_bound_;
+        return t>=lower_bound_ && t<upper_bound_;
+    }
+            
+    void Logger::addEventOfInterest(uint64_t start, uint64_t end)
+    {
+        start=start;
+        end=end;
     }
 }

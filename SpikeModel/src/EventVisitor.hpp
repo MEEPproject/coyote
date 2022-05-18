@@ -19,6 +19,7 @@ namespace spike_model
     class MCPUSetVVL;
     class MCPUInstruction;
     class InsnLatencyEvent;
+    class VectorWaitingForScalarStore;
 
     class EventVisitor
     {
@@ -58,6 +59,12 @@ namespace spike_model
              * \param e The event to handle
              */
             virtual void handle(std::shared_ptr<spike_model::Sync> e);
+            
+            /*!
+             * \brief Handles a sync event
+             * \param e The event to handle
+             */
+            virtual void handle(std::shared_ptr<spike_model::VectorWaitingForScalarStore> e);
 
             /*!
              * \brief Handles a finish event

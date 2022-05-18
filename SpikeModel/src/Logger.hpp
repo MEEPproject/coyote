@@ -6,8 +6,11 @@
 #include <list>
 #include <limits>
 
+enum class StallReason;
+
 namespace spike_model
 {
+
     class Logger
     {
         /*!
@@ -119,9 +122,9 @@ namespace spike_model
              * \brief Add a Stall event to the trace. This means that a core is waiting on a memory request.
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core
-             * \param pc The PC of the instruction related to the event
+             * \param reason The cause of the stall
              */
-            void logStall(uint64_t timestamp, uint64_t id, uint64_t pc);
+            void logStall(uint64_t timestamp, uint64_t id, StallReason reason);
 
             /*!
              * \brief Add an L2 Miss event to the trace
@@ -131,6 +134,15 @@ namespace spike_model
              * \param address The missing address
              */
             void logL2Miss(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
+            
+            /*!
+             * \brief Add an L2 Hit event to the trace
+             * \param timestamp The timestamp for the event
+             * \param id The id of the producing core
+             * \param pc The PC of the instruction related to the event
+             * \param address The missing address
+             */
+            void logL2Hit(uint64_t timestamp, uint64_t id, uint64_t pc, uint64_t address);
 
             /*!
              * \brief Add an event representing a request to a cache bank local to the tile
@@ -469,6 +481,14 @@ namespace spike_model
             void addEventOfInterest(std::string ev);
 
             /*!
+             * \brief Set tracing limits
+             * \param start The timestamp in which tracing will begin
+             * \param end The timestamp in which tracing will end
+             */
+            void addEventOfInterest(uint64_t start, uint64_t end);
+            
+
+            /*!
              * \brief Add an L2 writeback event to the trace
              * \param timestamp The timestamp for the event
              * \param id The id of the producing core (does not fully apply...)
@@ -506,25 +526,22 @@ namespace spike_model
              */
             void logNoCMessageDestinationCummulated(uint64_t timestamp, uint64_t dst_id, uint64_t pc, uint64_t num_packets);
 
-            /*!
-             * \brief Set the time bounds within which events are traced
-             * \param lower The lower bound
-             * \param upper The upper bound
-             */
-            void setTimeBounds(uint64_t lower, uint64_t upper);
-            
             std::shared_ptr<std::ofstream> getFile()
             {
                 return trace_file_;
             }
+
+            void logRaw(uint64_t timestamp, char * text); 
+
+            void setTimeBounds(uint64_t lower, uint64_t upper);
 
         private:
             std::shared_ptr<std::ofstream> trace_file_;
 
             std::shared_ptr<std::list<std::string>> events_of_interest_;
 
-            std::shared_ptr<uint64_t> lower_bound_=std::make_shared<uint64_t> (0);
-            std::shared_ptr<uint64_t> upper_bound_=std::make_shared<uint64_t> (std::numeric_limits<uint64_t>::max());
+            uint64_t lower_bound_=0;
+            uint64_t upper_bound_=std::numeric_limits<uint64_t>::max();
 
             /*!
              * \brief Implementation: Add a generic event.

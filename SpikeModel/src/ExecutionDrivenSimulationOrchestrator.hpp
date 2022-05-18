@@ -13,9 +13,11 @@
 #include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "Finish.hpp"
+#include "VectorWaitingForScalarStore.hpp"
 #include "LogCapable.hpp"
 #include "SimulationOrchestrator.hpp"
 #include "NoC/DetailedNoC.hpp"
+#include "StallReason.hpp"
 #include <set>
 #include <map>
 
@@ -34,7 +36,6 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
      */
 
     public:
-
         /*!
          * \brief Constructor for the ExecutionDrivenSimulationOrchestrator
          * \param spike An instance of a wrapped Spike simulation
@@ -79,6 +80,8 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
          * \param f The fence event to handle
          */
         void handle(std::shared_ptr<spike_model::Fence> f) override;
+    
+        void handle(std::shared_ptr<spike_model::VectorWaitingForScalarStore> e) override;
 
         void handle(std::shared_ptr<spike_model::MCPUSetVVL> r) override;
         
@@ -107,6 +110,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
         virtual void saveReports() override;
 
     private:
+
         std::shared_ptr<spike_model::SpikeWrapper> spike;
         std::shared_ptr<SpikeModel> spike_model;
         std::shared_ptr<spike_model::FullSystemSimulationEventManager> request_manager;
@@ -120,6 +124,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
         std::vector<uint16_t> runnable_cores;
         std::vector<bool> waiting_on_fetch;
         std::vector<bool> waiting_on_mshrs;
+        std::vector<bool> waiting_on_scalar_stores;
         std::vector<uint64_t> runnable_after;
         std::vector<uint16_t> cur_cycle_suspended_threads;
         std::vector<bool> threads_in_barrier;
@@ -140,6 +145,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
         uint32_t current_core;
         bool core_active;
         bool core_finished;
+        StallReason stall_reason;
 
         bool trace;
         bool l1_writeback;
@@ -158,6 +164,8 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
         float avg_mem_access_time_l1_miss=0;
         float avg_time_to_reach_l2=0;
         uint64_t num_l2_accesses=1; //Initialized to one to calcullate a rolling average
+
+        uint16_t submittedCacheRequestsInThisCycle;
 
         /*!
          * \brief Simulate an instruction in each of the active cores
@@ -198,7 +206,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
          * \brief Resume simulation on a core that is stalled
          * \param core The id of the core that will resume simulation
          */
-        void resumeCore(uint64_t core);
+        bool resumeCore(uint64_t core);
 
         /*
          * \brief Submit the pending operations of any kind to sparta

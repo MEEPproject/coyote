@@ -10,6 +10,7 @@
 #include "MemoryTile/MCPUSetVVL.hpp"
 #include "MemoryTile/MCPUInstruction.hpp"
 #include "InsnLatencyEvent.hpp"
+#include "VectorWaitingForScalarStore.hpp"
 
 namespace spike_model
 {
@@ -31,6 +32,11 @@ namespace spike_model
     void EventVisitor::handle(std::shared_ptr<spike_model::Sync> e)
     {
         handle(std::dynamic_pointer_cast<spike_model::CoreEvent>(e));
+    }
+    
+    void EventVisitor::handle(std::shared_ptr<spike_model::VectorWaitingForScalarStore> e)
+    {
+        handle(std::dynamic_pointer_cast<spike_model::Sync>(e));
     }
 
     void EventVisitor::handle(std::shared_ptr<spike_model::Finish> e)
