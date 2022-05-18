@@ -9,16 +9,15 @@ import time
 # Configuration
 coyote_bin_path="../SpikeModel/build/spike_model"
 apps_path="../apps/"
-#apps=["axpy/axpy", "spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS", "spmv_synth", "mt-matmul-vec/matmul"]
-apps=["spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS"]
-#apps=["spmv-vec/spmv_pdb1HYS", "spmv_synth", "mt-matmul-vec/matmul"]
+#apps=["mt-matmul-vec/matmul", "axpy/axpy", "spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS", "spmv-vec/spmv_synthetic"]
+apps=["mt-matmul-vec/matmul"]
 cores=1 # Change to the number of procs to use
-polling_time=60 # seconds
+polling_time=1 # seconds
 
 # Params validation
 if len(sys.argv)<5 or len(sys.argv)>6:
     print(len(sys.argv))
-    print("Usage: python3 parameter_sweep.py config_file parameter_name value_list(brace-enclosed, comma-separated) output_path [(Optional)enable_trace]")
+    print("Usage: python3 parameter_sweep.py config_file parameter_name value_list(brace-enclosed, comma-separated. Example '[true,false]') output_path [(Optional)enable_trace]")
     sys.exit()
 
 # Trace?
