@@ -114,7 +114,7 @@ namespace spike_model {
 			logger_->logMemTileNoCRecv(getClock()->currentCycle(), getID(), mes->getSrcPort(), req->getAddress());*/
 		}
 		
-		if(!enabled) {
+		/*if(!enabled) {
 			std::shared_ptr<CacheRequest> cr = std::dynamic_pointer_cast<CacheRequest>(mes->getRequest());
 			DEBUG_MSG("CacheRequest received from NoC: " << *cr);
 			
@@ -135,7 +135,7 @@ namespace spike_model {
 			}
 			
 			return;
-		}
+		}*/
 		
 		DEBUG_MSG("Received from NoC: " << *mes);	
 		mes->getRequest()->handle(this);
