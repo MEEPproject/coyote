@@ -596,7 +596,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
 
 
         //If there are MSHRs available, the core is not in a barrier and either a RAW was serviced or MSHRs just became available
-        if(can_run && !threads_in_barrier[core])
+        if(can_run && !threads_in_barrier[core] && !waiting_on_mshrs[core]) //The new version of resume in coherence probably already does something similar
         {
             bool resumed=resumeCore(core);
             if(trace_ && resumed)

@@ -48,16 +48,15 @@ namespace spike_model
                         tile->count_remote_requests_++;
                     }
 
-                    //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
-                    if(tile->trace_)
-                    {
-                        tile->logger_->logLocalBankRequest(r->getTimestamp(), r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
-                    }
-
                     uint64_t lapse=0;
                     if(r->getTimestamp()+1>tile->getClock()->currentCycle())
                     {
                         lapse=(r->getTimestamp())-tile->getClock()->currentCycle(); //Requests coming from spike have to account for clock synchronization
+                    }
+                    //std::cout << "Issuing local l2 request request for core " << req->getCoreId() << " for @ " << req->getAddress() << " from tile " << id_ << ". Using lapse " << lapse  << "\n";
+                    if(tile->trace_)
+                    {
+                        tile->logger_->logLocalBankRequest(tile->getClock()->currentCycle()+lapse, r->getCoreId(), r->getPC(), r->getCacheBank(), r->getAddress());
                     }
                     tile->issueLocalRequest_(r, lapse);
                 }
@@ -135,6 +134,7 @@ namespace spike_model
                     if(scratchpad_available_size<request_size)
                     {
                         uint64_t ways_to_disable=ceil(1.0*request_size/way_size);
+                        //uint64_t ways_to_disable=8;//ceil(1.0*request_size/way_size);  //HARDCODED DISABLING OF 8 WAYS
                         r->setSize(ways_to_disable); //THIS IS A NASTY TRICK
 
                         //Ways are disabled in every bank

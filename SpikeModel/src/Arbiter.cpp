@@ -184,16 +184,18 @@ namespace spike_model
 
     void Arbiter::submitToL2()
     {
+        std::vector<bool> sent(cores_per_tile_, false);
         for(int i = 0; i < num_l2_banks_; i++)
         {
             int j = (rr_cntr_cache_req_[i] + 1) % cores_per_tile_;
             int cntr = 0;
             while(cntr != cores_per_tile_)
             {
-                if(hasCacheRequest(i, j))
+                if(hasCacheRequest(i, j) && !sent[j])
                 {
                     total_time_spent_by_messages_=total_time_spent_by_messages_+(getClock()->currentCycle()-pending_l2_msgs_[i][j].front()->getTimestampReachArbiter());
                     l2_banks[i]->getAccess_(popCacheRequest(i,j));
+                    sent[j]=true;
                     rr_cntr_cache_req_[i] = j;
                     break;
                 }
