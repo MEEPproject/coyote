@@ -7,6 +7,8 @@
 #include "dataset.h"
 #include "util.h"
 
+//#define OVERLAP_COMPUTE_AND_LOAD
+
 #if 0
 #define FMA( vc, vb, sa, gvl ) do { \
   __epi_1xf64 vta  = __builtin_epi_vfmv_v_f_1xf64(sa, gvl); \
@@ -36,6 +38,10 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
      for (ii = 0; ii < M-15; ii += bi) {                        //unroll rows (no possibility of indirection on register addressing)
 		__epi_1xf64 vc0, vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8, vc9, vc10, vc11, vc12, vc13, vc14, vc15;
         __epi_1xf64 vb0;
+
+#ifdef OVERLAP_COMPUTE_AND_LOAD
+        __epi_1xf64 vb1;
+#endif
         vc0  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl);
 
 #if 0
@@ -58,8 +64,20 @@ static void matmul_builtins(int coreid, int ncores, int M, int K, int N, int bi,
         vc15  = __builtin_epi_vfmv_v_f_1xf64(0.0, gvl); 
 #endif
 
+#ifdef OVERLAP_COMPUTE_AND_LOAD
+        vb1 = __builtin_epi_vload_1xf64(&b[0][jj], gvl);
+#endif
+
         for (int kk = 0; kk < K; kk += bk) {
+#ifdef OVERLAP_COMPUTE_AND_LOAD
+           vb0=vb1;
+           if (kk + 1 < K) 
+           {
+              vb1 = __builtin_epi_vload_1xf64(&b[kk+1][jj], gvl);
+           }
+#else
            vb0 = __builtin_epi_vload_1xf64(&b[kk][jj], gvl);
+#endif
 	   {
            FMA( vc0,  vb0,   a[ii][kk], gvl ); //vc0 calculates the first  value of row0
            FMA( vc1,  vb0,  a[ii+1][kk], gvl ); //vc1 calculates the first  value of row1

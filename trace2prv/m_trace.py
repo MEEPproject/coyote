@@ -159,9 +159,8 @@ def intToPRV(string, event, paraver_line, last_state, PrvEvents):
         base=0
         #if event.name=="pc" or "Request" in event.name or event.name=="address" or event.name=="MemoryOperation" or "Ack" in event.name or event.name=="L1MissServiced" or event.name=="Resume" or event.name=="BankOperation":
         #print("\t"+string)
-        if event.name in ["PC", "Address", "MemoryOperation", "MemoryRead", "MemoryWrite", "L1Hit", "L1Miss", "L2Hit", "L2Miss", "Ack", "L1MissServiced", "ResumeAddress", "BankOperation", "L2Read", "L2Write", "L2Writeback"] or ("Request" in event.name and "Requested" not in event.name) or "Ack" in event.name or "MemTile" in event.name:
+        if event.name in ["PC", "BaseAddressAccessedByInstruction", "MemoryOperation", "MemoryRead", "MemoryWrite", "L1Hit", "L1Miss", "L2Hit", "L2Miss", "Ack", "L1MissServiced", "ResumeAddress", "BankOperation", "L2Read", "L2Write", "L2Writeback"] or ("Request" in event.name and "Requested" not in event.name) or "Ack" in event.name or "MemTile" in event.name:
             base=16
-
         value=int(string, base)
         #print("\t\t"+str(value))
         #value=string
@@ -283,15 +282,46 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     num_operands1=0;
     num_operands2=0;
     num_operands3=0;
+            
+    prev_had_l1_miss=False
+    prev_had_l2_miss=False
+    has_l1_miss=False
+    has_l2_miss=False
 
     for row in data:
 
         if (sanityCheck(row, True) == -1): continue
-        
+
         if int(row[0])>prev_time:
+            if int(row[0])==prev_time+1:
+                if prev_had_l1_miss and not has_l1_miss:
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l1_miss"]], 0)
+                if prev_had_l2_miss and not has_l2_miss:
+                    paraver_line.addEvent(PrvEvents[base_event_dict["l2_miss"]], 0)
+
             writePRVFile(prvfile, paraver_line.getLine())
             paraver_line.time = row[0]
             paraver_line.events = []
+
+            #Add 0 after cache misses
+            if int(row[0])>prev_time+1 and (has_l1_miss or has_l2_miss):
+                aux_paraver_line = ParaverLine(2, 1, 1, 1, 1)
+                aux_paraver_line.time = prev_time+1
+                paraver_line.events = []
+                if has_l1_miss:
+                    aux_paraver_line.addEvent(PrvEvents[base_event_dict["l1_miss"]], 0)
+
+                if  has_l2_miss:
+                    aux_paraver_line.addEvent(PrvEvents[base_event_dict["l2_miss"]], 0)
+
+                writePRVFile(prvfile, aux_paraver_line.getLine())
+                has_l1_miss=False
+                has_l2_miss=False
+
+            prev_had_l1_miss=has_l1_miss
+            prev_had_l2_miss=has_l2_miss
+            has_l1_miss=False
+            has_l2_miss=False
 
         #print("["+row[0]+"]")
 
@@ -402,18 +432,23 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                     
                     last_state[i] = parser_functions[i](row[2], PrvEvents[base_event_dict["pc"]], paraver_line, last_state[i], PrvEvents)
 
-                elif col=="stall": #stall
+                elif col=="stall" or col=="resume": #stall
                     key=-1
-                    if not PrvEvents[base_event_dict[col]].containsKey(value):
+                    if col=="resume":
+                        value="resume"
+
+                    if value=="raw":
+                        value="raw/resource unavailable"
+
+                    if not PrvEvents[base_event_dict["stall"]].containsKey(value):
                         key=num_stall_reasons
-                        PrvEvents[base_event_dict[col]].addValue(key, value)
+                        PrvEvents[base_event_dict["stall"]].addValue(key, value)
                         num_stall_reasons=num_stall_reasons+1
                     else:
-                        key=PrvEvents[base_event_dict[col]].getValue(value)
+                        key=PrvEvents[base_event_dict["stall"]].getValue(value)
                         #print("NOPE")
 
-                    #print("The key is "+str(key))
-                    last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict[col]], paraver_line, last_state[i], PrvEvents)
+                    last_state[i] = parser_functions[i](str(key), PrvEvents[base_event_dict["stall"]], paraver_line, last_state[i], PrvEvents)
                 else:
                     #if derived_event_dict[col]-2==46:
                         #print("!!!!!!!!!!!"+col)
@@ -451,6 +486,10 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                 paraver_line.addEvent(PrvEvents[mem_obj_name_pos],len(mem_objs))
                     
 
+        if row[3]=="l1_miss":
+            has_l1_miss=True
+        elif row[3]=="l2_miss":
+            has_l2_miss=True
 
         prev_type=row[3]
         prev_time=int(row[0])

@@ -5,7 +5,7 @@
     "events": [
       { "eventName": "PC",          "eventID": "0"},
       { "eventName": "L1Miss",          "eventID": "1"},
-      { "eventName": "Address",          "eventID": "2"},
+      { "eventName": "BaseAddressAccessedByInstruction",          "eventID": "2"},
       {"eventName": "LocalRequest",               "eventID": "3"  },
       {"eventName": "RemoteRequest",               "eventID": "4"  },
       {"eventName": "L2Address",               "eventID": "5"  },
@@ -16,7 +16,7 @@
       {"eventName": "AckForwarded",               "eventID": "10"  },
       {"eventName": "AckForwardReceived",               "eventID": "11"  },
       {"eventName": "L1MissServiced",               "eventID": "12"  },
-      {"eventName": "Stall",               "eventID": "13"  },
+      {"eventName": "Stall/Resume",               "eventID": "13"  },
       {"eventName": "Resume",               "eventID": "14"  },
       {"eventName": "KI",               "eventID": "15"  },
       {"eventName": "BankOperation",               "eventID": "16"  },
