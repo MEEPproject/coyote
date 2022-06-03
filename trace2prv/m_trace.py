@@ -278,10 +278,14 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
     prev_time=0
     prev_core="-1"
     num_different_instructions=0
-    num_stall_reasons=0
     num_operands1=0;
     num_operands2=0;
     num_operands3=0;
+                    
+    num_stall_reasons=0
+    key=num_stall_reasons
+    PrvEvents[base_event_dict["stall"]].addValue(key, "resume")
+    num_stall_reasons=num_stall_reasons+1
             
     prev_had_l1_miss=False
     prev_had_l2_miss=False

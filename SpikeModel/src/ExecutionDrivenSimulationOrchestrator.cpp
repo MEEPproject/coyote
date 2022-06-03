@@ -559,7 +559,7 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
         }
         else
         {
-        if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1()
+           if(r && r->getType()!=spike_model::CacheRequest::AccessType::WRITEBACK && !r->getBypassL1()
                  && r->getType()!=spike_model::CacheRequest::AccessType::STORE)
             {
                 std::shared_ptr<spike_model::CacheRequest> wb=spike->serviceCacheRequest(r, current_cycle);
@@ -576,6 +576,9 @@ void ExecutionDrivenSimulationOrchestrator::handle(std::shared_ptr<spike_model::
                 }
             }
         }
+
+        
+        spike->checkInstructionGraduation(r, current_cycle);
 
         if(r->getType()==spike_model::CacheRequest::AccessType::STORE && !r->getBypassL1())
         {
