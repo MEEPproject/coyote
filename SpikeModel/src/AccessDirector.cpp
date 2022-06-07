@@ -372,7 +372,7 @@ namespace spike_model
     
     std::shared_ptr<NoCMessage> AccessDirector::getScratchpadAckMessage(std::shared_ptr<ScratchpadRequest> req)
     {
-        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, line_size, tile->id_, req->getSourceTile());
+        return std::make_shared<NoCMessage>(req, NoCMessageType::SCRATCHPAD_ACK, 15, tile->id_, req->getSourceTile());
     }
 
     uint16_t AccessDirector::calculateBank(std::shared_ptr<spike_model::ScratchpadRequest> r)

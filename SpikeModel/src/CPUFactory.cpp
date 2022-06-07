@@ -438,21 +438,34 @@ auto spike_model::CPUFactory::bindTree_(sparta::RootTreeNode* root_node,
                 }
         }
         
-        spike_model::NoC *noc_for_mcpu = NULL;
+        spike_model::NoC *noc_for_mcpu = nullptr;
         if(topology_->num_memory_cpus!=0)
         {
             noc_for_mcpu = root_node->getChild(std::string("arch.noc"))->getResourceAs<spike_model::NoC>();
+                        
+            //-- create an array of memory tiles and give it to the NoC
+            std::shared_ptr<std::vector<MemoryCPUWrapper *>> memory_tiles = std::make_shared<std::vector<MemoryCPUWrapper *>>();
+            for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
+                auto mcpu_node = root_node->getChild(std::string("arch.memory_cpu") +
+                        sparta::utils::uint32_to_str(num_of_memory_cpus));
+                sparta_assert(mcpu_node != nullptr);
+
+                MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
+                memory_tiles->push_back(mcpu);
+            }
+            
+            noc_for_mcpu->setMemoryTiles(memory_tiles);
         }
 
-        for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) {
-        auto mcpu_node = root_node->getChild(std::string("arch.memory_cpu") +
-                    sparta::utils::uint32_to_str(num_of_memory_cpus));
-        sparta_assert(mcpu_node != nullptr);
+        for(std::size_t num_of_memory_cpus = 0; num_of_memory_cpus < topology_->num_memory_cpus; ++num_of_memory_cpus) 
+        {
+            auto mcpu_node = root_node->getChild(std::string("arch.memory_cpu") + 
+                sparta::utils::uint32_to_str(num_of_memory_cpus));
+            sparta_assert(mcpu_node != nullptr);
 
             MemoryCPUWrapper *mcpu = mcpu_node->getResourceAs<spike_model::MemoryCPUWrapper>();
             mcpu->setID(num_of_memory_cpus);
             mcpu->setNoC(noc_for_mcpu);
-            
             
             /*auto mc_node = root_node->getChild(std::string("arch.memory_controller") +
                     sparta::utils::uint32_to_str(num_of_memory_cpus));                  // the MPCU is bound to one MC

@@ -1,6 +1,6 @@
 #include "ExecutionDrivenSimulationOrchestrator.hpp"
 
-ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::DetailedNoC* detailed_noc):
+ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::NoC* noc):
     spike(spike),
     spike_model(spike_model),
     request_manager(request_manager),
@@ -17,8 +17,8 @@ ExecutionDrivenSimulationOrchestrator::ExecutionDrivenSimulationOrchestrator(std
     trace(trace),
     l1_writeback(l1_writeback),
     is_fetch(false),
-    detailed_noc_(detailed_noc),
-    booksim_has_packets_in_flight_(false),
+    noc_(noc),
+    noc_has_packets_in_flight_(false),
     max_in_flight_l1_misses(num_mshrs_per_core),
     in_flight_requests_per_l1(num_cores/num_threads_per_core),
     mshr_stalls_per_core(num_cores)
@@ -260,7 +260,7 @@ void ExecutionDrivenSimulationOrchestrator::run()
 {
     //Each iteration of the loop handles a cycle
     //Simulation will end when there are neither pending events nor more instructions to simulate
-    while(!spike_model->getScheduler()->isFinished() || !spike_finished || booksim_has_packets_in_flight_)
+    while(!spike_model->getScheduler()->isFinished() || !spike_finished || noc_has_packets_in_flight_)
     {
         submittedCacheRequestsInThisCycle=0;
         simulateInstInActiveCores();
@@ -281,24 +281,20 @@ void ExecutionDrivenSimulationOrchestrator::run()
         }
         //auto t2 = std::chrono::high_resolution_clock::now();
         //timer += std::chrono::duration_cast<std::chrono::nanoseconds>( t2 - t1 ).count();
+
+        // Execute one cycle of BookSim (it detailed model is used)
+        noc_->runBookSimCycles(1);
+        noc_has_packets_in_flight_ = noc_->deliverOnePacketToDestination(current_cycle);
+        // BookSim can retire a packet and introduce an event that must be executed before the cycle saved in next_event_tick
         next_event_tick=spike_model->getScheduler()->nextEventTick();
 
-        // Execute one cycle of BookSim
-        if(detailed_noc_ != NULL)
-        {
-            booksim_has_packets_in_flight_ = detailed_noc_->runBookSimCycles(1, current_cycle);
-            // BookSim can retire a packet and introduce an event that must be executed before the cycle saved in next_event_tick
-            next_event_tick=spike_model->getScheduler()->nextEventTick();
-            //std::cout << booksim_has_packets_in_flight_ << " at " << current_cycle << std::endl;
-        }
         selectRunnableThreads();
 
         //If there are no active cores, booksim must not be executed at next cycle and there is a pending event
-        if(active_cores.size()==0 && !booksim_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1 && !hasMsgInArbiter())
+        if(active_cores.size()==0 && !noc_has_packets_in_flight_ && next_event_tick!=sparta::Scheduler::INDEFINITE && (next_event_tick-current_cycle)>1 && !hasMsgInArbiter())
         {
-            // Advance BookSim clock
-            if(detailed_noc_ != NULL)
-                detailed_noc_->runBookSimCycles(next_event_tick-current_cycle-1, current_cycle); // -1 is because current cycle was executed above
+            // Advance BookSim clock (if detailed model is used)
+            noc_->runBookSimCycles(next_event_tick-current_cycle-1); // -1 is because current cycle was executed above
             //Advance the clock to the cycle for the event
             current_cycle=next_event_tick;
         }

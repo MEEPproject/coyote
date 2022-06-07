@@ -19,13 +19,21 @@
 #include "sparta/utils/SpartaSharedPointer.hpp"
 
 #include <memory>
+#include <tuple>
+#include <vector>
 
 #include "NoCMessage.hpp"
 #include "NoCMessageType.hpp"
 #include "../LogCapable.hpp"
 
+using std::vector;
+using std::shared_ptr;
+using std::pair;
+
 namespace spike_model
 {
+
+    class MemoryCPUWrapper; // forward declaration
 
     class NoC : public sparta::Unit, public LogCapable
     {
@@ -99,13 +107,34 @@ namespace spike_model
          * \return If there is space for the packet on its corresponding injection queue
          */
         virtual bool checkSpaceForPacket(const bool injectedByTile, const std::shared_ptr<NoCMessage> & mess) = 0;
+        /*! \brief Forward a message sent from a tile to the correct destination
+        *   \param mes The message to handle
+        */
         virtual void handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mes);
+        /*!
+         * \brief Simulate a cycle of BookSim and update the simulation time of BookSim if multiple cycles are required to simulate.
+         * 
+         * Executes a cycle of BookSim simulator. After that, it tries to retire a packet from the NoC and return if there are packets in NoC.
+         * If are called with cycles > 2, it updates the BookSim internal clock
+         * 
+         * \param cycles The number of cycles to simulate (typically 1)
+         * \note This function is not executed under Sparta management, so, the getClock()->currentCycle() is pointing to the latest+1 cycle managed by Sparta
+         * \note This function is override in DetailedModel to run BookSim
+         */
+        virtual inline void runBookSimCycles(const uint16_t cycles) {};
+        /*!
+         * \brief Extract, at maximum, one packet for each destination in each network and send them through ports
+         * \param current_cycle The current clock managed by simulator_orchestrator
+         * \return true If must be executed on the next Coyote cycle
+         * \return false If there is no packet in network and could not be executed in the next Coyote cycle
+         * \note This function is not executed under Sparta management, so, the getClock()->currentCycle() is pointing to the latest+1 cycle managed by Sparta
+         * \note THis function is override is Detailed model because this model does not use the {vas,mem}_queue because the interface has its own ejection queue
+         */
+        virtual bool deliverOnePacketToDestination(const uint64_t current_cycle);
+
+        void setMemoryTiles(std::shared_ptr<std::vector<MemoryCPUWrapper *>> &newMemoryTiles);
 
     protected:
-
-        /*! \brief Forward a message sent from a tile to the correct destination
-        *   \param mes The meesage to handle
-        */
 
         /*! \brief Forward a message sent from a memory CPU to the correct destination
         * \param mes The message
@@ -134,22 +163,25 @@ namespace spike_model
          */
         uint8_t getNetworkFromString(const std::string& net);
 
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_tiles_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_tiles_;
-        std::vector<std::unique_ptr<sparta::DataInPort<std::shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
-        std::vector<std::unique_ptr<sparta::DataOutPort<std::shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
+        vector<std::unique_ptr<sparta::DataInPort<shared_ptr<NoCMessage>>>> in_ports_tiles_;
+        vector<std::unique_ptr<sparta::DataOutPort<shared_ptr<NoCMessage>>>> out_ports_tiles_;
+        vector<std::unique_ptr<sparta::DataInPort<shared_ptr<NoCMessage>>>> in_ports_memory_cpus_;
+        vector<std::unique_ptr<sparta::DataOutPort<shared_ptr<NoCMessage>>>> out_ports_memory_cpus_;
+        vector<vector<vector<pair<shared_ptr<NoCMessage>, uint64_t>>>> vas_queue_;      //! Packets queue indexed by NoC and VAS destination
+        vector<vector<vector<pair<shared_ptr<NoCMessage>, uint64_t>>>> mem_queue_;      //! Packets queue indexed by NoC and MEM destination
         uint16_t                                        num_tiles_;                     //! The number of tiles connected
         uint16_t                                        num_memory_cpus_;               //! The number of memory cpus connected
         uint16_t                                        x_size_;                        //! The size of X dimension
         uint16_t                                        y_size_;                        //! The size of Y dimension
         uint16_t                                        size_;                          //! The network size
-        std::vector<uint16_t>                           mcpus_indices_;                 //! The indices of MCPUs in the network ordered by MCPU
+        vector<uint16_t>                                mcpus_indices_;                 //! The indices of MCPUs in the network ordered by MCPU
         std::string                                     noc_model_;                     //! The model of NoC to simulate
         uint8_t                                         max_class_used_;                //! The maximum class value used in messages
-        std::vector<std::string>                        noc_networks_;                  //! The name of the defined NoC networks
+        vector<std::string>                             noc_networks_;                  //! The name of the defined NoC networks
         /* Statistics */
-        std::vector<sparta::Counter> count_rx_packets_;                                 //! The number of packets received in each NoC
-        std::vector<sparta::Counter> count_tx_packets_;                                 //! The number of packets sent in each NoC
+        vector<sparta::Counter> count_rx_packets_;                                      //! The number of packets received in each NoC
+        vector<sparta::Counter> count_tx_packets_;                                      //! The number of packets sent in each NoC
+        std::shared_ptr<std::vector<MemoryCPUWrapper *>> memoryTiles;
 
     private:
 

@@ -105,6 +105,15 @@ namespace spike_model {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	//-- Message handling from the NoC
 	/////////////////////////////////////////////////////////////////////////////////////////////////
+	bool MemoryCPUWrapper::ableToReceivePacket(const std::shared_ptr<NoCMessage> &mes) {
+
+		//-- the MCPU handles a packet currently
+		if(mes->getType() == NoCMessageType::MCPU_REQUEST && transaction_table.size() > 0) {
+			return false;
+		}
+		return true;
+	}
+
 	void MemoryCPUWrapper::receiveMessage_noc(const std::shared_ptr<NoCMessage> &mes) {
 		count_requests_noc++;
 		
@@ -194,7 +203,7 @@ namespace spike_model {
 		
 		DEBUG_MSG_COLOR(SPARTA_UNMANAGED_COLOR_BRIGHT_CYAN, "MCPUSetVVL: " << *mes);
 			
-		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, line_size, getID(), mes->getSourceTile());
+		std::shared_ptr<NoCMessage> outgoing_noc_message = std::make_shared<NoCMessage>(mes, NoCMessageType::MCPU_REQUEST, 8, getID(), mes->getSourceTile());
 		sched_outgoing.push(outgoing_noc_message);
 		if(trace_) {
 			logger_->logMemTileVVL(getClock()->currentCycle(), getID(), mes->getCoreId(), vvl[mes->getCoreId()]);
@@ -231,7 +240,7 @@ namespace spike_model {
 				
 				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::ALLOCATE);
 				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
-				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, 15, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
 				
 				if(trace_) {
@@ -250,7 +259,7 @@ namespace spike_model {
 				
 				std::shared_ptr<ScratchpadRequest> sp_request = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
 				sp_request->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// reserve the space in the VAS Tile
-				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
+				std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(sp_request, NoCMessageType::SCRATCHPAD_COMMAND, 15, getID(), instr->getSourceTile());
 				sched_outgoing.push(noc_message);
 				
 				if(trace_) {
@@ -278,7 +287,7 @@ namespace spike_model {
 				std::shared_ptr outgoing_message = createScratchpadRequest(instr, ScratchpadRequest::ScratchpadCommand::READ);
 				outgoing_message->setSize(vvl[instr->getCoreId()] * (uint)instr->get_width());	// How many bytes to read from the SP?
 			
-			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, line_size, getID(), instr->getSourceTile());
+			std::shared_ptr<NoCMessage> noc_message = std::make_shared<NoCMessage>(outgoing_message, NoCMessageType::SCRATCHPAD_COMMAND, 15, getID(), instr->getSourceTile());
 			
 				sched_outgoing.push(noc_message);
 				if(trace_) {

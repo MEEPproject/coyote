@@ -1,6 +1,7 @@
 #include <fstream>
 #include <cmath>
 #include "DetailedNoC.hpp"
+#include "MemoryTile/MemoryCPUWrapper.hpp"
 #include "NoCMessage.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
 
@@ -24,18 +25,19 @@ namespace spike_model
         sparta_assert(params->network_width.isVector(), "The top.cpu.noc.params.network_width must be a vector");
         sparta_assert(params->network_width.getNumValues() == noc_networks_.size(),
             "The number of elements in top.cpu.noc.params.network_width must be: " << noc_networks_.size());
- 	for(auto network : noc_networks_)
-                {
-                	min_space_in_inj_queue_.push_back(sparta::Counter(
-                	        	        		 getStatisticSet(),                                      // parent
-                	        	        		 "min_space_in_inj_queue" + network,                     // name
-                	        	        		 "Minimum space seen in" + network + " injection queues",// description
-                	   sparta::Counter::COUNT_LATEST                           // behavior
-                	 ));
-                }
+        for(auto network : noc_networks_)
+        {
+            min_space_in_inj_queue_.push_back(sparta::Counter(
+                                            getStatisticSet(),                                       // parent
+                                            "min_space_in_inj_queue_" + network,                     // name
+                                            "Minimum space seen in " + network + " injection queues",// description
+                                            sparta::Counter::COUNT_LATEST                            // behavior
+            ));
+        }
         // Parse BookSim configuration to extract information and checks
         Booksim::BookSimConfig booksim_config;
         booksim_config.ParseFile(booksim_configuration_);
+        ejection_queue_size_ = booksim_config.GetInt("ejection_queue_size");
         const string topology = booksim_config.GetStr("topology");
         if(topology == "mesh") // Implemented as kncube network in BookSim
         {
@@ -84,10 +86,10 @@ namespace spike_model
         }
 
         // Get the injection queue size
-	for(uint8_t network_id=0; network_id < noc_networks_.size(); ++network_id)
+        for(uint8_t network_id=0; network_id < noc_networks_.size(); ++network_id)
         {
-        	min_space_in_inj_queue_[network_id] = booksim_config.GetInt("injection_queue_size");
-	}
+            min_space_in_inj_queue_[network_id] = booksim_config.GetInt("injection_queue_size");
+        }
         // Fill the mcpu_ and tile_to_network and network_is_mcpu vectors
         uint16_t mcpu = 0;
         uint16_t tile = 0;
@@ -261,8 +263,8 @@ namespace spike_model
         NoC::handleMessageFromTile_(mess);
         // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
-        sparta_assert(checkSpaceForPacket(INJECTED_BY_TILE, mess), 
-               "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
+        sparta_assert(checkSpaceForPacket(INJECTED_BY_TILE, mess), "Insufficient space at injection queue, please ask before inject or review injection_queue_size parameter");
+        sparta_assert(size <= ejection_queue_size_, "Packet size is bigger than output queue size, please review the ejection_queue_size parameter.");
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -310,8 +312,8 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         // Calculate and check size
         int size = (int) ceil(1.0*mess->getSize()/network_width_[mess->getNoCNetwork()]); // message size and network_width are in bits
-        sparta_assert(checkSpaceForPacket(INJECTED_BY_MCPU, mess),
-               "The injection queues are not well dimensioned, please review the injection_queue_size parameter.");
+        sparta_assert(checkSpaceForPacket(INJECTED_BY_TILE, mess), "Insufficient space at injection queue, please ask before inject or review injection_queue_size parameter");
+        sparta_assert(size <= ejection_queue_size_, "Packet size is bigger than output queue size, please review the ejection_queue_size parameter.");
         long packet_id = INVALID_PKT_ID;
         switch(mess->getType())
         {
@@ -350,23 +352,67 @@ namespace spike_model
         count_tx_flits_by_noc[mess->getNoCNetwork()] += size;
     }
 
-    bool DetailedNoC::runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle)
+    void DetailedNoC::runBookSimCycles(const uint16_t cycles)
     {
-        vector<bool> run_booksim_at_next_cycle = vector(noc_networks_.size(), true); // Just after a retired packet or after be called with multiple cycles
-        
         if(SPARTA_EXPECT_TRUE(cycles == 1)) // Run one cycle
         {
             for(uint8_t n=0; n < noc_networks_.size(); ++n)
             {
-                Booksim::BooksimWrapper::RetiredPacket pkt;
                 // Run BookSim
                 booksim_wrappers_[n]->RunCycles(cycles);
+            }
+        }
+        else // Advance BookSim simulation time
+        {
+            for(uint8_t n=0; n < noc_networks_.size(); ++n)
+            {
+                sparta_assert(!booksim_wrappers_[n]->CheckInFlightPackets());
+                sparta_assert(cycles);
+                booksim_wrappers_[n]->UpdateSimTime(cycles);
+            }
+        }
+    }
+
+    bool DetailedNoC::deliverOnePacketToDestination(const uint64_t current_cycle)
+    {
+        // {vas,mem}_queue_ are not used because the interface between Coyote and BookSim already has an ejection_queue and if this ejecion queue is not infinite
+        // and we do not pick up the packet, this will propagate the congestion backward
+        vector<bool> run_booksim_at_next_cycle = vector(noc_networks_.size(), false);
+
+        for (uint8_t n = 0; n < noc_networks_.size(); ++n)
+        {
+            Booksim::BooksimWrapper::RetiredPacket pkt;
+            
+            for(uint16_t dst=0; dst < size_; dst++)
+            {
+                std::shared_ptr<NoCMessage> mess;
+                // Check the type of tile
+                // memory tiles have the "magical" capability of being able to check if its next packet can be received
+                // by analyzing it without actually receiving it
+                if(network_is_mcpu_[dst])
+                {
+                    // obtain the packet at the front of ejection queue
+                    pkt = booksim_wrappers_[n]->NextPacket(dst);
+                    if(pkt.pid != INVALID_PKT_ID)
+                    {
+                        // get the message
+                        mess = pkts_map_[n][pkt.pid];
+                        // check if MT is able to receive the packet
+                        if(!(*memoryTiles)[mess->getDstPort()]->ableToReceivePacket(mess))
+                        {
+                            run_booksim_at_next_cycle[n] = true;
+                            continue; // continue if MT is not able to receive the packet
+                        }
+                    }
+                }
                 // Retire packet (if there)
-                pkt = booksim_wrappers_[n]->RetirePacket();
+                pkt = booksim_wrappers_[n]->RetirePacket(dst);
                 if(pkt.pid != INVALID_PKT_ID)
                 {
+                    run_booksim_at_next_cycle[n] = true;
+                    sparta_assert(pkt.dst == dst);
                     // Get the message
-                    std::shared_ptr<NoCMessage> mess = pkts_map_[n][pkt.pid];
+                    mess = pkts_map_[n][pkt.pid];
                     sparta_assert(mess->getNoCNetwork() == n);
                     sparta_assert(mess->getClass() == pkt.c);
                     pkts_map_[n].erase(pkt.pid);
@@ -385,21 +431,13 @@ namespace spike_model
                         out_ports_memory_cpus_[mess->getDstPort()]->send(mess, rel_time); // to MCPU
                     else
                         out_ports_tiles_[mess->getDstPort()]->send(mess, rel_time);       // to TILE
-                } 
-                else // If there is no retired packet, BookSim may not have an event on the next cycle: check if there are packets or credits in flight.
-                    run_booksim_at_next_cycle[n] = booksim_wrappers_[n]->CheckInFlightPackets() || booksim_wrappers_[n]->CheckInFlightCredits();
+                }
             }
+            // If a packet has not been retired, BookSim may not have an event on the next cycle: check if there are packets or credits in flight.
+            run_booksim_at_next_cycle[n] = run_booksim_at_next_cycle[n] || booksim_wrappers_[n]->CheckInFlightPackets() || booksim_wrappers_[n]->CheckInFlightCredits();
+            
         }
-        else // Advance BookSim simulation time
-        {
-            for(uint8_t n=0; n < noc_networks_.size(); ++n)
-            {
-                sparta_assert(!booksim_wrappers_[n]->CheckInFlightPackets());
-                sparta_assert(cycles);
-                booksim_wrappers_[n]->UpdateSimTime(cycles);
-            }
-        }
-        
+
         // Return if any NoC network needs to run BookSim at the next cycle
         bool any_network_needs_to_run_at_next_cycle = false;
         for(uint8_t n=0; n < noc_networks_.size() && !any_network_needs_to_run_at_next_cycle; ++n)

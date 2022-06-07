@@ -1,6 +1,7 @@
 
 #include "NoC.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
+#include "MemoryTile/MemoryCPUWrapper.hpp"
 #include <chrono>
 
 namespace spike_model
@@ -67,11 +68,10 @@ namespace spike_model
         // Set the messages' header size
         sparta_assert(params->message_header_size.getNumValues() == static_cast<int>(NoCMessageType::count),
                         "The number of messages defined in message_header_size param is not correct.");
-        int name_length;
-        int size;
+
         for(auto mess_header_size : params->message_header_size){
-            name_length = mess_header_size.find(":");
-            size = stoi(mess_header_size.substr(name_length+1));
+            int name_length = mess_header_size.find(":");
+            int size = stoi(mess_header_size.substr(name_length+1));
             sparta_assert(size < std::numeric_limits<uint8_t>::max(),
                             "The header size should be lower than " + std::to_string(std::numeric_limits<uint8_t>::max()));
             NoCMessage::header_size[static_cast<int>(getMessageTypeFromString_(mess_header_size.substr(0,name_length)))] = size;
@@ -80,15 +80,12 @@ namespace spike_model
         // Define the mapping of NoC Messages to Networks and classes
         sparta_assert(params->message_to_network_and_class.getNumValues() == static_cast<int>(NoCMessageType::count),
                         "The number of messages defined in message_to_network_and_class param is not correct.");
-        int mess_length;
-        int network_length;
-        int dot_pos;
-        int class_value;
+
         for(auto mess_net_class : params->message_to_network_and_class){
-            mess_length = mess_net_class.find(":");
-            dot_pos = mess_net_class.find(".");
-            network_length = dot_pos - (mess_length+1);
-            class_value = stoi(mess_net_class.substr(dot_pos+1));
+            int mess_length = mess_net_class.find(":");
+            int dot_pos = mess_net_class.find(".");
+            int network_length = dot_pos - (mess_length+1);
+            int class_value = stoi(mess_net_class.substr(dot_pos+1));
             sparta_assert(class_value >= 0 && class_value < std::numeric_limits<uint8_t>::max());
             if(class_value > max_class_used_)
                 max_class_used_ = class_value;
@@ -96,6 +93,15 @@ namespace spike_model
                 std::make_pair(getNetworkFromString(mess_net_class.substr(mess_length+1,network_length)), class_value);
         }
         sparta_assert(NoC::message_to_network_and_class_.size() == static_cast<int>(NoCMessageType::count));
+
+        // Packets queue
+        vas_queue_.resize(noc_networks_.size());
+        mem_queue_.resize(noc_networks_.size());
+        for (uint8_t noc = 0; noc < noc_networks_.size(); noc++)
+        {
+            vas_queue_.at(noc).resize(num_tiles_);
+            mem_queue_.at(noc).resize(num_memory_cpus_);
+        }
 
         // Statistics
         for(auto network : noc_networks_)
@@ -148,6 +154,7 @@ namespace spike_model
 
     void NoC::handleMessageFromTile_(const std::shared_ptr<NoCMessage> & mess)
     {
+        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         // Packet counter for each network
         count_rx_packets_[mess->getNoCNetwork()]++;
         count_tx_packets_[mess->getNoCNetwork()]++;
@@ -177,6 +184,62 @@ namespace spike_model
         }
     }
 
+    bool NoC::deliverOnePacketToDestination(const uint64_t current_cycle)
+    {
+        vector<bool> run_noc_at_next_cycle = vector(noc_networks_.size(), false);
+        // Like in detailed model we have a packet latency of X that does not include ejection latency and then, we eject the packets always 1 cycle later.
+        // Hence, here it is ejected the packet at NEXT cycle (current + 1) to always use the concept of packet latency in the same way
+        int rel_time = current_cycle + 1 - getClock()->currentCycle(); // getClock()->currentCycle() points to latest cycle + 1
+        for (uint8_t noc = 0; noc < noc_networks_.size(); ++noc)
+        {
+            // vas
+            for(uint16_t vas = 0; vas < num_tiles_; vas++)
+            {
+                // check if there is a packet to this vas tile
+                if(!vas_queue_.at(noc).at(vas).empty() && vas_queue_.at(noc).at(vas).front().second <= current_cycle)
+                {
+                    std::shared_ptr<NoCMessage> mess = vas_queue_.at(noc).at(vas).front().first;
+                    // Send to the actual destination at current + packet_latency_
+                    out_ports_tiles_[vas]->send(mess, rel_time);
+                    vas_queue_.at(noc).at(vas).erase(vas_queue_.at(noc).at(vas).begin());
+                }
+                // check if the are packets to be extracted at next cycle
+                if(!run_noc_at_next_cycle[noc] && !vas_queue_.at(noc).at(vas).empty())
+                    run_noc_at_next_cycle[noc] = true;
+            }
+            // mem
+            for(uint16_t mem = 0; mem < num_memory_cpus_; mem++)
+            {
+                // check if there is a packet to this mem tile
+                if(!mem_queue_.at(noc).at(mem).empty() && mem_queue_.at(noc).at(mem).front().second <= current_cycle)
+                {
+                    std::shared_ptr<NoCMessage> mess = mem_queue_.at(noc).at(mem).front().first;
+                    sparta_assert(mem == mess->getDstPort());
+                    // check if memory tile is able to receive the packet
+                    // Memory tiles have the "magical" capability of being able to check if its next packet can be received
+                    // by analyzing it without actually receiving it
+                    if(!(*memoryTiles)[mem]->ableToReceivePacket(mess))
+                    {
+                        run_noc_at_next_cycle[noc] = true;
+                        continue; // continue if MT is not able to receive the packet
+                    }
+                    // Send to the actual destination at current + packet_latency_
+                    out_ports_memory_cpus_[mem]->send(mess, rel_time);
+                    mem_queue_.at(noc).at(mem).erase(mem_queue_.at(noc).at(mem).begin());
+                }
+                // check if the are packets to be extracted at next cycle
+                if(!run_noc_at_next_cycle[noc] && !mem_queue_.at(noc).at(mem).empty())
+                    run_noc_at_next_cycle[noc] = true;
+            }
+        }
+        // Return if any NoC network needs to be executed at the next cycle
+        bool any_network_needs_to_run_at_next_cycle = false;
+        for(uint8_t noc=0; noc < noc_networks_.size() && !any_network_needs_to_run_at_next_cycle; ++noc)
+            any_network_needs_to_run_at_next_cycle |= run_noc_at_next_cycle[noc];
+
+        return any_network_needs_to_run_at_next_cycle;
+    }
+
     void NoC::traceSrcDst_(const std::shared_ptr<NoCMessage> & mess)
     {
         uint32_t dst_id=mess->getDstPort();
@@ -199,6 +262,7 @@ namespace spike_model
 
     void NoC::handleMessageFromMemoryCPU_(const std::shared_ptr<NoCMessage> & mess)
     {
+        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         // Packet counter for each network
         count_rx_packets_[mess->getNoCNetwork()]++;
         count_tx_packets_[mess->getNoCNetwork()]++;
@@ -223,6 +287,10 @@ namespace spike_model
         {
             traceSrcDst_(mess);
         }
+    }
+
+    void NoC::setMemoryTiles(std::shared_ptr<std::vector<MemoryCPUWrapper *>> &newMemoryTiles) {
+        memoryTiles = newMemoryTiles;
     }
 
 } // spike_model

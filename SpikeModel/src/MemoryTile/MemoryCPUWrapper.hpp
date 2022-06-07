@@ -23,6 +23,9 @@
 #include <unordered_map>
 
 namespace spike_model {
+		
+	class NoC; // forward declaration
+	
 	class MemoryCPUWrapper : public sparta::Unit, public LogCapable, public spike_model::EventVisitor {
 		public:
 
@@ -39,9 +42,9 @@ namespace spike_model {
 					MemoryCPUWrapperParameterSet(sparta::TreeNode* n):sparta::ParameterSet(n) { }
 					PARAMETER(uint64_t, line_size, 64, "The cache line size")
 					PARAMETER(uint64_t, latency, 1, "The latency of the buses in the memory CPU wrapper")
-                	PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
-                	PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
-                	PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
+					PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
+					PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
+					PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
 			};
 
 			/*!
@@ -63,7 +66,7 @@ namespace spike_model {
 			 * \param The ID to be set
 			 */
 			void setID(uint16_t id);
-			
+
 			/*!
 			 * \brief Get the ID of the current Memory Tile
 			 * \return The ID of this Memory Tile
@@ -86,16 +89,28 @@ namespace spike_model {
 			void setAddressMappingInfo(uint64_t memory_controller_shift, uint64_t memory_controller_mask);
 
 			/*!
-                         * \brief Set the addressing information for the LLC
-                         * \param size_kbs The total size of the LLC for this memory tile in KBs
-                         * \param assoc The associativity of the LLC
-                         */
+             * \brief Set the addressing information for the LLC
+             * \param size_kbs The total size of the LLC for this memory tile in KBs
+             * \param assoc The associativity of the LLC
+             */
 			void setLLCInfo(uint64_t size_kbs, uint8_t assoc);
 			
 			
-			bool ableToAcceptPacket(std::shared_ptr<NoCMessage> packet) {
-				return true;
-			}
+			/*!
+			 * \brief This method allows to inform the NoC, if a packet in [mes] can be accepted. This allows the MemoryTile
+			 * to simulate multiple NoC ports. For instance, if the Memory Tile can handle only one vector memory operation at
+			 * a time. However, some of those memory operation require additional information such as indices. If the MemorTile
+			 * becomes busy, no other packets, including those carrying the indices, can enter the memory tile. Therefore, this
+			 * method allows to "peek" into the next packet to be sent, and can then deny it. The NoC will retry to send the
+			 * packet in the future.
+			 * This method is called $n$ times per simulated clock cycle. $n$ is equal to the number of NoCs. Therefore, other
+			 * packets traversing on another pane/NoC will be able to overtake the stalled packet. This scenario prevents deadlocks
+			 * when, e.g. a second vector memory instruction is stalled, but the current one still waits for LVRF packets from the
+			 * VAS Tile.
+			 * \param mes The NoC message
+			 * \return True, if the memory tile can accept the packet offered by the NoC, false otherwise.
+			 */
+			bool ableToReceivePacket(const std::shared_ptr<NoCMessage> &mes);
 
 		private:
 			const uint8_t num_of_registers = 32;
@@ -123,7 +138,7 @@ namespace spike_model {
 			uint64_t mc_shift;
 			uint64_t mc_mask;
 			
-		    uint8_t tag_bits;
+			uint8_t tag_bits;
 			uint8_t block_offset_bits;
 			uint8_t set_bits;
 			uint8_t bank_bits;
@@ -220,7 +235,7 @@ namespace spike_model {
 			void memOp_orderedIndex(std::shared_ptr<MCPUInstruction> instr);
 			void memOp_unorderedIndex(std::shared_ptr<MCPUInstruction> instr);
 
-            //This two functions might be fused into one with a better class hierarchy
+			//This two functions might be fused into one with a better class hierarchy
 			std::shared_ptr<ScratchpadRequest> createScratchpadRequest(const std::shared_ptr<Request> &mes, ScratchpadRequest::ScratchpadCommand command);
 			std::shared_ptr<ScratchpadRequest> createScratchpadRequest(const std::shared_ptr<MCPUInstruction> &mes, ScratchpadRequest::ScratchpadCommand command);
 

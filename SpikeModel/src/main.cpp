@@ -8,7 +8,7 @@
 #include "CacheDataMappingPolicy.hpp"
 #include "ExecutionDrivenSimulationOrchestrator.hpp"
 #include "TraceDrivenSimulationOrchestrator.hpp"
-#include "NoC/DetailedNoC.hpp"
+#include "NoC/NoC.hpp"
 #include "SimulationEntryPoint.hpp"
 
 #include "sparta/parsers/ConfigEmitterYAML.hpp"
@@ -96,7 +96,7 @@ void setupTiledSimulation(sparta::app::CommandLineSimulator& cls)
         "\nL1$I line size: " << icache_line_size << " because top.arch.params.icache_config is: " << icache_config);            
 } 
 
-std::shared_ptr<SimulationOrchestrator> createTraceDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
+std::shared_ptr<SimulationOrchestrator> createTraceDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::NoC* noc)
 {
     const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
 
@@ -122,10 +122,10 @@ std::shared_ptr<SimulationOrchestrator> createTraceDrivenOrchestrator(sparta::ap
     {
         sparta_assert(false, "Unsupported architecture " << architecture << " for trace driven simulation.");
     }
-    return std::make_shared<TraceDrivenSimulationOrchestrator>(cmd, sim, entry_point, trace, detailed_noc);
+    return std::make_shared<TraceDrivenSimulationOrchestrator>(cmd, sim, entry_point, trace, noc);
 }
 
-std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::DetailedNoC* detailed_noc)
+std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta::app::CommandLineSimulator& cls, std::shared_ptr<SpikeModel>& sim, spike_model::NoC* noc)
 {
     const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
     
@@ -195,7 +195,7 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
         }
     }
     return std::make_shared<ExecutionDrivenSimulationOrchestrator>(spike, sim, request_manager, num_cores, num_threads_per_core,
-                thread_switch_latency, num_mshrs_per_core, trace, l1_writeback, detailed_noc);
+                thread_switch_latency, num_mshrs_per_core, trace, l1_writeback, noc);
 }
                 
 int main(int argc, char **argv)
@@ -259,15 +259,11 @@ int main(int argc, char **argv)
 
         cls.populateSimulation(&(*sim));
 
-        // Get a NoC pointer or NULL to represent non detailed NoC models
-        spike_model::DetailedNoC* detailed_noc = NULL;
+        // Get a NoC pointer
+        spike_model::NoC* noc = NULL;
         if(architecture=="tiled")
         {
-            auto noc_model              = upt.get("top.arch.noc.params.noc_model").getAs<std::string>();
-            if (noc_model == "detailed")
-            {
-                detailed_noc = sim->getRoot()->getChild(std::string("arch.noc"))->getResourceAs<spike_model::DetailedNoC>();
-            }
+            noc = sim->getRoot()->getChild(std::string("arch.noc"))->getResourceAs<spike_model::NoC>();
         }
 
         std::shared_ptr<SimulationOrchestrator> orchestrator=NULL;
@@ -275,12 +271,12 @@ int main(int argc, char **argv)
         if(simulation_mode=="execution_driven")
         {
             printf("Gonna create\n");
-            orchestrator=createExecutionDrivenOrchestrator(cls, sim, detailed_noc);
+            orchestrator=createExecutionDrivenOrchestrator(cls, sim, noc);
             printf("Created\n");
         }
         else if(simulation_mode == "trace_driven")
         {
-            orchestrator=createTraceDrivenOrchestrator(cls, sim, detailed_noc);
+            orchestrator=createTraceDrivenOrchestrator(cls, sim, noc);
         }
 
         if(trace)

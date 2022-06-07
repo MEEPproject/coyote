@@ -5,12 +5,12 @@
 #include "CacheRequest.hpp"
 
 
-TraceDrivenSimulationOrchestrator::TraceDrivenSimulationOrchestrator(std::string trace_path, std::shared_ptr<SpikeModel>& spike_model, spike_model::SimulationEntryPoint * entry_point, bool trace, spike_model::DetailedNoC* detailed_noc) :
+TraceDrivenSimulationOrchestrator::TraceDrivenSimulationOrchestrator(std::string trace_path, std::shared_ptr<SpikeModel>& spike_model, spike_model::SimulationEntryPoint * entry_point, bool trace, spike_model::NoC* noc) :
     spike_model(spike_model),
     entry_point(entry_point),
     current_cycle(1),
     trace(trace),
-    detailed_noc_(detailed_noc),
+    noc_(noc),
     input_trace(trace_path)
 {
 }

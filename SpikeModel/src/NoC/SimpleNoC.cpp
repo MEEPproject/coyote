@@ -79,7 +79,6 @@ namespace spike_model
         NoC::handleMessageFromTile_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         switch(mess->getType())
         {
             // VAS -> VAS messages
@@ -92,7 +91,7 @@ namespace spike_model
                 src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 dst_src_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
                 // Latency: Injection + Link traversal + hops * latency_per_hop (RC - VA - SA - ST + output_link)
-                out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
+                vas_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_));
                 break;
 
             // VAS -> MEM messages
@@ -108,7 +107,7 @@ namespace spike_model
                 dst_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 dst_src_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][tiles_coordinates_[mess->getSrcPort()].second][tiles_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
+                mem_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_));
                 break;
 
             default:
@@ -125,7 +124,6 @@ namespace spike_model
         NoC::handleMessageFromMemoryCPU_(mess);
         writePacketCountMatrix_();
         int hop_count = -1;
-        sparta_assert(mess->getNoCNetwork() < noc_networks_.size());
         switch(mess->getType())
         {
             // MEM -> VAS messages
@@ -138,7 +136,7 @@ namespace spike_model
                 dst_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 dst_src_count_[tiles_coordinates_[mess->getDstPort()].second][tiles_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
-                out_ports_tiles_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
+                vas_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_));
                 break;
                 
             // MEM -> MEM messages
@@ -150,7 +148,7 @@ namespace spike_model
                 dst_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mess->getNoCNetwork()]++; // [y][x][NoC]
                 src_count_[mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++;
                 dst_src_count_[mcpus_coordinates_[mess->getDstPort()].second][mcpus_coordinates_[mess->getDstPort()].first][mcpus_coordinates_[mess->getSrcPort()].second][mcpus_coordinates_[mess->getSrcPort()].first][mess->getNoCNetwork()]++; //dst[y][x]src[y][x][NoC]
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_);
+                mem_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + INJECTION + LINK_TRAVERSAL + hop_count*latency_per_hop_));
                 break;
             default:
                 sparta_assert(false);

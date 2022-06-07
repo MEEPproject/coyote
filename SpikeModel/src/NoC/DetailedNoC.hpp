@@ -12,6 +12,9 @@ using std::shared_ptr;
 
 namespace spike_model
 {
+
+    class MemoryCPUWrapper; // forward declaration
+
     class DetailedNoC : public NoC
     {
         /*!
@@ -65,12 +68,17 @@ namespace spike_model
          * If are called with cycles > 2, it updates the BookSim internal clock
          * 
          * \param cycles The number of cycles to simulate (typically 1)
-         * \param current_cycle The current clock managed by simulator_orchestrator
-         * \return true If must be executed on the next Coyote cycle
-         * \return false If there is no packet in BookSim network and could not be executed in the next Coyote cycle
          * \note This function is not executed under Sparta management, so, the getClock()->currentCycle() is pointing to the latest+1 cycle managed by Sparta
          */
-        bool runBookSimCycles(const uint16_t cycles, const uint64_t current_cycle);
+        virtual void runBookSimCycles(const uint16_t cycles) override;
+        /*!
+         * \brief Extract, at maximum, one packet for each destination in each network and send them through ports
+         * \param current_cycle The current clock managed by simulator_orchestrator
+         * \return true If must be executed on the next Coyote cycle
+         * \return false If there is no packet in network and could not be executed in the next Coyote cycle
+         * \note This function is not executed under Sparta management, so, the getClock()->currentCycle() is pointing to the latest+1 cycle managed by Sparta
+         */
+        virtual bool deliverOnePacketToDestination(const uint64_t current_cycle) override;
 
          /*! 
          * \brief Forwards a message from TILE to the actual destination using BookSim
@@ -87,6 +95,7 @@ namespace spike_model
         void handleMessageFromMemoryCPU_(const shared_ptr<NoCMessage> & mess) override;
 
         string                                  booksim_configuration_;     //! The configuration file to load in BookSim
+        uint16_t                                ejection_queue_size_;       //! The configured ejection queue size
         vector<Booksim::BooksimWrapper*>        booksim_wrappers_;          //! BookSim library pointer for each NoC network
         vector<uint16_t>                        mcpu_to_network_;           //! The network ids of mcpus
         vector<uint16_t>                        tile_to_network_;           //! The network ids of tiles

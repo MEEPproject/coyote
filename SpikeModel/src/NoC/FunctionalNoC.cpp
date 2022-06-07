@@ -2,6 +2,7 @@
 #include "FunctionalNoC.hpp"
 #include "sparta/utils/SpartaAssert.hpp"
 
+using std::vector;
 namespace spike_model
 {
     FunctionalNoC::FunctionalNoC(sparta::TreeNode *node, const FunctionalNoCParameterSet *params) :
@@ -22,7 +23,7 @@ namespace spike_model
             // VAS -> VAS messages
             case NoCMessageType::REMOTE_L2_REQUEST:
             case NoCMessageType::REMOTE_L2_ACK:
-                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
+                vas_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + packet_latency_));
                 break;
 
             // VAS -> MCPU messages
@@ -32,7 +33,7 @@ namespace spike_model
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_ACK:
             case NoCMessageType::SCRATCHPAD_DATA_REPLY:
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
+                mem_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + packet_latency_));
                 break;
 
             default:
@@ -50,13 +51,12 @@ namespace spike_model
             case NoCMessageType::MEMORY_ACK:
             case NoCMessageType::MCPU_REQUEST:
             case NoCMessageType::SCRATCHPAD_COMMAND:
-                out_ports_tiles_[mess->getDstPort()]->send(mess, packet_latency_);
+                vas_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + packet_latency_));
                 break;
-            
             // MemoryTile -> Memory Tile Communication
             case NoCMessageType::MEM_TILE_REQUEST:
             case NoCMessageType::MEM_TILE_REPLY:
-                out_ports_memory_cpus_[mess->getDstPort()]->send(mess, packet_latency_);
+                mem_queue_.at(mess->getNoCNetwork()).at(mess->getDstPort()).push_back(std::make_pair(mess, getClock()->currentCycle() + packet_latency_));
                 break;
 
             default:

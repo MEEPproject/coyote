@@ -19,7 +19,7 @@
 #include "Finish.hpp"
 #include "LogCapable.hpp"
 #include "SimulationOrchestrator.hpp"
-#include "NoC/DetailedNoC.hpp"
+#include "NoC/NoC.hpp"
 
 class TraceDrivenSimulationOrchestrator : public SimulationOrchestrator
 {
@@ -42,9 +42,9 @@ class TraceDrivenSimulationOrchestrator : public SimulationOrchestrator
          * \param spike_model The model for the architecture that will be simulated
          * \param entry_point The entry point for the event engine
          * \param trace Whether tracing is enabled or not
-         * \param detailed_noc A pointer to the simulated DetailedNoC or NULL if a detailed model is not used
+         * \param noc A pointer to the simulated NoC
          */
-        TraceDrivenSimulationOrchestrator(std::string trace_path, std::shared_ptr<SpikeModel>& spike_model, spike_model::SimulationEntryPoint * entry_point, bool trace, spike_model::DetailedNoC* detailed_noc);
+        TraceDrivenSimulationOrchestrator(std::string trace_path, std::shared_ptr<SpikeModel>& spike_model, spike_model::SimulationEntryPoint * entry_point, bool trace, spike_model::NoC* noc);
 
         /*!
          * \brief Destructor for TraceDrivenSimulationOrchestrator
@@ -64,7 +64,7 @@ class TraceDrivenSimulationOrchestrator : public SimulationOrchestrator
         uint64_t current_cycle;
         bool trace;
 
-        spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
+        spike_model::NoC* noc_;    //! Pointer to the NoC
 
         std::ifstream input_trace;
         

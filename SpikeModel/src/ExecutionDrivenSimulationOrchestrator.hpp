@@ -3,6 +3,9 @@
 #define __EXECUTION_DRIVEN_SIMULATION_ORCHESTRATOR_HH__
     
 #include <memory>
+#include <set>
+#include <map>
+
 #include "spike_wrapper.h"
 #include "FullSystemSimulationEventManager.hpp"
 #include "SpikeModel.hpp"
@@ -16,10 +19,8 @@
 #include "VectorWaitingForScalarStore.hpp"
 #include "LogCapable.hpp"
 #include "SimulationOrchestrator.hpp"
-#include "NoC/DetailedNoC.hpp"
 #include "StallReason.hpp"
-#include <set>
-#include <map>
+#include "NoC/NoC.hpp"
 
 class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, public spike_model::EventVisitor
 {
@@ -28,7 +29,7 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
     /**
      * \class ExecutionDrivenSimulationOrchestrator
      *
-     * \brief ExecutionDrivenSimulationOrchestrator is the glue that puts together  Spike and Sparta in Coyote.
+     * \brief ExecutionDrivenSimulationOrchestrator is the glue that puts together Spike and Sparta in Coyote.
      *
      * Its purpose is to handle the execution of instructions on Spike, the forwarding of L2 Requests
      * to Sparta and the notifications to Sparta when a request has been serviced.
@@ -47,9 +48,9 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
          * \param num_mshrs_per_core The number of Miss Status Holding Registers per core
          * \param trace Whether tracing is enabled or not
          * \param l1_writeback Whether l1 is writeback or writethrough
-         * \param detailed_noc A pointer to the simulated DetailedNoC or NULL if a detailed model is not used
+         * \param noc A pointer to the simulated NoC
          */
-        ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::DetailedNoC* detailed_noc);
+        ExecutionDrivenSimulationOrchestrator(std::shared_ptr<spike_model::SpikeWrapper>& spike, std::shared_ptr<SpikeModel>& spike_model, std::shared_ptr<spike_model::FullSystemSimulationEventManager>& request_manager, uint32_t num_cores, uint32_t num_threads_per_core, uint32_t thread_switch_latency, uint16_t num_mshrs_per_core, bool trace, bool l1_writeback, spike_model::NoC* noc);
 
         /*!
          * \brief Destructor for ExecutionDrivenSimulationOrchestrator
@@ -152,8 +153,8 @@ class ExecutionDrivenSimulationOrchestrator : public SimulationOrchestrator, pub
 
         bool is_fetch;
 
-        spike_model::DetailedNoC* detailed_noc_;    //! Pointer to the NoC
-        bool booksim_has_packets_in_flight_;        //! Flag that indicates if booksim has packets in flight
+        spike_model::NoC* noc_;    //! Pointer to the NoC
+        bool noc_has_packets_in_flight_;        //! Flag that indicates if the noc has packets in flight
         std::set<uint16_t> stalled_cores_for_arbiter;
         
         uint16_t max_in_flight_l1_misses;

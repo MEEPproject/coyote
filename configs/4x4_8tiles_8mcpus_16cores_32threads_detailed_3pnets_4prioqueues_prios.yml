@@ -13,22 +13,28 @@
 # Simulation configuration
 meta:
   params:
-    architecture: core_topology_4           # (std::string)     Topology to simulate (core_topology_4)
+    architecture: tiled                     # (std::string)     Topology to simulate (tiled)
+    simulation_mode: execution_driven       # (std::string)     The type of simulation to perform (execution_driven, trace_driven). Mode execution_driven only supported for a tiled architecture
     show_factories: false                   # (bool)            Print generated factories
     trace: false                            # (bool)            Generate a trace into paraver format
-    events_to_trace: []                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    events_to_trace: [any]                     # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
     enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
+    vector_bypass_l1: false
+    vector_bypass_l2: false
+    l1_writeback: false                    # (bool)            l1 is a writeback or a writethrough cache
+    enable_llc: false
     fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
-    cmd: apps/mt-matmul-vec/matmul          # (std::string)     App to execute in the RISC-V simulator
+    cmd: apps/axpy/axpy                  # (std::string)     App to execute in the RISC-V simulator
 
 # Architecture configuration
 top:
-  cpu:
+  arch:
     params:
       frequency_ghz: 1                      # (double)          CPU Operating frequency
       num_cores: 32                         # (uint16_t)        The number of cores to simulate
       num_threads_per_core: 2               # (uint16_t)	      The number of threads per core
       thread_switch_latency: 0              # (uint16_t)	      The number of cycles required to make the thread runnable
+      num_mshrs_per_core: 8                 # (uint16_t)        The number of MSHRs per core
       num_tiles: 8                          # (uint16_t)	      The number of tiles to simulate
       num_memory_cpus: 8                    # (uint16_t)        The number of MCPUs to simulate
       # num_memory_controllers: 1             # (uint16_t)	      The number of MCs to simulate
@@ -36,6 +42,8 @@ top:
       icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
       dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
       varch: v512:e64:s512                  # (std::string)     The RISC-V Vector uArch string
+      lanes_per_vpu: 16
+      num_llcs: 8
       x_size: 4                             # (uint16_t)        The size of X dimension
       y_size: 4                             # (uint16_t)        The size of Y dimension
       mcpus_indices: [0,3,4,7,8,11,12,15]   # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
@@ -43,11 +51,13 @@ top:
       params:
         num_l2_banks: 16                    # (uint16_t)        The number of l2 cache banks in the tile
         latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
-        l2_sharing_mode: tile_private       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
+        l2_sharing_mode: fully_shared       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
         bank_policy: set_interleaving       # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
-        scratchpad_policy: set_interleaving # (std::string)     The data mapping policy for the scratchpad (page_to_bank, set_interleaving)
+        scratchpad_policy: core_to_bank     # (std::string)     The data mapping policy for the scratchpad (core_to_bank, full_vreg_interleaving)
         tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
-        address_policy: close_page          # (std::string)     The data mapping policy in main memory (open_page, close_page)
+      arbiter:
+        params:
+          q_sz: 16                          # (uint64_t)        The arbiter Queue Size
       l2_bank*:
         params:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
@@ -57,23 +67,68 @@ top:
           miss_latency: 15                  # (uint16_t)        Cache miss latency
           hit_latency: 15                   # (uint16_t)        Cache hit latency
           max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
     memory_cpu*:
       params:
         line_size: 64                       # (uint64_t)        Cache line size (power of 2)
         latency: 1                          # (uint64_t)        The latency of the MCPU
+        num_llc_banks: 16                   # (uint16_t)        The number of LLCs
+        llc_bank_policy: set_interleaving   # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        max_vvl: 16384                      # (uint64_t         The maximum vvl that will be returned by the MCPU (in bits)
+      llc*:
+        params:
+          line_size: 64                     # (uint64_t)        Cache line size (power of 2)
+          size_kb: 512                      # (uint64_t)        Size of L2 cache in KB (power of 2)
+          associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          always_hit: false                 # (bool)            L2 cache will always hit
+          miss_latency: 15                  # (uint16_t)        Cache miss latency
+          hit_latency: 15                   # (uint16_t)        Cache hit latency
+          max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
     memory_controller*:
       params:
-        num_banks: 8                        # (uint64_t)        The number of memory banks handled by this MC
+        num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
+        num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
         write_allocate: true                # (bool)            The write allocation policy
+        request_reordering_policy: fifo      # (std::string)     The reordering policy for memory requests (fifo, access_type)
+        command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready)
+        address_policy: row_bank_column_bank_group_interleave 
+                                            # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column
+        unused_lsbs: 6                      # (uint8_t)         The number of bits that are unused in the address calculation
+        mem_spec:                           # (vector<string>)  The memory latencies
+          - "CCDL:3"
+          - "CCDS:2"
+          - "CKE:8"
+          - "QSCK:1"
+          - "FAW:16"
+          - "PL:0"
+          - "RAS:28"
+          - "RC:42"
+          - "RCDRD:12"
+          - "RCDWR:6"
+          - "REFI:3900"
+          - "REFISB:244"
+          - "RFC:220"
+          - "RFCSB:96"
+          - "RL:17"
+          - "RP:14"
+          - "RRDL:6"
+          - "RRDS:4"
+          - "RREFD:8"
+          - "RTP:5"
+          - "RTW:18"
+          - "WL:7"
+          - "WR:14"
+          - "WTRL:9"
+          - "WTRS:4"
+          - "XP:8"
+          - "XS:216"
       memory_bank*:
         params:
           num_rows: 16384                   # (uint64_t)        The number of rows
           num_columns: 64                   # (uint64_t)        The number of columns
           column_element_size: 32           # (uint64_t)        The size of column elements
-          delay_open: 16                    # (uint64_t)        The delay to open a row
-          delay_close: 16                   # (uint64_t)        The delay to close a row
-          delay_read: 200                   # (uint64_t)        The delay to read
-          delay_write: 200                  # (uint64_t)        The delay to write
+          burst_length: 2                   # (uint8_t)         The number of columns handled back to back as a result of a READ/WRITE
     noc:
       params:
         noc_model: detailed                 # (std::string)     NoC Model to simulate (functional, simple, detailed)
@@ -81,6 +136,7 @@ top:
           - "DATA_TRANSFER"
           - "ADDRESS_ONLY"
           - "CONTROL"
+          - "MEMORY"
         message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
           - "REMOTE_L2_REQUEST:27"
           - "MEMORY_REQUEST_LOAD:27"
@@ -92,6 +148,8 @@ top:
           - "SCRATCHPAD_ACK:27"
           - "SCRATCHPAD_DATA_REPLY:27"
           - "SCRATCHPAD_COMMAND:27"
+          - "MEM_TILE_REQUEST:27"
+          - "MEM_TILE_REPLY:27"
         message_to_network_and_class:       # (vector<string>)  The mapping of NoC messages to networks and classes
           - "REMOTE_L2_REQUEST:ADDRESS_ONLY.1"
           - "MEMORY_REQUEST_LOAD:ADDRESS_ONLY.1"
@@ -103,8 +161,10 @@ top:
           - "SCRATCHPAD_ACK:CONTROL.0"
           - "SCRATCHPAD_DATA_REPLY:DATA_TRANSFER.2"
           - "SCRATCHPAD_COMMAND:DATA_TRANSFER.3"
+          - "MEM_TILE_REQUEST:MEMORY.0"
+          - "MEM_TILE_REPLY:MEMORY.0"
         booksim_configuration: configs/booksim/4x4_mesh_iq_4vcs_prios.cfg  # (std::string)   BookSim configuration file
-        network_width: [603,99,99]          # (uint16_t)        The physical channel width in bits
+        network_width: [603,99,99,603]          # (uint16_t)        The physical channel width in bits
         stats_files_prefix: booksimstats    # (std::string)     The filename prefix for BookSim statistics files
 
 ...
