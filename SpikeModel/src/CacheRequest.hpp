@@ -165,6 +165,16 @@ namespace spike_model
             {
                 memory_ack = ack;
             }
+    
+            void setProducedByVector()
+            {
+                produced_by_vector_instruction=true;
+            }
+
+            bool getProducedByVector()
+            {
+                return produced_by_vector_instruction;
+            }
 
             /*
              * \brief Get the number of bytes that have been handled by memory for this cache request
@@ -218,6 +228,8 @@ namespace spike_model
 
             bool closes_memory_row=false;
             bool misses_memory_row=false;
+
+            bool produced_by_vector_instruction=false;
 
             /*!
              * \brief Set the bank information of the memory access triggered by the CacheRequest

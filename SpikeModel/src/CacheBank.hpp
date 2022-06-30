@@ -24,7 +24,7 @@
 
 #include "CacheRequest.hpp"
 #include "ScratchpadRequest.hpp"
-#include "SimpleDL1.hpp"
+#include "SimpleDL2.hpp"
 #include "LogCapable.hpp"
 #include "SimulationEntryPoint.hpp"
 
@@ -254,14 +254,23 @@ namespace spike_model
         uint64_t calculateLineAddress(std::shared_ptr<CacheRequest> r);
 
         //An unordered set indexed by the bits of an instruction and containing all its pending (mmu/cache) accesses
-        sparta::Counter count_cache_reads_=sparta::Counter(getStatisticSet(), "cache_reads", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
-        sparta::Counter count_cache_writes_=sparta::Counter(getStatisticSet(), "cache_writes", "Number of cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_reads_vector_=sparta::Counter(getStatisticSet(), "vector_reads", "Number of vector cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_writes_vector_=sparta::Counter(getStatisticSet(), "vector_writes", "Number of vector cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_reads_non_vector_=sparta::Counter(getStatisticSet(), "non_vector_reads", "Number of non-vector cache requests", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_cache_writes_non_vector_=sparta::Counter(getStatisticSet(), "non_vector_writes", "Number of non-vector cache requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_scratchpad_requests_=sparta::Counter(getStatisticSet(), "scratchpad_requests", "Number of scratchpad requests", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_misses_on_already_pending_=sparta::Counter(getStatisticSet(), "misses_on_already_pending", "Number of misses on addreses that have already been requested", sparta::Counter::COUNT_NORMAL);
-        sparta::Counter count_cache_misses_=sparta::Counter(getStatisticSet(), "cache_misses", "Number of cache misses", sparta::Counter::COUNT_NORMAL);
-        sparta::Counter count_conflict_=sparta::Counter(getStatisticSet(), "cache_conflicts", "Number of cache conflicts", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_vector_misses_=sparta::Counter(getStatisticSet(), "vector_misses", "Number of vector misses", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_non_vector_misses_=sparta::Counter(getStatisticSet(), "non_vector_misses", "Number of non-vector misses", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_stall_=sparta::Counter(getStatisticSet(), "stalls", "Stalls due to full in-flight queue", sparta::Counter::COUNT_NORMAL);
         sparta::Counter count_hit_on_store_=sparta::Counter(getStatisticSet(), "hits_on_store", "Number of hits on pending stores", sparta::Counter::COUNT_NORMAL);
+        
+        sparta::Counter count_non_vector_evicts_non_vector_=sparta::Counter(getStatisticSet(), "non_vector_evicts_non_vector", "Number of cache non vector line eviction caused by a non vector access", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_vector_evicts_non_vector_=sparta::Counter(getStatisticSet(), "vector_evicts_non_vector", "Number of cache non vector line evictions caused by a vector access", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_non_vector_evicts_vector_=sparta::Counter(getStatisticSet(), "non_vector_evicts_vector", "Number of cache vector line evictions caused by a non vector access", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_vector_evicts_vector_=sparta::Counter(getStatisticSet(), "vector_evicts_vector", "Number of cache vector line evictions caused by a vector access", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_vector_evicts_mixed_=sparta::Counter(getStatisticSet(), "vector_evicts_mixed", "Number of cache mixed line evictions caused by a vector access", sparta::Counter::COUNT_NORMAL);
+        sparta::Counter count_non_vector_evicts_mixed_=sparta::Counter(getStatisticSet(), "non_vector_evicts_mixed", "Number of cache mixed line evictions caused by a non vector access", sparta::Counter::COUNT_NORMAL);
         
         sparta::Counter count_wbs_=sparta::Counter(getStatisticSet(), "writebacks", "Number of writebacks", sparta::Counter::COUNT_NORMAL);
             
@@ -270,14 +279,49 @@ namespace spike_model
         sparta::StatisticDef avg_latency_lookup{
             getStatisticSet(), "avg_latency",
             "Average latency",
-            getStatisticSet(), "total_time_spent_by_requests/(cache_reads+cache_writes)"
+            getStatisticSet(), "total_time_spent_by_requests/(overall_reads+overall_writes)"
         };
         
+        sparta::StatisticDef count_cache_reads_{
+            getStatisticSet(), "overall_reads",
+            "Number of cache reads (overall)",
+            getStatisticSet(), "vector_reads+non_vector_reads"
+        };
+        
+        sparta::StatisticDef count_cache_writes_{
+            getStatisticSet(), "overall_writes",
+            "Number of cache writes (overall)",
+            getStatisticSet(), "vector_writes+non_vector_writes"
+        };
+        
+        sparta::StatisticDef count_cache_misses_{
+            getStatisticSet(), "overall_misses",
+            "Number of cache misses (overall)",
+            getStatisticSet(), "vector_misses+non_vector_misses"
+        };
     
         sparta::StatisticDef miss_ratio_{
             getStatisticSet(), "miss_ratio",
             "Miss ratio",
-            getStatisticSet(), "cache_misses/(cache_reads+cache_writes)"
+            getStatisticSet(), "overall_misses/(overall_reads+overall_writes)"
+        };
+        
+        sparta::StatisticDef vector_miss_ratio_{
+            getStatisticSet(), "vector_miss_ratio",
+            "Vector miss ratio",
+            getStatisticSet(), "vector_misses/(vector_reads+vector_writes)"
+        };
+        
+        sparta::StatisticDef non_vector_miss_ratio_{
+            getStatisticSet(), "non_vector_miss_ratio",
+            "Non-vector miss ratio",
+            getStatisticSet(), "non_vector_misses/(non_vector_reads+non_vector_writes)"
+        };
+        
+        sparta::StatisticDef count_evictions_{
+            getStatisticSet(), "total_evictions",
+            "Total evictions",
+            getStatisticSet(), "non_vector_evicts_non_vector+vector_evicts_non_vector+non_vector_evicts_vector+vector_evicts_vector+vector_evicts_mixed+non_vector_evicts_mixed"
         };
 
         class CacheRequestHash
@@ -360,7 +404,7 @@ namespace spike_model
         std::map<uint64_t, uint64_t> eviction_times_;
         bool unit_test;
         // Using the same handling policies as the L1 Data Cache
-        using DL1Handle = SimpleDL1::Handle;
+        using DL1Handle = SimpleDL2::Handle;
         DL1Handle l2_cache_;
         
         /*!
@@ -379,7 +423,7 @@ namespace spike_model
         * \brief Update the replacement info for an address
         * \param The address to update
         */
-        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType);
+        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType, bool is_vector);
     };
 
 

@@ -26,7 +26,7 @@
 #include "CacheBank.hpp"
 #include "ScratchpadRequest.hpp"
 
-#include "SimpleDL1.hpp"
+#include "SimpleDL2.hpp"
 
 #include "LogCapable.hpp"
 

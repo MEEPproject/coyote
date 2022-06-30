@@ -110,9 +110,9 @@ namespace spike_model
     
     
     // Reload cache line
-    void L2CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank, CacheRequest::AccessType type)
+    void L2CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank, CacheRequest::AccessType type, bool is_vector)
     {
-        CacheBank::reloadCache_(phyAddr, bank, type);
+        CacheBank::reloadCache_(phyAddr, bank, type, is_vector);
         
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
         if(trace_) {

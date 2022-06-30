@@ -26,7 +26,7 @@
 #include "CacheBank.hpp"
 #include "ScratchpadRequest.hpp"
 
-#include "SimpleDL1.hpp"
+#include "SimpleDL2.hpp"
 #include "Tile.hpp"
 
 #include "LogCapable.hpp"
@@ -116,7 +116,7 @@ namespace spike_model
         virtual bool handleCacheLookupReq_(const MemoryAccessInfoPtr & mem_access_info_ptr) override;
     private:
         Tile *tile;
-        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType) override;
+        virtual void reloadCache_(uint64_t, uint16_t, CacheRequest::AccessType, bool is_vector) override;
         virtual void logCacheRequest(std::shared_ptr<CacheRequest> r) override;
 
     };

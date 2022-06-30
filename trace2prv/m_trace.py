@@ -341,6 +341,9 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
 
         for col in row[1:]:
             i = i + 1
+            if row[3]=="inst_graduate":
+                break
+
             if (i==2 or i==4 or i==5) and ("resume" in row[3] or row[3]=="stall" or row[3]=="KI"): #These events have no associated pc, address or destination
                 continue
 
@@ -476,7 +479,7 @@ def spikeSpartaTraceToPrv(csvfile, prvfile, PrvEvents, threads, args):
                     #print(base_event_dict[i])
                     #last_state[i] = parser_functions[i](col, PrvEvents[base_event_dict[i]], paraver_line, last_state[i])
 
-        if (row[3]!="resume" and row[3]!="stall" and row[3]!="KI") or (row[3]=="resume" and int(row[5], 16)!=0): #Add memory obj info. stalls, KIs and resumes with value 0 have no mem info
+        if (args.exe!=None and row[3]!="resume" and row[3]!="stall" and row[3]!="KI") or (row[3]=="resume" and int(row[5], 16)!=0): #Add memory obj info. stalls, KIs and resumes with value 0 have no mem info
             found=False
             for i in range(len(mem_objs)):
                 start, end=mem_objs[i]

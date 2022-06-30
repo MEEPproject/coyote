@@ -40,7 +40,7 @@ namespace spike_model
         // Cache config
         std::unique_ptr<sparta::cache::ReplacementIF> repl(new sparta::cache::TreePLRUReplacement
                                                          (l2_associativity_));
-        l2_cache_.reset(new SimpleDL1( getContainer(), l2_size_kb_, l2_line_size_, l2_line_size_*bank_and_tile_offset_, *repl ));
+        l2_cache_.reset(new SimpleDL2( getContainer(), l2_size_kb_, l2_line_size_, l2_line_size_*bank_and_tile_offset_, *repl ));
 
         if(SPARTA_EXPECT_FALSE(info_logger_.observed())) {
             info_logger_ << "CacheBank construct: #" << node->getGroupIdx();
@@ -61,7 +61,7 @@ namespace spike_model
         //For write-back, stores are write allocate, so we have to reload the cache
         if((writeback_ && req->getType()!=CacheRequest::AccessType::WRITEBACK) || (!writeback_ && req->getType()!=CacheRequest::AccessType::STORE))
         {
-            reloadCache_(calculateLineAddress(req), req->getCacheBank(), req->getType());
+            reloadCache_(calculateLineAddress(req), req->getCacheBank(), req->getType(), req->getProducedByVector());
 
             auto range_misses=in_flight_misses_.equal_range(req);
             sparta_assert(range_misses.first != range_misses.second, "Got an ack for an unrequested miss\n");
@@ -176,7 +176,7 @@ namespace spike_model
         bool CACHE_HIT=true;
         if(mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK)
         {
-            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType());
+            reloadCache_(calculateLineAddress(mem_access_info_ptr->getReq()), mem_access_info_ptr->getReq()->getCacheBank(), mem_access_info_ptr->getReq()->getType(), mem_access_info_ptr->getReq()->getProducedByVector());
             CACHE_HIT=true;
         }
         else if(writeback_ || mem_access_info_ptr->getReq()->getType()!=CacheRequest::AccessType::STORE)
@@ -227,7 +227,14 @@ namespace spike_model
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
                 if(!already_pending)
                 {
-                    count_cache_misses_++;
+                    if(mem_access_info_ptr->getReq()->getProducedByVector())
+                    {
+                        count_vector_misses_++;
+                    }
+                    else
+                    {
+                        count_non_vector_misses_++;
+                    }
                     std::shared_ptr<spike_model::CacheRequest> cache_req = mem_access_info_ptr->getReq();
                     out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
@@ -275,9 +282,19 @@ namespace spike_model
             cache_hit = (cache_line != nullptr) && cache_line->isValid();
             if (cache_hit) {
                 l2_cache_->touchMRU(*cache_line);
+
+                if(mem_access_info_ptr->getReq()->getProducedByVector())
+                {
+                    cache_line->setAccessedByVector(true);
+                }
+                else
+                {
+                    cache_line->setAccessedByNonVector(true);
+                }
+
                 //SET DIRTY BIT IF NECESSARY
                 if((mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK) && writeback_)
-                {
+                 {
                     cache_line->setModified(true); //send the block to memory for write through l2
                 }
             }
@@ -299,7 +316,7 @@ namespace spike_model
     }
 
     // Reload cache line
-    void CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank, CacheRequest::AccessType type)
+    void CacheBank::reloadCache_(uint64_t phyAddr, uint16_t bank, CacheRequest::AccessType type, bool is_vector)
     {
         auto l2_cache_line = &l2_cache_->getLineForReplacementWithInvalidCheck(phyAddr);
 
@@ -322,9 +339,49 @@ namespace spike_model
         }
 
         if(l2_cache_line->isValid())
-            count_conflict_++;
+        {
+            if(is_vector)
+            {
+                if(l2_cache_line->getAccessedByVector() && l2_cache_line->getAccessedByNonVector())
+                {
+                    count_vector_evicts_mixed_++;
+                }
+                else if(l2_cache_line->getAccessedByVector())
+                {
+                    count_vector_evicts_vector_++; 
+                }
+                else
+                {
+                    count_vector_evicts_non_vector_++;
+                }
+            }
+            else
+            {
+                if(l2_cache_line->getAccessedByVector() && l2_cache_line->getAccessedByNonVector())
+                {
+                    count_non_vector_evicts_mixed_++;
+                }
+                else if(l2_cache_line->getAccessedByVector())
+                {
+                    count_non_vector_evicts_vector_++; 
+                }
+                else
+                {
+                    count_non_vector_evicts_non_vector_++;
+                }
+            }
+        }
 
         l2_cache_->allocateWithMRUUpdate(*l2_cache_line, phyAddr);
+                
+        if(is_vector)
+        {
+            l2_cache_line->setAccessedByVector(true);
+        }
+        else
+        {
+            l2_cache_line->setAccessedByNonVector(true);
+        }
 
         if(type == CacheRequest::AccessType::WRITEBACK || type == CacheRequest::AccessType::STORE)
             l2_cache_line->setModified(true); //Send the block to memory for write through L2
@@ -354,11 +411,25 @@ namespace spike_model
 
             if(r->getType()==CacheRequest::AccessType::LOAD || r->getType()==CacheRequest::AccessType::FETCH)
             {
-                count_cache_reads_+=1;
+                if(r->getProducedByVector())
+                {
+                    count_cache_reads_vector_+=1;
+                }
+                else
+                {
+                    count_cache_reads_non_vector_+=1;
+                }
             }
             else
             {
-                count_cache_writes_+=1;
+                if(r->getProducedByVector())
+                {
+                    count_cache_writes_vector_+=1;
+                }
+                else
+                {
+                    count_cache_writes_non_vector_+=1;
+                }
             }
 
             bool hit_on_store=false;

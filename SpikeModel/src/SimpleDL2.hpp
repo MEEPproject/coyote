@@ -20,7 +20,9 @@ namespace spike_model
         SimpleCacheLine(uint64_t line_size) :
             line_size_(line_size),
             valid_(false),
-            modified_(false)
+            modified_(false),
+            accessed_by_vector_(false),
+            accessed_by_non_vector_(false)
         {
             sparta_assert(sparta::utils::is_power_of_2(line_size),
                 "Cache line size must be a power of 2. line_size=" << line_size);
@@ -31,7 +33,9 @@ namespace spike_model
             BasicCacheItem(rhs),
             line_size_(rhs.line_size_),
             valid_(rhs.valid_),
-            modified_(rhs.modified_)
+            modified_(rhs.modified_),
+            accessed_by_vector_(rhs.accessed_by_vector_),
+            accessed_by_non_vector_(rhs.accessed_by_non_vector_)
         {
         }
 
@@ -52,6 +56,8 @@ namespace spike_model
         {
             setValid(true);
             setModified(false);
+            setAccessedByVector(false);
+            setAccessedByNonVector(false);
             BasicCacheItem::setAddr(addr);
         }
 
@@ -64,6 +70,10 @@ namespace spike_model
         // Required by SimpleCache2
         void setModified(bool m) { modified_=m; }
         bool isModified() { return modified_;}
+        void setAccessedByVector(bool a) { accessed_by_vector_=a; }
+        bool getAccessedByVector() { return accessed_by_vector_; }
+        void setAccessedByNonVector(bool a) { accessed_by_non_vector_=a; }
+        bool getAccessedByNonVector() { return accessed_by_non_vector_; }
 
         // Required by SimpleCache2
         bool read(uint64_t offset, uint32_t size, uint32_t *buf) const
@@ -85,23 +95,26 @@ namespace spike_model
             return true;
         }
 
+
+
         private:
         uint32_t line_size_;
         bool valid_;
         bool modified_;
-
+        bool accessed_by_vector_;
+        bool accessed_by_non_vector_;
         }; // class SimpleCacheLine
 
-    //class SimpleDL1 : public sparta::cache::SimpleCache2<SimpleCacheLine>,
-    class SimpleDL1 : public sparta::cache::SimpleCache<SimpleCacheLine>,
+    //class SimpleDL2 : public sparta::cache::SimpleCache2<SimpleCacheLine>,
+    class SimpleDL2 : public sparta::cache::SimpleCache<SimpleCacheLine>,
                       public sparta::TreeNode,
                       public sparta::cache::PreloadableIF,
                       public sparta::cache::PreloadDumpableIF
 
     {
     public:
-        using Handle = std::shared_ptr<SimpleDL1>;
-        SimpleDL1(sparta::TreeNode* parent,
+        using Handle = std::shared_ptr<SimpleDL2>;
+        SimpleDL2(sparta::TreeNode* parent,
                   uint64_t cache_size_kb,
                   uint64_t line_size,
                   uint64_t bank_and_tile_offset,
@@ -114,8 +127,8 @@ namespace spike_model
             sparta::TreeNode(parent, "l1cache", "Simple L1 Cache"),
             sparta::cache::PreloadableIF(),
             sparta::cache::PreloadDumpableIF(),
-            preloadable_(this, std::bind(&SimpleDL1::preloadPkt_, this, _1),
-                         std::bind(&SimpleDL1::preloadDump_, this, _1))
+            preloadable_(this, std::bind(&SimpleDL2::preloadPkt_, this, _1),
+                         std::bind(&SimpleDL2::preloadDump_, this, _1))
         {}
     private:
         /**
@@ -131,7 +144,7 @@ namespace spike_model
                 auto& cache_line = getLineForReplacement(va);
                 std::cout << *this << " : Preloading VA: 0x" << std::hex << va
                           << std::endl;
-                allocateWithMRUUpdate(cache_line, va);
+                allocateWithMRUUpdate(cache_line, va, false);
                 // Sanity check that the line was marked as valid.
                 sparta_assert(getLine(va) != nullptr);
             }
@@ -168,7 +181,7 @@ namespace spike_model
         //! the preloadPkt call to us.
         sparta::cache::PreloadableNode preloadable_;
 
-    }; // class SimpleDL1
+    }; // class SimpleDL2
 
 } // namespace core_example
 

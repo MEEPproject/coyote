@@ -95,5 +95,5 @@ namespace spike_model
     bool CacheRequest::getMissesMemoryRow()
     {
         return misses_memory_row;
-    }
+    }            
 }

@@ -222,7 +222,7 @@ namespace sparta
                                        uint64_t   addr,
                                        bool       nt)
             {
-                line.reset( addr, nt );
+                line.reset( addr );
                 if (nt) {
                     auto &cache_set = cache_.getCacheSet(addr);
                     cache_set.setPreviousNTWay( line.getWay() );

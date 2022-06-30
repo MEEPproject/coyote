@@ -416,13 +416,15 @@ double SpikeModel::getAvgL2Latency()
             sparta::CounterBase* c_time = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.tile") +
                                     sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
                                     sparta::utils::uint32_to_str(j) + std::string(".stats.total_time_spent_by_requests"));
-            sparta::CounterBase* c_reads = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.tile") +
+            sparta::StatisticDef* c_reads = getRoot()->getChildAs<sparta::StatisticDef>(std::string("arch.tile") +
                                     sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
-                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_reads"));
-            sparta::CounterBase* c_writes = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.tile") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.overall_reads"));
+            sparta::StatisticDef* c_writes = getRoot()->getChildAs<sparta::StatisticDef>(std::string("arch.tile") +
                                     sparta::utils::uint32_to_str(i) + std::string(".l2_bank") +
-                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_writes"));
-            count_requests+=c_reads->get()+c_writes->get();
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.overall_writes"));
+            sparta::StatisticInstance reads(c_reads);
+            sparta::StatisticInstance writes(c_writes);
+            count_requests+=reads.getValue()+writes.getValue();
             count_times+=c_time->get();
 
         }
@@ -502,13 +504,15 @@ double SpikeModel::getAvgLLCLatency()
             sparta::CounterBase* c_time = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.memory_cpu") +
                                     sparta::utils::uint32_to_str(i) + std::string(".llc") +
                                     sparta::utils::uint32_to_str(j) + std::string(".stats.total_time_spent_by_requests"));
-            sparta::CounterBase* c_reads = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.memory_cpu") +
+            sparta::StatisticDef* c_reads = getRoot()->getChildAs<sparta::StatisticDef>(std::string("arch.memory_cpu") +
                                     sparta::utils::uint32_to_str(i) + std::string(".llc") +
-                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_reads"));
-            sparta::CounterBase* c_writes = getRoot()->getChildAs<sparta::CounterBase>(std::string("arch.memory_cpu") +
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.overall_reads"));
+            sparta::StatisticDef* c_writes = getRoot()->getChildAs<sparta::StatisticDef>(std::string("arch.memory_cpu") +
                                     sparta::utils::uint32_to_str(i) + std::string(".llc") +
-                                    sparta::utils::uint32_to_str(j) + std::string(".stats.cache_writes"));
-            count_requests+=c_reads->get()+c_writes->get();
+                                    sparta::utils::uint32_to_str(j) + std::string(".stats.overall_writes"));
+            sparta::StatisticInstance reads(c_reads);
+            sparta::StatisticInstance writes(c_writes);
+            count_requests+=reads.getValue()+writes.getValue();
             count_times+=c_time->get();
 
         }

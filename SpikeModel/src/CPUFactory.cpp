@@ -204,7 +204,6 @@ auto spike_model::CPUFactory::buildTree_(sparta::RootTreeNode* root_node,
                     replace(parent_name, to_replace_memory_controllers_, std::to_string(num_of_memory_controllers));
                     replace(node_name, to_replace_memory_banks_, replace_with);
                     replace(human_name, to_replace_memory_banks_, replace_with);
-                    std::cout << "Bank " << num_of_memory_banks << "\n";
                     auto parent_node = root_node->getChildAs<sparta::TreeNode>(parent_name);
                     auto rtn = new sparta::ResourceTreeNode(parent_node,
                                                           node_name,

@@ -270,9 +270,7 @@ int main(int argc, char **argv)
         
         if(simulation_mode=="execution_driven")
         {
-            printf("Gonna create\n");
             orchestrator=createExecutionDrivenOrchestrator(cls, sim, noc);
-            printf("Created\n");
         }
         else if(simulation_mode == "trace_driven")
         {
@@ -319,7 +317,6 @@ int main(int argc, char **argv)
                 l->addEventOfInterest(events_of_interest); //Last event
             }
         }
-        printf("Gonna run\n");
         orchestrator->run();
 
         cls.postProcess(&(*sim));
