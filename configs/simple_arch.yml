@@ -64,6 +64,7 @@ top:
           line_size: 64                     # (uint64_t)        Cache line size (power of 2)
           size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
           associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          lvrf_ways: 0                     # (uint64_t)        The number of ways that will be disabled for regular cache operation and used as an LVRF
           always_hit: false                 # (bool)            L2 cache will always hit
           writeback: false                # (bool)            L2 cache is writeback or writethrough
           miss_latency: 15                  # (uint16_t)        Cache miss latency

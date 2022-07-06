@@ -7,10 +7,9 @@ import queue
 import time
 
 # Configuration
-coyote_bin_path="../SpikeModel/build/spike_model"
+coyote_bin_path="../Coyote/build/coyote"
 apps_path="../apps/"
-#apps=["mt-matmul-vec/matmul", "axpy/axpy", "spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS", "spmv-vec/spmv_synthetic"]
-apps=["mt-matmul-vec/matmul"]
+apps=["mt-matmul-vec/matmul", "axpy/axpy", "spmv-vec/spmv_consph", "spmv-vec/spmv_cop20k", "spmv-vec/spmv_pdb1HYS", "spmv-vec/spmv_synthetic"]
 cores=1 # Change to the number of procs to use
 polling_time=1 # seconds
 
