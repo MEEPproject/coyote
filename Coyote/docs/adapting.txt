@@ -1,0 +1,18 @@
+
+/*!
+  \page adapting Adapting an application to Coyote
+
+  The current Coyote implementation has no support for syscalls, so for an application to be simulated, it needs to be baremetal. This means certain limitations on the codes that can be executed.
+
+  ======================================================================  
+
+  
+  \section limitations Known Limitations
+  The following are the most relevant limitations when apating a kernel to Coyote. The example kernels in the apps folder are a good starting point to adapt your first code.
+  - No file I/O.
+  - No command line arguments. This means that parameters such as the iteration count or the number of cores to run the application need to be static too. This could be fixed by using a different asm preamble and syscall.c file.
+  - No dynamic memory. All data needs to be static. Thus, the big dataset.h file in the applications provided as an example, which gets generated via different scripts.
+  - Parallel execution of code is obtained by having each of the simulated cores execute the same thread_entry function (you can think of it as your <code>main</code>) but with a different argument for the core id. The assembly preamble in my_crt.S handles this part.
+
+  In the application provided as examples, the last two bullets are handled by compiling using a script that produces the dataset and modifies the code to use the numbers of code specified section.
+*/

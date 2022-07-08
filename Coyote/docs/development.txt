@@ -1,0 +1,56 @@
+
+/*!
+  \page development A primer on Coyote development
+
+  The purpose of this page is to provide guidance in the implementation of new Coyote features
+
+  ======================================================================
+  \section development_overview Simulator overview
+
+ Coyote is built on Spike, an Instruction Set Simulator (ISS) by SiFive, and Sparta, a simulator creation framework also by SiFive. Spike itself knows nothing about time or performance, but we extended it to support some of the features covered in the \ref core_features section. Spike provides functional simulation plus modeling of L1s, while Sparta classes, together with the Sparta event engine, provide the modeling of the memory hierarchy beyond the L1 and the impact on performance of the movement of data through it.
+
+  When a Coyote simulation is launched, a single wrapped Spike instance is spawned, representing all the cores in the system. An instance of the sparta-based model of the memory hierarchy is also spawned. However, they do not start simulating straightaway, but wait to be instructed to operate instead. The class that handles the management of Spike and Sparta and their interaction is the ExecutionDrivenSimulationOrchestrator. 
+  
+  As a result of the above, one of the first things to consider when adding a new feature to Coyote is considering which elements it will affect. The following subsections provide guidance with respect to this decision.
+
+  \subsection spike The Wrapped Spike
+
+  The wrapped Spike can be found in folder riscv-isa-sim. It is a modified version of Spike that can be set up to simulate instruction by instruction upon a method call. Its interface can be found in class coyote::SpikeWrappper
+
+  Features more closely related to the microarchitecture of the core or the L1 usually involve changes to this part of the simulator. Examples:
+
+    - What would be the impact of branch prediction?
+    - How would a different replacement policy affect performance?
+    - How do vector processing and multi-threading interact?
+
+  \subsection sparta The Sparta Model
+
+  The Sparta-based memory hierarchy model can be found in folder Coyote/src. It is based on a set of classes that represent units, which communicate through ports. Features that have an impact on how the data moves throughout the overall system usually imply changes to this part of the simulator. Examples:
+    - How would a new data placement policy impact performance?
+    - What NoC topology is the most suitable for my problem?
+    - Would a new reordering policy imrpove memory controller bandwidth?
+
+  \subsection orchestrator The Simulation Orchestrator
+  This ExecutionDrivenSimulationOrchestrator class is found in the Coyote/src folder. It is the glue that puts the Sparta model and Spike together. As such, new feature that imply crossing the L1 boundary or deciding when cores should execute often imply changes to this class. Examples:
+    - Atomic operations.
+    - Accurate fences.
+    - Prefetcing techniques analysis.
+
+  \section visitor_design_pattern The visitor design pattern
+
+  Spike, the orchestrator and the sparta model communicate by passing around pointers to data structures extending the coyote::Event base class (not to be confused with Sparta Events, which will be covered later). All the units in the sparta model implement the well-known visitor design pattern (by extending class coyote::EventVisitor) to leverage polymorphism and ease the addition of new kinds of events. Each unit overrides the coyote::EventVisitor::handle method for the kinds of events that are relevant to its operation. For example a cache bank will override the methods associated to coyote::CacheRequest instances. Overall, communicating with a unit usually means the handle method for the particular event descendant and unit getting called. 
+
+  \section ports_events Ports and Sparta Events
+
+  Sparta offers an event engine that is built upon a priority-driven, time-ordered queue. Events may have 6 different levels of priority, which are evaluated in order within each quantum of time. Sparta also defines units, which represent clocked elements that are operated using events. Consequently, many of the classes that involve the actual modelling of the architecture (e.g. Tile, MemoryController...) inherit from the sparta Unit class (not shown in the class diagram). The classes in the Coyote Sparta-based model use two fundamental buolding blocks.
+
+  - Sparta Event objects, such as UniqueEvent or PayloadEvent. These objects receive a pointer to a function (let's call it f) upon their creation. The execution of this function can be triggered by using the schedule method of the event, which receives a delay (d). This basically means: "enqueue an event into the event engine, which will execute f in d cycles".
+  - Ports, such as DataInPort or DataOutPort. These objects communicate units. They have to be explicitly connected (an in to an out). They are associated to a data type. In ports are also associated to a callback function (let's call it f) upon creation. This means that sending an object o through an out port with delay d will result in the execution of function f, receiving object o as parameter d cycles after the send was performed.
+
+The reading of ports always takes place in a scheduling phase prior to the evaluation of events. In that manner, the units in Coyote take a traditional 2-phase a approach to simulation: each cycle, read your input ports first, then react, operate and potentially write to your output ports.
+
+  \section example A minimum example of Coyote-style Sparta units
+
+  Folder SpartaExample contains a minimum example of Sparta model built in the Coyote style. Its purpose is serve as a basis to understand how Coyote is built. This simulator models a "Core" that has a fixed probability of issuing a request to the "Cache". The "Cache" has a fixed probability of hitting/missing. I case of miss, the request is communicated to a "Memory" with fixed latency. Then acknowledgements are communicated back. The code itself is documented to point to the places in the actual Coyote with similar functionalities.
+
+*/

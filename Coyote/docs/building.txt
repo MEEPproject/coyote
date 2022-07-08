@@ -1,0 +1,43 @@
+
+/*!
+  \page building Building Coyote
+
+  Coyote does not have any requirements beyond those of its constituent parts: Spike, Sparta and BookSim. 
+  The vector applications provided require the EPI compiler, but scripts are provided to install it either 
+  as a binary or as part of a container.
+
+  Coyote is known to work on OpenSUSE 15.0 (EPI compiler on docker), Ubuntu 20.20 and Ubuntu on WSL 2.
+
+  ======================================================================
+  \section Installing
+
+  Several scripts are provided to ease the compilation of the tools:
+
+  - install_dependencies_ubuntu.sh automatically installs all the dependencies (Ubuntu only). This script 
+  is also known to work under the Ubuntu WSL. If you are using a different distro, please check the script
+  and satisfy the dependencies manually.
+
+  - install_sparta.sh downloads the latest version of Sparta and compiles it (Distro-independent).
+
+  - setup_epi_compiler_docker.sh sets up the EPI compiler inside a docker container.
+
+  - setup_epi_compiler_binary.sh sets up the EPI compiler as a binary.
+
+  - compile_coyote.sh compiles the modified Spike thats is used and the memory hierarchy model. This script 
+  expects the Sparta framework to be located in the same path as the repo (alongside the Coyote and riscv-isa-sim 
+  folders). For other locations, the script can still be used, but the SPIKE_PATH, SPARTA_PATH and COYOTE_SRC 
+  environment variables need to be adequately set.
+
+  IMPORTANT: The compile_coyote.sh script is the recommended compilation tool. Partial compiles of the sources 
+  within the Coyote folder via the make in the build foldere work most of the time, but modifications 
+  to the files that interface with Spike also require Spike to be recompiled. Failing to do so results 
+  in unexpected (and hard to debug behaviors), which can only be fixed by adequately compiling all the tools.
+
+  Once the software dependencies are satisfied, either by using the provided script or otherwise, the execution of 
+  the scripts to install sparta and compile should produce a working binary for the tools, located in the build folder 
+  inside Coyote. The Spike (riscv-isa-sim) side of Coyote relies on configure and make to compile, while the Sparta 
+  side (Coyote) relies on cmake and make. The compilation pipeline is quite straightforward, as can be checked in the compilation script.
+
+  If you are updating from an older release, executing the scripts again should produce a working version of the simulator too.
+
+*/

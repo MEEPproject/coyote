@@ -1,0 +1,38 @@
+
+/*!
+  \mainpage Coyote Simulator
+
+   Coyote is an execution-driven simulator based on the open source RISC-V ISA that is in development as part of MEEP. 
+   Coyote focuses on data movement and the modelling of the memory hierarchy of the system, which is one of the main 
+   hurdles for high performance and efficiency, while omitting lower level details. As a result, it provides sufficient 
+   simulation throughput and fidelity to enable first order comparisons of very different design points within reasonable 
+   simulation time. 
+   
+   To leverage previous community efforts, Coyote is built upon two preexisting simulation tools: Spike 
+   and Sparta. Spike offers the functional simulation and L1 cache modelling capabilities, and has also been extended 
+   with some extra features, such as RAW dependency tracking and instruction latencies. Sparta has been used to 
+   model the memory hierarchy starting from the L2. The following figure provides a very high level representation
+   of the kinds of architectures that Coyote targets.
+
+   <img src="Coyote_overview.png" alt="" caption="Example of an architecture targetted by Coyote" style="transform: scale(0.75,0.75);" />
+
+  <h3>Documentation</h3>
+  -# \ref features <br>
+  A rundown of the supported and planned architecture features and simulation capabilities<br>&nbsp;
+
+  -# \ref building <br>
+  Information on how to set up the simulator<br>&nbsp;
+
+  -# \ref running <br>
+  An example simple simulation using Coyote<br>&nbsp;
+
+  -# \ref tracing <br>
+  Producing and visualizing traces using paraver<br>&nbsp;
+
+  -# \ref adapting <br>
+  Learn about the conditions that a code needs to meet to be executed in Coyote<br>&nbsp;
+
+  -# \ref development <br>
+  An overview of how the simulator is organized and a simple example of a small set of units put together in the Coyote style<br>&nbsp;
+
+*/

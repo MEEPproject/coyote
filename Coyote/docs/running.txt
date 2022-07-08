@@ -1,0 +1,37 @@
+
+/*!
+  \page running Running Coyote
+
+  This section will guide you through the running of your first kernel using Coyote.
+
+  ======================================================================
+
+  The vector DGEMM kernel (mt-matmul-vec) will be used as an example. It can be found in the apps folder. To compile it, use:
+
+  \code{.sh}
+  % sh compile.sh [numThreads] [matrixRows]
+  \endcode
+
+  All the applications in the folder have a similar structure and are compiled using a script that takes as input arguments the 
+  number of threads that will run in the simulation and the size of the dataset. To get more information regarding why we need 
+  to do this, please check the supported kernels section in \ref features and the \ref adapting section.
+
+  To run the application using Coyote, go to the build folder inside Coyote and execute:
+
+  \code{.sh}
+  % ./coyote -c ../../configs/simple_arch.yml -p meta.params.cmd ../../apps/mt-matmul-vec/matmul
+  \endcode
+
+  The file simple_arch.yml contains the specification of the architecture to be simulated. In this case, a very simple system with
+  a single core. Feel free to modify this file, use any of the other included files under the configs folder or create your own. 
+  Note that the number of threads when an app is compiled *needs to match* the number of cores times the number of threads 
+  per core specified in the yml file. All the parameters in the yml file can also be input through the command line using their
+  full name. For instance, to run a simulation using simple_arch, but with 2 l2 banks you can use:
+    
+  \code{.sh}
+  % ./coyote -c ../../configs/simple_arch.yml -p meta.params.cmd ../../apps/mt-matmul-vec/matmul -p top.arch.tile0.params.num_l2_banks 2
+  \endcode
+
+  For a further description of the available parameters, please refer to the parameter manual.
+
+*/

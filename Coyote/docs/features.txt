@@ -1,0 +1,87 @@
+
+/*!
+  \page features Feature overview
+
+  The purpose of Coyote is exploring different HPC architecture designs. Consequently, it needs to 
+  be able to model the features that are common to this kind of systems, such as high core counts, 
+  tiled systems, deep memory hierarchies and vector instructions. Flexibility is also a must, as very different 
+  design points might have to be compared in order to make decisions on the most fitting architecture.
+
+  ======================================================================
+  \section arch_features Supported architecture features
+  The following sections cover the features supported in each of the architecture elements modeled in Coyote.
+
+  \subsection core_features Core
+
+  Coyote models a single-issue, in-order core attached to a vector processor unit (VPU). The modeling of the core includes 
+  the tracking of RAW dependencies in order to decide whether the input register of an instruction is ready or not,
+  support for CGMT and configurable instruction latencies. With respect to the VPU, the latency for instructions 
+  is calcullated accounting for the number of lanes that the VPU is configured with. The core and VPU are connected to 
+  an LRU L1 with configurable geometry and write policy. The L1 models MSHRs and may be bypassed by vector memory instructions 
+  (if enabled).
+
+  \subsection tile_features Tile
+
+  Each tile contains crossbar that connects a number of cores, L2 banks and NoC router. The L2 banks are configurable with respect
+  to their geometry and data mapping policy. The complete L2 as a whole has a configurable sharing policy (either the L2 banks in
+  a tile are private to the cores in that tile or the L2 is shared and distributed across all the tiles). The L2 may also be bypassed 
+  by vector memory instructions (if enabled).
+
+  \subsection noc_features NoC 
+
+  Coyote supports three different NoC models with different levels of fidelity and impact on the simulation throughput:
+
+  - Functional: it models an ideal network with a defined average packet latency, so, basically, it forwards a packet from its source to its destination with a delay equal to avg_pkt_latency.
+  - Simple: it models an ideal mesh with a defined hop latency, so, basically, it calculates the Manhattan distance between the source and destionation of a packet and forwards it with a delay of: injection + link_traversal + #hops * hop_latency.
+    - Mesh topology
+    - DOR routing
+  - Detailed: using this NoC model Coyote delegates the NoC modelling to BookSim network simulator with a baseline design consisting of:
+    - Wormhole switching mechanisms
+    - No priorities
+    - No virtual channels
+    - 3 pipeline stages
+    - Credit-based flow control which is able to stall coyote if the injection queues are full
+    - Configurable network-width
+    - No end2end error detection nor correction
+    - Loss-less network
+    - External concentration in Tile's crossbar (N cores + N L2s)
+    - Square and non-square Mesh
+      - Potentially: other topologies
+    - DOR-XY routing
+      - Potentially: Different routings
+    - Different physical networks for each NoC network 
+    - Accurate average hop count
+    - Accurate average latency
+    - Define 1 (or as much as priorities) injection queues for PEs
+    - Define 1 (or a multiple of priorities) VCs on transit ports
+
+  The configs folder contains examples on how to use each of these models.
+
+  \subsection memory_features Memory Tile
+
+  Memory tiles contain an LLC (implemented by reusing the L2 module in the tile) and a memory controller. Memory controllers are configurable with respect to their geometry (number of banks, rows, columns...), reorder policy, data mapping and DRAM latencies. The examples in the config folder model HBM but different memory technologies could be modeled by tweaking the geometry and latencies. The modeling of the memory operation takes into accoun ACTIVATE, PRECHARGE, READ and WRITE commands.
+
+  \section kernels Sample kernels
+
+  Coyote runs statically linked applications, compiled using either the standard riscv-gnu compiler or the compiler developed for the EPI project, the latter for applications that use EPI intrinsics. However, Spike is only capable of simulating multicore systems in its baremetal mode. As a result, the applications that can be run in Coyote have limitted syscall capabilities and, therefore, cannot rely on input arguments or file I/O. More details about this in \ref adapting. Six kernels are provided as samples:
+
+  - Single core stream.
+  - Multi-core Scalar DGEMM.
+  - Multi-core Vector DGEMM.
+  - Multi-core Vector SpMV.
+  - Multi-core Vector Somier (Stencil).
+  - Multi-core Vector axpy
+
+  These kernels can be found in the apps folder of the repos. Each of them has its own compilation script.
+
+  \section plans Future plans
+
+  The following is a non-comprehensive list of features planned for Coyote in no particular order:
+
+  - Coherence. A simple MSI coherence protocol is currently under internal verification.
+  - Support for multiple clock domains.
+  - Accurate modelling of atomics.
+  - TLB and MMU.
+  - More detailed modeling of vector instruction latencies.
+
+*/
