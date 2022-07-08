@@ -1,0 +1,156 @@
+# Name: simple_arch
+# Description: Describes an architecture composed by:
+#  - 1 tile with: 
+#     - 1 core (1 thread)
+#     - 16 l2 slices
+#  - 1 MCPU with: 
+#     - 1 MC
+#     - 8 memory banks 
+#  - a functional NoC
+
+---
+
+# Simulation configuration
+meta:
+  params:
+    architecture: tiled                     # (std::string)     Topology to simulate (tiled, l2_unit_test, memory_controller_unit_test)
+    simulation_mode: execution_driven       # (std::string)     The type of simulation to perform (execution_driven, trace_driven). Mode execution_driven only supported for a tiled architecture
+    show_factories: false                   # (bool)            Print generated factories
+    trace: true                            # (bool)            Generate a trace into paraver format
+    events_to_trace: [any]                  # (std::vector<std::string>)    The events to trace (comma-separated). Default: All of them
+    enable_smart_mcpu: false                # (bool)            Enable or disable smart MCPU
+    enable_llc: false                       # (bool)            Enable or disable the LLC attached to the Memory Tile    
+    vector_bypass_l1: true                  # (bool)            Vector memory accesses bypass the L1 (Ignored if mcpu enabled) 
+    vector_bypass_l2: false                 # (bool)            Vector memory accesses bypass the L2 (Ignored if MCPU enabled)
+    l1_writeback: false                    # (bool)            l1 is a writeback or a writethrough cache
+    fast_cache: false                       # (bool)            Use a fast L1 cache model instead of the default spike cache
+    cmd: apps/mt-matmul/matmul              # (std::string)     App to execute in the RISC-V simulator (Either a binary or trace depending on param simulation_mode)
+
+# Architecture configuration
+top:
+  arch:
+    params:
+      frequency_ghz: 1                      # (double)          CPU Operating frequency
+      num_cores: 1                          # (uint16_t)        The number of cores to simulate
+      num_threads_per_core: 1               # (uint16_t)	    The number of threads per core
+      thread_switch_latency: 0              # (uint16_t)	    The number of cycles required to make the thread runnable
+      num_mshrs_per_core: 8               # (uint16_t)        The number of MSHRs per core
+      num_tiles: 1                          # (uint16_t)	    The number of tiles to simulate
+      num_memory_cpus: 1                    # (uint16_t)        The number of MCPUs to simulate
+      # num_memory_controllers: 1           # (uint16_t)	    The number of MCs to simulate
+      isa: RV64IMAFDCV                      # (std::string)	    The RISC-V isa version to use 
+      icache_config: 64:8:64                # (std::string)	    The L1$I cache configuration (sets:associativity:line_size)
+      dcache_config: 64:8:64                # (std::string)	    The L1$D cache configuration (sets:associativity:line_size)
+      varch: v8192:e64:s8192                # (std::string)     The RISC-V Vector uArch string
+      lanes_per_vpu: 16                     # (uint16_t)        The number of lanes per VPU  
+      x_size: 2                             # (uint16_t)        The size of X dimension
+      y_size: 1                             # (uint16_t)        The size of Y dimension
+      mcpus_indices: [0]                    # (std::vector<uint16_t>)     The network indices assigned to the MCPUs
+    tile*:
+      params:
+        num_l2_banks: 2                    # (uint16_t)        The number of l2 cache banks in the tile
+        latency: 1                          # (uint64_t)        The number of cycles to get to a local cache bank
+        l2_sharing_mode: fully_shared       # (std::string)     How the cache will be shared among the tiles (tile_private, fully_shared)
+        bank_policy: set_interleaving       # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        scratchpad_policy: core_to_bank     # (std::string)     The data mapping policy for the scratchpad (core_to_bank, vreg_interleaving)
+        tile_policy: set_interleaving       # (std::string)     The data mapping policy for tiles (page_to_bank, set_interleaving)
+      arbiter:
+        params:
+          q_sz: 16                          # (uint64_t)        The arbiter Queue Size
+      l2_bank*:
+        params:
+          line_size: 64                     # (uint64_t)        Cache line size (power of 2)
+          size_kb: 256                      # (uint64_t)        Size of L2 cache in KB (power of 2)
+          associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          always_hit: false                 # (bool)            L2 cache will always hit
+          writeback: true                # (bool)            L2 cache is writeback or writethrough
+          miss_latency: 15                  # (uint16_t)        Cache miss latency
+          hit_latency: 15                   # (uint16_t)        Cache hit latency
+          max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
+    memory_cpu*:
+      params:
+        line_size: 64                       # (uint64_t)        Cache line size (power of 2)
+        latency: 1                          # (uint64_t)        The latency of the MCPU
+        num_llc_banks: 16                    # (uint16_t)        The number of LLCs
+        llc_bank_policy: set_interleaving   # (std::string)     The data mapping policy for banks (page_to_bank, set_interleaving)
+        max_vvl: 32768                      # (uint64_t         The maximum vvl that will be returned by the MCPU (in bits)
+      llc*:
+        params:
+          line_size: 64                     # (uint64_t)        Cache line size (power of 2)
+          size_kb: 512                      # (uint64_t)        Size of L2 cache in KB (power of 2)
+          associativity: 16                 # (uint64_t)        L2 cache associativity (power of 2)
+          always_hit: false                 # (bool)            L2 cache will always hit
+          miss_latency: 15                  # (uint16_t)        Cache miss latency
+          hit_latency: 15                   # (uint16_t)        Cache hit latency
+          max_outstanding_misses: 16        # (uint16_t)        Maximum misses in flight to the next level
+          max_outstanding_wbs: 1            # (uint16_t)        Maximum number of in flight wbs
+    memory_controller*:
+      params:
+        num_banks: 32                       # (uint64_t)        The number of memory banks handled by this MC
+        num_banks_per_group: 4              # (uint64_t)        The number of memory banks per bank group
+        write_allocate: true                # (bool)            The write allocation policy
+        request_reordering_policy: fifo      # (std::string)     The reordering policy for memory requests (fifo, access_type, greedy)
+        command_reordering_policy: fifo     # (std::string)     The reordering policy for memory commands (fifo, oldest_ready, fifo_with_priorities, oldest_rw_over_precharge)
+        address_policy: row_bank_column_bank_group_interleave 
+                                            # (std::string)     The data mapping molicy in main memory (open_page, close_page, row_bank_column_bank_group_interleave, row_column_bank, bank_row_column)
+
+        unused_lsbs: 6                      # (uint8_t)         The number of bits that are unused in the address calculation
+        mem_spec:                           # (vector<string>)  The memory latencies
+          - "CCDL:3"
+          - "CCDS:2"
+          - "CKE:8"
+          - "QSCK:1"
+          - "FAW:16"
+          - "PL:0"
+          - "RAS:28"
+          - "RC:42"
+          - "RCDRD:12"
+          - "RCDWR:6"
+          - "REFI:3900"
+          - "REFISB:244"
+          - "RFC:220"
+          - "RFCSB:96"
+          - "RL:17"
+          - "RP:14"
+          - "RRDL:6"
+          - "RRDS:4"
+          - "RREFD:8"
+          - "RTP:5"
+          - "RTW:18"
+          - "WL:7"
+          - "WR:14"
+          - "WTRL:9"
+          - "WTRS:4"
+          - "XP:8"
+          - "XS:216"
+
+      memory_bank*:
+        params:
+          num_rows: 16384                   # (uint64_t)        The number of rows
+          num_columns: 64                   # (uint64_t)        The number of columns
+          column_element_size: 32           # (uint64_t)        The size of column elements
+          burst_length: 2                   # (uint8_t)         The number of columns handled back to back as a result of a READ/WRITE
+    noc:
+      params:
+        noc_model: functional               # (std::string)     NoC Model to simulate (functional, simple, detailed)
+        noc_networks:                       # (vector<string>)  NoC networks to define
+          - "DATA_TRANSFER"
+          - "ADDRESS_ONLY"
+          - "CONTROL"
+        message_header_size:                # (vector<string>)  The size of messages' header including CRC (in bits)
+          - "REMOTE_L2_REQUEST:8"
+          - "MEMORY_REQUEST_LOAD:8"
+          - "MEMORY_REQUEST_STORE:8"
+          - "MEMORY_REQUEST_WB:8"
+          - "REMOTE_L2_ACK:8"
+          - "MEMORY_ACK:8"
+          - "MCPU_REQUEST:8"
+          - "SCRATCHPAD_ACK:8"
+          - "SCRATCHPAD_DATA_REPLY:8"
+          - "SCRATCHPAD_COMMAND:8"
+          - "MEM_TILE_REQUEST:8"
+          - "MEM_TILE_REPLY:8"
+        packet_latency: 5                   # (uint16_t)        The average latency for each packet
+
+...
