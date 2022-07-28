@@ -16,7 +16,7 @@
   Coyote models a single-issue, in-order core attached to a vector processor unit (VPU). The modeling of the core includes 
   the tracking of RAW dependencies in order to decide whether the input register of an instruction is ready or not,
   support for CGMT and configurable instruction latencies. With respect to the VPU, the latency for instructions 
-  is calcullated accounting for the number of lanes that the VPU is configured with. The core and VPU are connected to 
+  is calculated accounting for the number of lanes that the VPU is configured with. The core and VPU are connected to 
   an LRU L1 with configurable geometry and write policy. The L1 models MSHRs and may be bypassed by vector memory instructions 
   (if enabled).
 
@@ -32,7 +32,7 @@
   Coyote supports three different NoC models with different levels of fidelity and impact on the simulation throughput:
 
   - Functional: it models an ideal network with a defined average packet latency, so, basically, it forwards a packet from its source to its destination with a delay equal to avg_pkt_latency.
-  - Simple: it models an ideal mesh with a defined hop latency, so, basically, it calculates the Manhattan distance between the source and destionation of a packet and forwards it with a delay of: injection + link_traversal + #hops * hop_latency.
+  - Simple: it models an ideal mesh with a defined hop latency, so, basically, it calculates the Manhattan distance between the source and destination of a packet and forwards it with a delay of: injection + link_traversal + #hops * hop_latency.
     - Mesh topology
     - DOR routing
   - Detailed: using this NoC model Coyote delegates the NoC modelling to BookSim network simulator with a baseline design consisting of:
@@ -59,11 +59,11 @@
 
   \subsection memory_features Memory Tile
 
-  Memory tiles contain an LLC (implemented by reusing the L2 module in the tile) and a memory controller. Memory controllers are configurable with respect to their geometry (number of banks, rows, columns...), reorder policy, data mapping and DRAM latencies. The examples in the config folder model HBM but different memory technologies could be modeled by tweaking the geometry and latencies. The modeling of the memory operation takes into accoun ACTIVATE, PRECHARGE, READ and WRITE commands.
+  Memory tiles contain an LLC (implemented by reusing the L2 module in the tile) and a memory controller. Memory controllers are configurable with respect to their geometry (number of banks, rows, columns...), reorder policy, data mapping and DRAM latencies. The examples in the config folder model HBM but different memory technologies could be modeled by tweaking the geometry and latencies. The modeling of the memory operation takes into account ACTIVATE, PRECHARGE, READ and WRITE commands.
 
   \section kernels Sample kernels
 
-  Coyote runs statically linked applications, compiled using either the standard riscv-gnu compiler or the compiler developed for the EPI project, the latter for applications that use EPI intrinsics. However, Spike is only capable of simulating multicore systems in its baremetal mode. As a result, the applications that can be run in Coyote have limitted syscall capabilities and, therefore, cannot rely on input arguments or file I/O. More details about this in \ref adapting. Six kernels are provided as samples:
+  Coyote runs statically linked applications, compiled using either the standard riscv-gnu compiler or the compiler developed for the EPI project, the latter for applications that use EPI intrinsics. However, Spike is only capable of simulating multicore systems in its baremetal mode. As a result, the applications that can be run in Coyote have limited syscall capabilities and, therefore, cannot rely on input arguments or file I/O. More details about this in \ref adapting. Six kernels are provided as samples:
 
   - Single core stream.
   - Multi-core Scalar DGEMM.

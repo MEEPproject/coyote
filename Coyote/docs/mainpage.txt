@@ -14,7 +14,7 @@
    model the memory hierarchy starting from the L2. The following figure provides a very high level representation
    of the kinds of architectures that Coyote targets.
 
-   <img src="Coyote_overview.png" alt="" caption="Example of an architecture targetted by Coyote" style="transform: scale(0.75,0.75);" />
+   \image html images/Coyote_overview.png
 
   <h3>Documentation</h3>
   -# \ref features <br>

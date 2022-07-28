@@ -1,8 +1,10 @@
 #/bin/bash!
 threads=$1
 if [ -z "$1" ]; then
-	threads="1"
+	threads=`nproc --all`
 fi
+
+echo "Using $threads threads to compile Sparta. Overwrite this setting with $0 <threads>."
 
 # Pick specific commit to ensure the compatibility with Coyote code
 

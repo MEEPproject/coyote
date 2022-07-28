@@ -8,7 +8,7 @@
 
   
   \section limitations Known Limitations
-  The following are the most relevant limitations when apating a kernel to Coyote. The example kernels in the apps folder are a good starting point to adapt your first code.
+  The following are the most relevant limitations when adapting a kernel to Coyote. The example kernels in the apps folder are a good starting point to adapt your first code.
   - No file I/O.
   - No command line arguments. This means that parameters such as the iteration count or the number of cores to run the application need to be static too. This could be fixed by using a different asm preamble and syscall.c file.
   - No dynamic memory. All data needs to be static. Thus, the big dataset.h file in the applications provided as an example, which gets generated via different scripts.
