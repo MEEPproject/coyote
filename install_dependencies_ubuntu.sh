@@ -2,8 +2,10 @@
 
 threads=$1
 if [ -z "$1" ]; then
-    threads="1"
+    threads=`nproc --all`
 fi
+
+echo "Using $threads threads to compile the riscv tool chain. Overwrite this setting with $0 <threads>."
 
 #sparta
 sudo apt-get install --yes cmake git g++ libboost-all-dev doxygen libsqlite3-dev libyaml-cpp-dev rapidjson-dev libhdf5-dev

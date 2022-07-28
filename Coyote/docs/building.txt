@@ -13,6 +13,13 @@
 
   Several scripts are provided to ease the compilation of the tools:
 
+  - If you have not checked out the Coyote repository including its submodules, please checkout the submodules
+    by executing
+    \code{.sh}
+      % git submodule update --init
+    \endcode
+    in the root directory of the simulator.
+    
   - install_dependencies_ubuntu.sh automatically installs all the dependencies (Ubuntu only). This script 
   is also known to work under the Ubuntu WSL. If you are using a different distro, please check the script
   and satisfy the dependencies manually.

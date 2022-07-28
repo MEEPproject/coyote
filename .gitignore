@@ -16,3 +16,9 @@ apps/**/matmul
 apps/**/spmv
 apps/**/somier
 apps/**/axpy
+
+Coyote/docs/doxygen.log
+
+Coyote/docs/doxygen_coyote_warnings.out
+
+Coyote/docs/html/

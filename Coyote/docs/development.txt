@@ -34,7 +34,7 @@
   This ExecutionDrivenSimulationOrchestrator class is found in the Coyote/src folder. It is the glue that puts the Sparta model and Spike together. As such, new feature that imply crossing the L1 boundary or deciding when cores should execute often imply changes to this class. Examples:
     - Atomic operations.
     - Accurate fences.
-    - Prefetcing techniques analysis.
+    - Prefetching techniques analysis.
 
   \section visitor_design_pattern The visitor design pattern
 
@@ -42,7 +42,7 @@
 
   \section ports_events Ports and Sparta Events
 
-  Sparta offers an event engine that is built upon a priority-driven, time-ordered queue. Events may have 6 different levels of priority, which are evaluated in order within each quantum of time. Sparta also defines units, which represent clocked elements that are operated using events. Consequently, many of the classes that involve the actual modelling of the architecture (e.g. Tile, MemoryController...) inherit from the sparta Unit class (not shown in the class diagram). The classes in the Coyote Sparta-based model use two fundamental buolding blocks.
+  Sparta offers an event engine that is built upon a priority-driven, time-ordered queue. Events may have 6 different levels of priority, which are evaluated in order within each quantum of time. Sparta also defines units, which represent clocked elements that are operated using events. Consequently, many of the classes that involve the actual modelling of the architecture (e.g. Tile, MemoryController...) inherit from the sparta Unit class (not shown in the class diagram). The classes in the Coyote Sparta-based model use two fundamental building blocks.
 
   - Sparta Event objects, such as UniqueEvent or PayloadEvent. These objects receive a pointer to a function (let's call it f) upon their creation. The execution of this function can be triggered by using the schedule method of the event, which receives a delay (d). This basically means: "enqueue an event into the event engine, which will execute f in d cycles".
   - Ports, such as DataInPort or DataOutPort. These objects communicate units. They have to be explicitly connected (an in to an out). They are associated to a data type. In ports are also associated to a callback function (let's call it f) upon creation. This means that sending an object o through an out port with delay d will result in the execution of function f, receiving object o as parameter d cycles after the send was performed.
