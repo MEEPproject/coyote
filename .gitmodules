@@ -1,6 +1,6 @@
 [submodule "riscv-isa-sim"]
 	path = riscv-isa-sim
-	url = https://gitlab.bsc.es/meep/meep-performance-modelling/coyote-tool/riscv-isa-sim.git
+	url = https://github.com/MEEPproject/riscv-isa-sim.git
 [submodule "booksim"]
 	path = booksim
-	url = https://gitlab.bsc.es/meep/meep-performance-modelling/coyote-tool/booksim.git
+	url = https://github.com/MEEPproject/booksim.git
