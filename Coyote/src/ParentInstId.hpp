@@ -36,7 +36,6 @@ namespace coyote
         
         public:
 
-            ParentInstId(ParentInstId const&) = delete;
             ParentInstId& operator=(ParentInstId const&) = delete;
 
             /*!

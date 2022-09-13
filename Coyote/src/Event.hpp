@@ -39,7 +39,6 @@ namespace coyote
         
         public:
 
-            Event(Event const&) = delete;
             Event& operator=(Event const&) = delete;
 
             /*!

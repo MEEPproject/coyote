@@ -44,7 +44,6 @@ namespace coyote
 
             //Request(){}
             Request() = delete;
-            Request(Request const&) = delete;
             Request& operator=(Request const&) = delete;
 
             /*!

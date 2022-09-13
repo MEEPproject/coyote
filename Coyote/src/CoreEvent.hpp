@@ -37,7 +37,6 @@ namespace coyote
         public:
             //CoreEvent(){}
             CoreEvent() = delete;
-            CoreEvent(CoreEvent const&) = delete;
             CoreEvent& operator=(CoreEvent const&) = delete;
 
             /*!
