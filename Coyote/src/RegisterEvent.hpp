@@ -45,7 +45,6 @@ namespace coyote
 
             //RegisterEvent(){}
             RegisterEvent() = delete;
-            RegisterEvent(RegisterEvent const&) = delete;
             RegisterEvent& operator=(RegisterEvent const&) = delete;
 
 

@@ -53,7 +53,6 @@ namespace coyote
             
             //CacheRequest(){}
             CacheRequest() = delete;
-            CacheRequest(Request const&) = delete;
             CacheRequest& operator=(Request const&) = delete;
 
              /*!
