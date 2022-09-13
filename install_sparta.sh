@@ -30,7 +30,7 @@ echo "Using $threads threads to compile Sparta. Overwrite this setting with $0 <
 git clone https://github.com/sparcians/map.git || { cd map;git checkout 533e178;cd ..; } 
 
 cd map/sparta
-git checkout 533e178
+git checkout d0c90f8
 mkdir release
 cd release
 cmake .. -DCMAKE_BUILD_TYPE=Release

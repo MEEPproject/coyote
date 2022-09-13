@@ -40,6 +40,8 @@ namespace coyote {
 
 	MemoryCPUWrapper::MemoryCPUWrapper(sparta::TreeNode *node, const MemoryCPUWrapperParameterSet *p):
 			sparta::Unit(node),
+			enabled(p->enable_smart_mcpu),
+			enabled_llc(p->enable_llc),
 			line_size(p->line_size),
 			latency(p->latency),
 			llc_banks(p->num_llc_banks),
@@ -98,8 +100,6 @@ namespace coyote {
 				//-- read the configuration
 				root_node			= node->getRoot()->getAs<sparta::RootTreeNode>();
 				auto config			= root_node->getSimulator()->getSimulationConfiguration()->getUnboundParameterTree();
-				this->enabled		= config.tryGet("meta.params.enable_smart_mcpu")->getAs<bool>();
-				this->enabled_llc	= config.tryGet("meta.params.enable_llc")->getAs<bool>();
 				this->sp_reg_size	= (size_t)config.tryGet("top.arch.tile0.params.num_l2_banks")->getAs<uint16_t>() *
 									  (size_t)config.tryGet("top.arch.tile0.l2_bank0.params.size_kb")->getAs<uint64_t>() *
 									  (size_t)1024 / (

@@ -153,7 +153,7 @@ std::shared_ptr<SimulationOrchestrator> createExecutionDrivenOrchestrator(sparta
 
     auto fast_cache             = upt.get("meta.params.fast_cache").getAs<bool>();
     auto cmd                    = upt.get("meta.params.cmd").getAs<std::string>();
-    auto enable_smart_mcpu      = upt.get("meta.params.enable_smart_mcpu").getAs<bool>();
+    auto enable_smart_mcpu      = upt.get("top.arch.memory_cpu0.params.enable_smart_mcpu").getAs<bool>();
     auto vector_bypass_l1       = upt.get("meta.params.vector_bypass_l1").getAs<bool>();
     auto vector_bypass_l2       = upt.get("meta.params.vector_bypass_l2").getAs<bool>();
     auto l1_writeback           = upt.get("meta.params.l1_writeback").getAs<bool>();
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
     try{
         // Helper class for parsing command line arguments, setting up the
         // simulator, and running the simulator. All of the things done by this
-        // classs can be done manually if desired. Use the source for the
+        // class can be done manually if desired. Use the source for the
         // CommandLineSimulator class as a starting point
         sparta::app::CommandLineSimulator cls(USAGE, DEFAULTS);
         // Maintain this code as an example of additional options
@@ -259,6 +259,7 @@ int main(int argc, char **argv)
 
         // Read general parameters
         const auto upt = cls.getSimulationConfiguration().getUnboundParameterTree();
+
         // simulation parameters
         auto architecture           = upt.get("meta.params.architecture").getAs<std::string>();
         auto simulation_mode        = upt.get("meta.params.simulation_mode").getAs<std::string>();
@@ -345,8 +346,9 @@ int main(int argc, char **argv)
 
         orchestrator->saveReports();
 
-    }catch(...){
-        // Could still handle or log the exception here
+    } catch(std::stringstream *msg) {
+        
+        std::cerr << msg->str() << std::endl;
         throw;
     }
 

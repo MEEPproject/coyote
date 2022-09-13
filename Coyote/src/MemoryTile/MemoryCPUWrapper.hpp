@@ -64,6 +64,8 @@ namespace coyote {
 					PARAMETER(uint16_t, num_llc_banks, 1, "The number of llc cache banks in the memory tile")
 					PARAMETER(std::string, llc_pol, "set_interleaving", "The data mapping policy for banks")
 					PARAMETER(uint32_t, max_vvl, 65536, "The maximum vvl that the MCPU will return")
+					PARAMETER(bool, enable_smart_mcpu, false, "Enable the Memory Tile/MCPU")
+					PARAMETER(bool, enable_llc, true, "Enable the LLC/L3")
 			};
 
 			/*!
@@ -143,17 +145,22 @@ namespace coyote {
 			
 			SPStatus *sp_status;
 			
-			uint16_t id;
-			uint32_t line_size;
-			uint32_t *vvl;
-			uint64_t latency;
-			uint16_t llc_banks;
-			CacheDataMappingPolicy llc_policy;
-			uint32_t max_vvl;
-			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
-			bool enabled;
-			bool enabled_llc;
+			bool enabled;	// is the memory tile enabled?
+			bool enabled_llc;	// is the LLC enabled?
 		
+			uint16_t buf_size_out_llc4mc_to_crossbar; // the size of the single FIFO buffer from all the banks of the LLC sending requests to the MC going through the crossbar
+			
+			uint16_t buf_size_out_noc; // the size of the FIFO buffers from the memory tile to the NoC
+			uint16_t id;	// the ID of the instantiated memory tile
+			uint32_t line_size; // the size of 1 cache line
+			uint32_t *vvl;	// table of current VVL settings in the VAS Tile cores
+			uint64_t latency; // what latency for the Memory tile? currently it is only set for a few buffers
+			uint16_t llc_banks;	// number of LLC banks
+			uint8_t nNoCs;
+			CacheDataMappingPolicy llc_policy;
+			uint32_t max_vvl; // the maximum VVL that the VVL supports. vvl[core] can be equal or lesser than that
+			uint32_t instructionID_counter; // ID issued to incoming mcpu instructions. increments with every new instruction
+
 			uint64_t mc_shift;
 			uint64_t mc_mask;
 			
