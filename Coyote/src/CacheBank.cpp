@@ -211,6 +211,7 @@ namespace coyote
 
         if (CACHE_HIT)
         {
+            std::shared_ptr<CacheRequest> crForWriteThrough = std::make_shared<CacheRequest>(*(mem_access_info_ptr->getReq()));
             mem_access_info_ptr->getReq()->setServiced();
             if(!unit_test)
             {
@@ -219,7 +220,7 @@ namespace coyote
             total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+hit_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
             if(!writeback_ && mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE)
             {
-                out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(hit_latency_));
+                out_biu_req_.send(crForWriteThrough, sparta::Clock::Cycle(hit_latency_));
             }
         }
         else 
@@ -251,6 +252,16 @@ namespace coyote
                 //MISSES ON LOADS AND FETCHES ARE ONLY FORWARDED IF THE LINE IS NOT ALREADY PENDING
                 if(!already_pending)
                 {
+                    std::shared_ptr<coyote::CacheRequest> cache_req = mem_access_info_ptr->getReq();
+                    std::shared_ptr<CacheRequest> crForMemoryPort;
+
+                    if(writeback_ || cache_req->getType() != CacheRequest::AccessType::STORE) {
+                        crForMemoryPort = cache_req;
+                    } else {
+                        crForMemoryPort = std::make_shared<CacheRequest>(*cache_req);
+                    }
+                    out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
+
                     if(mem_access_info_ptr->getReq()->getProducedByVector())
                     {
                         count_vector_misses_++;
@@ -259,16 +270,15 @@ namespace coyote
                     {
                         count_non_vector_misses_++;
                     }
-                    std::shared_ptr<coyote::CacheRequest> cache_req = mem_access_info_ptr->getReq();
-                    out_biu_req_.send(cache_req, sparta::Clock::Cycle(miss_latency_));
                     total_time_spent_by_requests_=total_time_spent_by_requests_+(getClock()->currentCycle()+miss_latency_-mem_access_info_ptr->getReq()->getTimestampReachCacheBank());
                 }
                 else
                 {
-                    //For writethrough caches, all the writes are sent to lower level cache
+                    //For write-through caches, all the writes are sent to lower level cache
                     if(!writeback_ && mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE)
                     {
-                        out_biu_req_.send(mem_access_info_ptr->getReq(), sparta::Clock::Cycle(miss_latency_));
+                        std::shared_ptr<CacheRequest> crForWriteThrough = std::make_shared<CacheRequest>(*(mem_access_info_ptr->getReq()));
+                        out_biu_req_.send(crForWriteThrough, sparta::Clock::Cycle(miss_latency_));
                     }
                     else
                     {
@@ -329,7 +339,7 @@ namespace coyote
 
                 //SET DIRTY BIT IF NECESSARY
                 if((mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::STORE || mem_access_info_ptr->getReq()->getType()==CacheRequest::AccessType::WRITEBACK) && writeback_)
-                 {
+                {
                     cache_line->setModified(true); //send the block to memory for write through l2
                 }
             }
