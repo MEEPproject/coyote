@@ -27,10 +27,10 @@ echo "Using $threads threads to compile Sparta. Overwrite this setting with $0 <
 
 # Pick specific commit to ensure the compatibility with Coyote code
 
-git clone https://github.com/sparcians/map.git || { cd map;git checkout 533e178;cd ..; } 
+git clone https://github.com/sparcians/map.git || { cd map;git checkout 28d86d5113f4904b64ca55c666b420a8da32efea;cd ..; } 
 
 cd map/sparta
-git checkout d0c90f8
+git checkout 28d86d5113f4904b64ca55c666b420a8da32efea
 mkdir release
 cd release
 cmake .. -DCMAKE_BUILD_TYPE=Release

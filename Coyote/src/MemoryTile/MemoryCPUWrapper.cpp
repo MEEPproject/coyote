@@ -340,6 +340,20 @@ namespace coyote {
 			case ScratchpadRequest::ScratchpadCommand::ALLOCATE:
 				sched_outgoing.notify(parent_instr->getDestinationRegId());
 				sp_status[parent_instr->getDestinationRegId()] = SPStatus::READY;
+				
+				//-- We have to check 3 situations:
+				//   1) All packets for this particular memory request were in the wait queue
+				//   2) Some of the packets for this particular memory request were in the wait queue, while others are still
+				//      in flight from the memory controller.
+				//   3) None of the packets waited so far.
+				//
+				//   Depending on the number of packets returned from the wait queue, we can remove the parent instruction from the
+				//   map. If there are still packets are in flight, then we must not remove the parent instruction.
+				if(transaction_id->second.counter_cacheRequests == 0) {
+					DEBUG_MSG("\t\t\tcomplete, deleted instr: " << *(transaction_id->second.mcpu_instruction));
+					transaction_table.erase(transaction_id);
+				}
+				
 				break;
 			case ScratchpadRequest::ScratchpadCommand::FREE:
 				break;
@@ -460,7 +474,7 @@ namespace coyote {
 			//-- Generate a cache line request
 			std::shared_ptr<CacheRequest> memory_request = createCacheRequest(address, instr);
 			
-			DEBUG_MSG("elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", CR: " << *memory_request);
+			DEBUG_MSG("VVL: " << local_vvl << ", elements/request: " << number_of_elements_per_request << ", remaining elements: " << remaining_elements << ", CR: " << *memory_request);
 			//memory_request->set_mem_op_latency(line_size/32);	// load 64 Bytes
             memory_request->setSize(line_size);
 									
@@ -734,8 +748,10 @@ namespace coyote {
 					size_t destReg = transaction_id->second.mcpu_instruction->getDestinationRegId();
 					if(sp_status[destReg] == SPStatus::READY) {
 						sched_outgoing.push(noc_message);
+						DEBUG_MSG("\t\tAdded LVRF Packet to outgoing NoC buffer: " << *outgoing_message);
 					} else {
 						sched_outgoing.add_delay_queue(noc_message, destReg);
+						DEBUG_MSG("\t\tDelay LVRF Packet for outgoing NoC buffer, the LVRF is not yet ALLOCATED. LVRF Packet: " << *outgoing_message << "");
 					}
 					
                     if(trace_) {
@@ -753,7 +769,9 @@ namespace coyote {
 		
 		DEBUG_MSG("\t\tCRs/SPRs to go: " << transaction_id->second.counter_cacheRequests << "/" << transaction_id->second.counter_scratchpadRequests);
 		
-		if(transaction_id->second.counter_cacheRequests == 0) {
+		//-- has the LVRF ACK for an ALLOC arrived? If not, the packet is delayed. In case, it is the 
+		//   very last packet to be sent out, do not remove the parent instruction.
+		if(transaction_id->second.counter_cacheRequests == 0 && sp_status[transaction_id->second.mcpu_instruction->getDestinationRegId()] == SPStatus::READY) {
 			DEBUG_MSG("\t\t\tcomplete, deleted instr: " << *(transaction_id->second.mcpu_instruction));
 			transaction_table.erase(transaction_id);
 		}
