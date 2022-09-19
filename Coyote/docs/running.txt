@@ -21,6 +21,9 @@
   \code{.sh}
   % ./coyote -c ../../configs/simple_arch.yml -p meta.params.cmd ../../apps/mt-matmul-vec/matmul
   \endcode
+  
+  Please note, that in the current version of Coyote, giving the executable as parameter (-p) to Coyote is not supported. Instead,
+  change the variable in simple_arch.yml directly.
 
   The file simple_arch.yml contains the specification of the architecture to be simulated. In this case, a very simple system with
   a single core. Feel free to modify this file, use any of the other included files under the configs folder or create your own. 
